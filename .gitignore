@@ -1,5 +1,13 @@
-out
-dist
-node_modules
+# ビルド成果物
+out/
+dist/
+node_modules/
 .vscode-test/
+
+# パッケージ（配布用ファイル）
 *.vsix
+
+# 追記推奨：OSやエディタのゴミ
+.DS_Store
+Thumbs.db
+.eslintcache

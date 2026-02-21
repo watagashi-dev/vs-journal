@@ -1,13 +1,21 @@
 {
   "name": "vs-journal",
   "displayName": "VS Journal",
-  "description": "Tag based memo tool(HOWM inspired)",
+  "description": "A tag-based journal tool for organizing your daily notes. (howm inspired)",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.109.0"
   },
   "categories": [
     "Other"
+  ],
+  "keywords": [
+    "markdown",
+    "journal",
+    "memo",
+    "notes",
+    "tagging",
+    "howm-inspired"
   ],
   "activationEvents": [],
   "main": "./dist/extension.js",
