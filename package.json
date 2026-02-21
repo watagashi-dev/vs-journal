@@ -2,7 +2,7 @@
   "name": "vs-journal",
   "displayName": "VS Journal",
   "description": "A tag-based journal tool for organizing your daily notes. (howm inspired)",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "engines": {
     "vscode": "^1.109.0"
   },
@@ -22,10 +22,42 @@
   "contributes": {
     "commands": [
       {
-        "command": "vs-journal.helloWorld",
-        "title": "Hello World"
+        "command": "vs-journal.newEntry",
+        "title": "VS Journal: New Entry"
+      },
+      {
+        "command": "vs-journal.previewEntry",
+        "title": "VS Journal: Preview Entry"
       }
-    ]
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "VS Journal configuration",
+      "properties": {
+        "vsJournal.journalDir": {
+          "type": "string",
+          "default": "journal",
+          "description": "Journal files will be saved under this directory in the workspace."
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "vsJournal",
+          "title": "Journal",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "vsJournal": [
+        {
+          "id": "vsJournalTags",
+          "name": "Tags"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
@@ -42,15 +74,18 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.109.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
-    "typescript-eslint": "^8.54.0",
-    "eslint": "^9.39.2",
-    "esbuild": "^0.27.2",
-    "npm-run-all": "^4.1.5",
-    "typescript": "^5.9.3",
+    "@types/vscode": "^1.109.0",
     "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2"
+    "@vscode/test-electron": "^2.5.2",
+    "esbuild": "^0.27.2",
+    "eslint": "^10.0.1",
+    "npm-run-all": "^1.1.3",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.36.0"
+  },
+  "dependencies": {
+    "marked": "4.3.0"
   }
 }
