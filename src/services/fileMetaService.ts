@@ -14,7 +14,9 @@ export function createFileMeta(filePath: string): FileMeta {
   // タイトル取得
   for (const line of lines) {
     const trimmed = line.trim();
-    if (trimmed.length === 0) continue;
+    if (trimmed.length === 0){
+      continue;
+    }
 
     if (trimmed.startsWith('# ')) {
       title = trimmed.substring(2).trim();
@@ -25,8 +27,12 @@ export function createFileMeta(filePath: string): FileMeta {
   // タグ抽出（行全体がハッシュタグのみ）
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed.startsWith('#')) continue;
-    if (trimmed.startsWith('# ')) continue; // 見出し除外
+    if (!trimmed.startsWith('#')){
+      continue;
+    }
+    if (trimmed.startsWith('# ')){
+      continue; // 見出し除外
+    }
 
     // 1行に複数タグがある場合も抽出
     const matches = [...trimmed.matchAll(TAG_REGEX_GLOBAL)];
