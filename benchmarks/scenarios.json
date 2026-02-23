@@ -1,0 +1,64 @@
+[
+  {
+    "name": "small_balanced",
+    "files": 500,
+    "tag_types": 50,
+    "tags_per_file": 2,
+    "depth": 1,
+    "size": 1000,
+    "seed": 1,
+    "output": "datasets/small_balanced"
+  },
+  {
+    "name": "medium_balanced",
+    "files": 3000,
+    "tag_types": 200,
+    "tags_per_file": 2,
+    "depth": 1,
+    "size": 1200,
+    "seed": 2,
+    "output": "datasets/medium_balanced"
+  },
+  {
+    "name": "large_balanced",
+    "files": 10000,
+    "tag_types": 500,
+    "tags_per_file": 3,
+    "depth": 1,
+    "size": 1500,
+    "seed": 3,
+    "output": "datasets/large_balanced"
+  },
+  {
+    "name": "heavy_single_tag",
+    "files": 10000,
+    "tag_types": 50,
+    "tags_per_file": 2,
+    "heavy_tag": "project",
+    "heavy_ratio": 0.8,
+    "depth": 1,
+    "size": 1500,
+    "seed": 42,
+    "output": "datasets/heavy_single_tag"
+  },
+  {
+    "name": "few_tags_many_files",
+    "files": 10000,
+    "tag_types": 10,
+    "tags_per_file": 1,
+    "depth": 1,
+    "size": 1500,
+    "seed": 5,
+    "output": "datasets/few_tags_many_files"
+  },
+  {
+    "name": "large_files",
+    "files": 5000,
+    "tag_types": 200,
+    "tags_per_file": 3,
+    "depth": 1,
+    "size": 8000,
+    "seed": 6,
+    "output": "datasets/large_files"
+  }
+]

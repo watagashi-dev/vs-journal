@@ -8,6 +8,7 @@ import { getWorkspaceRoot } from './utils/workspace';
 import { TagTreeProvider } from './sidebar/TagTreeProvider';
 import { createFileMeta } from './services/fileMetaService';
 import { FileMeta } from './models/FileMeta';
+import { measure } from './perf';
 
 let currentPanel: vscode.WebviewPanel | undefined;
 let currentDocument: vscode.TextDocument | undefined;
@@ -161,11 +162,13 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.window.withProgress({
         location: { viewId: 'vsJournalTags' }
     }, async () => {
-        await refreshAllData().catch(err=> {
-			if (err.message !== 'Canceled') {
-				console.log(err);
-			}
-		});
+        await measure("initial scan", async () => {
+            await refreshAllData().catch(err=> {
+                if (err.message !== 'Canceled') {
+                    console.log(err);
+                }
+            });
+        });
     });
 	setupWatcher(); // 監視開始
 
@@ -173,7 +176,9 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(async event => {
             if (event.affectsConfiguration('vsJournal.journalDir')) {
-                await refreshAllData();
+                await measure("initial scan", async () => {
+                    await refreshAllData();
+                });
 				setupWatcher(); // 設定変更に合わせて監視を作り直し
                 vscode.window.showInformationMessage('VS Journal: journalDir updated');
             }
@@ -182,7 +187,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // 保存時（差分更新を適用）
     context.subscriptions.push(
-        vscode.workspace.onDidSaveTextDocument(document => {
+        vscode.workspace.onDidSaveTextDocument(async document => {
             if (!isJournalFile(document)) { return; }
             
             // 全スキャンではなく、このファイルだけを処理（爆速）
@@ -190,7 +195,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
             // パネルが「表示されている」時だけ更新をかける
             if (currentPanel && currentPanel.visible && currentDocument?.uri.toString() === document.uri.toString()) {
-                updatePreview();
+                await measure("preview generation", async () => {
+                    updatePreview();
+                });
             }
         })
     );
@@ -221,7 +228,9 @@ export async function activate(context: vscode.ExtensionContext) {
                 currentPanel = vscode.window.createWebviewPanel('vsJournalPreview', 'VS Journal Preview', vscode.ViewColumn.Active, { enableScripts: false });
                 currentPanel.onDidDispose(() => { currentPanel = undefined; currentDocument = undefined; });
             }
-            updatePreview();
+            await measure("preview generation", async () => {
+                updatePreview();
+            });
         }),
 
         vscode.commands.registerCommand('vs-journal.selectJournalDir', async () => {
