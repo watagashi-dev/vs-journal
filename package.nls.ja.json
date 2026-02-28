@@ -1,4 +1,5 @@
 {
   "extension.description": "タグで整理する、快適なMarkdownジャーナル作成支援ツール",
-  "config.journalDir.markdownDescription": "ジャーナルファイルの保存先ディレクトリ [ここをクリックしてフォルダを選択](command:vs-journal.selectJournalDir)"
+  "config.journalDir.markdownDescription": "ジャーナルファイルの保存先ディレクトリ [ここをクリックしてフォルダを選択](command:vs-journal.selectJournalDir)",
+  "view.vsJournal.tags.empty": "エントリーがありません"
 }

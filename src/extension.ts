@@ -19,9 +19,6 @@ const fileMetaMap = new Map<string, FileMeta>();
 const tagIndexForProvider = new Map<string, any[]>(); 
 let untaggedFiles: { filePath: string; title: string }[] = [];
 
-/**
- * ジャーナルディレクトリのパス解決
- */
 function getJournalDir(): string {
     const config = vscode.workspace.getConfiguration('vsJournal');
     const setting = config.inspect<string>('journalDir');
@@ -32,172 +29,155 @@ function getJournalDir(): string {
 }
 
 function getAbsoluteJournalDir(journalDir: string): string | undefined {
-    if (path.isAbsolute(journalDir)) { return journalDir; }
+    if (path.isAbsolute(journalDir)) {
+        return journalDir;
+    }
     const root = getWorkspaceRoot();
     return root ? path.join(root, journalDir) : undefined;
 }
 
-/**
- * 【高速化】全ファイルの初期スキャン
- */
 async function refreshAllData() {
     const journalDir = getJournalDir();
     const fullDir = getAbsoluteJournalDir(journalDir);
-    
+
     fileMetaMap.clear();
     tagIndexForProvider.clear();
     untaggedFiles = [];
 
-    if (!fullDir || !fs.existsSync(fullDir)) { return; }
+    if (!fullDir || !fs.existsSync(fullDir)) {
+        return;
+    }
 
     const files = fs.readdirSync(fullDir).filter(f => f.endsWith('.md'));
 
-    // 全ファイルを解析してインデックスを構築
     for (const file of files) {
         const filePath = path.join(fullDir, file);
         const meta = createFileMeta(filePath);
         fileMetaMap.set(filePath, meta);
 
         if (meta.tags.length === 0) {
-            untaggedFiles.push({ filePath: meta.filePath, title: meta.title });
-        } else {
-            for (const tag of meta.tags) {
-                if (!tagIndexForProvider.has(tag)) { tagIndexForProvider.set(tag, []); }
-                tagIndexForProvider.get(tag)!.push({ filePath: meta.filePath, title: meta.title });
-            }
+            addToUntagged({ filePath: meta.filePath, title: meta.title });
+        }
+        else {
+            meta.tags.forEach(tag => addToTagIndex(tag, { filePath: meta.filePath, title: meta.title }));
         }
     }
 
     notifyProvider();
 }
 
-/**
- * 【差分更新】保存された1ファイルだけを効率的に更新する
- */
 function updateSingleFile(filePath: string) {
-    // 1. 古いデータの削除
     const oldMeta = fileMetaMap.get(filePath);
     if (oldMeta) {
-        for (const tag of oldMeta.tags) {
+        oldMeta.tags.forEach(tag => {
             const files = tagIndexForProvider.get(tag);
             if (files) {
                 const filtered = files.filter(f => f.filePath !== filePath);
                 filtered.length === 0 ? tagIndexForProvider.delete(tag) : tagIndexForProvider.set(tag, filtered);
             }
-        }
+        });
     }
     untaggedFiles = untaggedFiles.filter(f => f.filePath !== filePath);
 
-    // 2. 新しいデータの抽出と追加
     const newMeta = createFileMeta(filePath);
     fileMetaMap.set(filePath, newMeta);
 
     if (newMeta.tags.length === 0) {
-        untaggedFiles.push({ filePath: newMeta.filePath, title: newMeta.title });
-    } else {
-        for (const tag of newMeta.tags) {
-            if (!tagIndexForProvider.has(tag)) { tagIndexForProvider.set(tag, []); }
-            tagIndexForProvider.get(tag)!.push({ filePath: newMeta.filePath, title: newMeta.title });
-        }
+        addToUntagged({ filePath: newMeta.filePath, title: newMeta.title });
+    }
+    else {
+        newMeta.tags.forEach(tag => addToTagIndex(tag, { filePath: newMeta.filePath, title: newMeta.title }));
     }
 
     notifyProvider();
 }
 
-/**
- * Providerに最新データを反映させる
- */
-function notifyProvider() {
+function notifyProvider(scanning?: boolean) {
     const allTags = Array.from(tagIndexForProvider.keys()).sort();
-    tagProvider.refresh(allTags, untaggedFiles, tagIndexForProvider);
+    tagProvider.refresh(allTags, untaggedFiles, tagIndexForProvider, scanning);
 }
 
 export async function activate(context: vscode.ExtensionContext) {
-	let fileWatcher: vscode.FileSystemWatcher | undefined;
+    let fileWatcher: vscode.FileSystemWatcher | undefined;
 
-    // --- イベント監視 ---
-	const setupWatcher = () => {
-		// 古い監視があれば破棄する（デグレード・二重動作防止）
-		if (fileWatcher) {
-			fileWatcher.dispose();
-		}
+    // ステータスバー作成
+    const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+    context.subscriptions.push(statusBar);
 
-		const journalDir = getJournalDir();
-		const absJournalDir = getAbsoluteJournalDir(journalDir);
-		if (!absJournalDir) { return; }
+    // ステータスバーに現在のジャーナルDirを表示
+    const updateStatusBar = () => {
+        const dir = getAbsoluteJournalDir(getJournalDir());
+        if (dir) {
+            const shortDir = dir.length > 40 ? '…' + dir.slice(-37) : dir; // 長すぎる場合省略
+            statusBar.text = `VS Journal: ${shortDir}`;
+            statusBar.tooltip = dir;
+            statusBar.show();
+        } else {
+            statusBar.hide();
+        }
+    };
 
-		const pattern = new vscode.RelativePattern(absJournalDir, '**/*.md');
-		fileWatcher = vscode.workspace.createFileSystemWatcher(pattern);
+    const setupWatcher = () => {
+        if (fileWatcher) {
+            fileWatcher.dispose();
+        }
 
-		fileWatcher.onDidCreate(uri => updateSingleFile(uri.fsPath));
-		fileWatcher.onDidChange(uri => updateSingleFile(uri.fsPath));
-		fileWatcher.onDidDelete(() => refreshAllData());
+        const absDir = getAbsoluteJournalDir(getJournalDir());
+        if (!absDir) {
+            return;
+        }
 
-		// 拡張機能が終了したときに自動で破棄されるように登録
-		context.subscriptions.push(fileWatcher);
-	};
+        const pattern = new vscode.RelativePattern(absDir, '**/*.md');
+        fileWatcher = vscode.workspace.createFileSystemWatcher(pattern);
 
-    // Providerの即時初期化
+        fileWatcher.onDidCreate(uri => updateSingleFile(uri.fsPath));
+        fileWatcher.onDidChange(uri => updateSingleFile(uri.fsPath));
+        fileWatcher.onDidDelete(() => refreshAllData());
+
+        context.subscriptions.push(fileWatcher);
+    };
+
     tagProvider = new TagTreeProvider([], [], new Map());
-    const treeView = vscode.window.createTreeView('vsJournalTags', { 
+    vscode.window.createTreeView('vsJournalTags', {
         treeDataProvider: tagProvider,
-        showCollapseAll: true 
+        showCollapseAll: true,
     });
 
-//    treeView.onDidChangeVisibility(e => {
-//        try {
-//            await vscode.commands.executeCommand(
-//                'setContext',
-//                'vsJournalTagsVisible',
-//                e.visible
-//            );
-//        } catch (err: any) {
-//            if (err?.message !== 'Canceled') {
-//                console.log(err);
-//            }
-//        }
-//    });
+    const performScan = async (message: string) => {
+        tagProvider.refresh([], [], new Map(), true); // Treeにスピナー表示
+        await refreshAllData();
 
-    // 非同期で初回スキャン（プログレスバーをサイドバー内に表示）
-    vscode.window.withProgress({
-        location: { viewId: 'vsJournalTags' }
-    }, async () => {
-        await measure("initial scan", async () => {
-            await refreshAllData().catch(err=> {
-                if (err.message !== 'Canceled') {
-                    console.log(err);
-                }
-            });
-        });
-    });
-	setupWatcher(); // 監視開始
+        await new Promise(r => setTimeout(r, 10000)); // 3秒待つ
+
+        tagProvider.refresh(Array.from(tagIndexForProvider.keys()).sort(), untaggedFiles, tagIndexForProvider, false);
+        updateStatusBar();
+    };
+
+    await performScan('VS Journal: scanning...');
+
+    setupWatcher();
+    updateStatusBar();
 
     // 設定変更
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(async event => {
             if (event.affectsConfiguration('vsJournal.journalDir')) {
-                await measure("initial scan", async () => {
-                    await refreshAllData();
-                });
-				setupWatcher(); // 設定変更に合わせて監視を作り直し
-                vscode.window.showInformationMessage('VS Journal: journalDir updated');
+                await performScan('VS Journal: journalDir updated');
+                setupWatcher();
             }
         })
     );
 
-    // 保存時（差分更新を適用）
+    // 保存時差分更新
     context.subscriptions.push(
-        vscode.workspace.onDidSaveTextDocument(async document => {
-            if (!isJournalFile(document)) { return; }
-            
-            // 全スキャンではなく、このファイルだけを処理（爆速）
+        vscode.workspace.onDidSaveTextDocument(document => {
+            if (!isJournalFile(document)) {
+                return;
+            }
             updateSingleFile(document.uri.fsPath);
 
-            // パネルが「表示されている」時だけ更新をかける
             if (currentPanel && currentPanel.visible && currentDocument?.uri.toString() === document.uri.toString()) {
-                await measure("preview generation", async () => {
-                    updatePreview();
-                });
+                updatePreview();
             }
         })
     );
@@ -215,7 +195,7 @@ export async function activate(context: vscode.ExtensionContext) {
             }
             const doc = await vscode.workspace.openTextDocument(fullPath);
             await vscode.window.showTextDocument(doc);
-            updateSingleFile(fullPath); // 新規作成も差分更新
+            // updateSingleFile(fullPath); // 新規作成も差分更新
         }),
 
         vscode.commands.registerCommand('vs-journal.previewEntry', async () => {
@@ -244,6 +224,17 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         }),
 
+        vscode.window.onDidChangeActiveTextEditor(editor => {
+            if (!editor || !isJournalFile(editor.document)) {
+                return;
+            }
+
+            const meta = fileMetaMap.get(editor.document.uri.fsPath);
+            if (!meta || meta.tags.length === 0) {
+                return;
+            }
+        }),
+
         vscode.languages.registerCompletionItemProvider(
             { scheme: 'file', language: 'markdown' },
             {
@@ -266,7 +257,20 @@ function updatePreview() {
 
     try {
         const htmlContent = marked.parse(currentDocument?.getText() || "");
-        currentPanel.webview.html = `<!DOCTYPE html><html>...${htmlContent}...</html>`;
+        // WebViewにCSSを読み込む
+        const cssPath = vscode.Uri.file(path.join(__dirname, '..', 'resources', 'webview.css'));
+        const cssUri = currentPanel.webview.asWebviewUri(cssPath);
+        currentPanel.webview.html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <link rel="stylesheet" type="text/css" href="${cssUri}">
+            </head>
+            <body>
+                ${htmlContent}
+            </body>
+            </html>
+        `;
     } catch (e) {
         // 万が一の描画エラーをキャッチしてログを汚さないようにする
         console.log("Preview update skipped (panel might be busy)");
@@ -278,6 +282,20 @@ function isJournalFile(document: vscode.TextDocument): boolean {
     if (!absJournalDir) { return false; }
     const rel = path.relative(absJournalDir, document.uri.fsPath);
     return !rel.startsWith('..') && !path.isAbsolute(rel) && document.uri.fsPath.toLowerCase().endsWith('.md');
+}
+
+function addToUntagged(file: { filePath: string; title: string }) {
+    if (!untaggedFiles.some(f => f.filePath === file.filePath)) {
+        untaggedFiles.push(file);
+    }
+}
+
+function addToTagIndex(tag: string, file: { filePath: string; title: string }) {
+    const list = tagIndexForProvider.get(tag) || [];
+    if (!list.some(f => f.filePath === file.filePath)) {
+        list.push(file);
+        tagIndexForProvider.set(tag, list);
+    }
 }
 
 export function deactivate() {}

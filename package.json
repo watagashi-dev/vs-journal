@@ -17,8 +17,6 @@
     "tagging",
     "howm-inspired"
   ],
-  "activationEvents": [
-  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
@@ -64,6 +62,12 @@
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "vsJournalTags",
+        "contents": "%view.vsJournal.tags.empty%"
+      }
+    ],
     "menus": {
       "view/title": [
         {
@@ -83,7 +87,7 @@
         },
         {
           "command": "vs-journal.previewEntry",
-          "when": "view.vsJournalTags.visible" 
+          "when": "view.vsJournalTags.visible"
         },
         {
           "command": "vs-journal.selectJournalDir"
@@ -91,15 +95,15 @@
       ]
     },
     "keybindings": [
-    {
-      "command": "vs-journal.newEntry",
-      "key": "ctrl+k ctrl+n"
-    },
-    {
-      "command": "vsJournalTags.focus",
-      "key": "ctrl+k ctrl+j"
-    }
-  ]
+      {
+        "command": "vs-journal.newEntry",
+        "key": "ctrl+k ctrl+n"
+      },
+      {
+        "command": "vsJournalTags.focus",
+        "key": "ctrl+k ctrl+j"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
