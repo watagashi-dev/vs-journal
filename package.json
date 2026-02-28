@@ -49,7 +49,7 @@
       "activitybar": [
         {
           "id": "vsJournal",
-          "title": "Journal",
+          "title": "vsJournal",
           "icon": "resources/icon.svg"
         }
       ]
@@ -58,7 +58,7 @@
       "vsJournal": [
         {
           "id": "vsJournalTags",
-          "name": "Tags"
+          "name": "%tagsViewName%"
         }
       ]
     },

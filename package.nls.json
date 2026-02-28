@@ -1,5 +1,6 @@
 {
   "extension.description": "A tag-based Markdown journaling tool for easy daily note-taking.",
   "config.journalDir.markdownDescription": "Directory where journal files are stored. [Click here to select a folder](command:vs-journal.selectJournalDir)",
-  "view.vsJournal.tags.empty": "No entries"
+  "view.vsJournal.tags.empty": "No entries",
+  "tagsViewName": "Tag View"
 }

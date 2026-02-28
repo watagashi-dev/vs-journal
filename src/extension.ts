@@ -13,6 +13,7 @@ import { measure } from './perf';
 let currentPanel: vscode.WebviewPanel | undefined;
 let currentDocument: vscode.TextDocument | undefined;
 let tagProvider: TagTreeProvider;
+let extensionContext: vscode.ExtensionContext;
 
 // 状態管理
 const fileMetaMap = new Map<string, FileMeta>();
@@ -99,6 +100,8 @@ function notifyProvider(scanning?: boolean) {
 
 export async function activate(context: vscode.ExtensionContext) {
     let fileWatcher: vscode.FileSystemWatcher | undefined;
+
+    extensionContext = context;
 
     // ステータスバー作成
     const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
@@ -198,16 +201,53 @@ export async function activate(context: vscode.ExtensionContext) {
             // updateSingleFile(fullPath); // 新規作成も差分更新
         }),
 
-        vscode.commands.registerCommand('vs-journal.previewEntry', async () => {
-            const editor = vscode.window.activeTextEditor;
-            if (!editor || !isJournalFile(editor.document)) { return; }
-            currentDocument = editor.document;
-            if (currentPanel) {
-                currentPanel.reveal(vscode.ViewColumn.Active);
+        vscode.commands.registerCommand('vs-journal.previewEntry', async (filePath?: string) => {
+            let document: vscode.TextDocument | undefined;
+
+            if (filePath) {
+                // ファイルパスが渡されていれば開く
+                document = await vscode.workspace.openTextDocument(filePath);
+            } else if (vscode.window.activeTextEditor && isJournalFile(vscode.window.activeTextEditor.document)) {
+                document = vscode.window.activeTextEditor.document;
             } else {
-                currentPanel = vscode.window.createWebviewPanel('vsJournalPreview', 'VS Journal Preview', vscode.ViewColumn.Active, { enableScripts: false });
-                currentPanel.onDidDispose(() => { currentPanel = undefined; currentDocument = undefined; });
+                return; // プレビューできる対象がない
             }
+
+            currentDocument = document;
+            const column = vscode.ViewColumn.Active;
+
+            if (currentPanel) {
+                const isActive =
+                    currentPanel.visible && currentPanel.active;
+                    
+                // すでに前面にあるなら何もしない
+                if (!isActive) {
+                    currentPanel.reveal(column, false);
+                }
+            } else {
+                currentPanel = vscode.window.createWebviewPanel(
+                    'vsJournalPreview',
+                    'VS Journal Preview',
+                    column,
+                    {
+                        enableScripts: true,
+                        retainContextWhenHidden: true
+                    }
+                );
+                currentPanel.onDidDispose(() => {
+                    currentPanel = undefined;
+                    currentDocument = undefined;
+                });
+
+                // --- WebView からのメッセージ受信 ---
+                currentPanel.webview.onDidReceiveMessage(message => {
+                    if (message.command === 'edit' && currentDocument) {
+                        vscode.window.showTextDocument(currentDocument);
+                    }
+                });
+                currentPanel.reveal(column, true);
+            }
+
             await measure("preview generation", async () => {
                 updatePreview();
             });
@@ -258,16 +298,24 @@ function updatePreview() {
     try {
         const htmlContent = marked.parse(currentDocument?.getText() || "");
         // WebViewにCSSを読み込む
-        const cssPath = vscode.Uri.file(path.join(__dirname, '..', 'resources', 'webview.css'));
+        const cssPath = vscode.Uri.file(
+            path.join(extensionContext.extensionPath, 'resources', 'webview.css'));
         const cssUri = currentPanel.webview.asWebviewUri(cssPath);
         currentPanel.webview.html = `
             <!DOCTYPE html>
             <html>
             <head>
+                <meta charset="UTF-8">
                 <link rel="stylesheet" type="text/css" href="${cssUri}">
             </head>
             <body>
                 ${htmlContent}
+                <script>
+                    const vscode = acquireVsCodeApi();
+                    document.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') vscode.postMessage({ command: 'edit' });
+                    });
+                </script>
             </body>
             </html>
         `;

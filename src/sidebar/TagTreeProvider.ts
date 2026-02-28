@@ -86,9 +86,9 @@ export class TagTreeProvider implements vscode.TreeDataProvider<TreeItem> {
         const fileNodes = files.map(f => {
             const item = new TreeItem(f.title, vscode.TreeItemCollapsibleState.None, 'file');
             item.command = {
-                command: 'vscode.open',
-                title: 'Open File',
-                arguments: [vscode.Uri.file(f.filePath)]
+                command: 'vs-journal.previewEntry',
+                title: 'Preview Entry',
+                arguments: [f.filePath] // ファイルパスを渡す
             };
             item.tooltip = f.filePath;
             return item;
