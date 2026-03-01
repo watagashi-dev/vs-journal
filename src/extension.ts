@@ -30,11 +30,14 @@ function getJournalDir(): string {
     return config.get<string>('journalDir') ?? path.join(os.homedir(), 'vsJournal');
 }
 
-function getAbsoluteJournalDir(journalDir: string): string | undefined {
+export function getAbsoluteJournalDir(
+  journalDir: string,
+  workspaceRoot?: string
+): string | undefined {
     if (path.isAbsolute(journalDir)) {
         return journalDir;
     }
-    const root = getWorkspaceRoot();
+    const root = workspaceRoot ?? getWorkspaceRoot();
     return root ? path.join(root, journalDir) : undefined;
 }
 
@@ -342,24 +345,38 @@ function updatePreview() {
     }
 }
 
-function isJournalFile(document: vscode.TextDocument): boolean {
-    const absJournalDir = getAbsoluteJournalDir(getJournalDir());
-    if (!absJournalDir) { return false; }
-    const rel = path.relative(absJournalDir, document.uri.fsPath);
+// extension.ts
+export function isJournalFile(
+    document: vscode.TextDocument,
+    absJournalDir?: string // テスト用に注入可能
+): boolean {
+    const journalDir = absJournalDir ?? getAbsoluteJournalDir(getJournalDir());
+    if (!journalDir) { return false; }
+    const rel = path.relative(journalDir, document.uri.fsPath);
     return !rel.startsWith('..') && !path.isAbsolute(rel) && document.uri.fsPath.toLowerCase().endsWith('.md');
 }
 
-function addToUntagged(file: { filePath: string; title: string }) {
-    if (!untaggedFiles.some(f => f.filePath === file.filePath)) {
-        untaggedFiles.push(file);
+
+export function addToUntagged(
+    file: { filePath: string; title: string },
+    arr?: { filePath: string; title: string }[]
+) {
+    const targetArr = arr ?? untaggedFiles;
+    if (!targetArr.some(f => f.filePath === file.filePath)) {
+        targetArr.push(file);
     }
 }
 
-function addToTagIndex(tag: string, file: { filePath: string; title: string }) {
-    const list = tagIndexForProvider.get(tag) || [];
+export function addToTagIndex(
+    tag: string,
+    file: { filePath: string; title: string },
+    map?: Map<string, any[]>
+) {
+    const targetMap = map ?? tagIndexForProvider;
+    const list = targetMap.get(tag) || [];
     if (!list.some(f => f.filePath === file.filePath)) {
         list.push(file);
-        tagIndexForProvider.set(tag, list);
+        targetMap.set(tag, list);
     }
 }
 
