@@ -1,5 +1,6 @@
 // src/sidebar/TagTreeProvider.ts
 import * as vscode from 'vscode';
+import { TagHierarchyNode } from '../services/TagHierarchyBuilder';
 
 export interface FileInfo {
     filePath: string;
@@ -7,34 +8,49 @@ export interface FileInfo {
 }
 
 export class TagTreeProvider implements vscode.TreeDataProvider<TreeItem> {
-    private _onDidChangeTreeData: vscode.EventEmitter<TreeItem | undefined | void> = new vscode.EventEmitter<TreeItem | undefined | void>();
-    readonly onDidChangeTreeData: vscode.Event<TreeItem | undefined | void> = this._onDidChangeTreeData.event;
+    private _onDidChangeTreeData: vscode.EventEmitter<TreeItem | undefined | void> =
+        new vscode.EventEmitter<TreeItem | undefined | void>();
+    readonly onDidChangeTreeData: vscode.Event<TreeItem | undefined | void> =
+        this._onDidChangeTreeData.event;
 
     private isScanning: boolean = false;
+    private nodes: TagHierarchyNode[] = [];
 
-    constructor(
-        private tags: string[],
-        private untaggedFiles: FileInfo[],
-        private tagIndex: Map<string, FileInfo[]>
-    ) {}
+    constructor(initialNodes: TagHierarchyNode[] = []) {
+        this.nodes = initialNodes;
+    }
+
+    private nodeToTreeItem(node: TagHierarchyNode): TreeItem {
+        const item = new TreeItem(
+            node.name,
+            node.children.size > 0 || node.files.length > 0
+                ? vscode.TreeItemCollapsibleState.Collapsed
+                : vscode.TreeItemCollapsibleState.None,
+            node.contextValue,
+            node // node情報を保持
+        );
+
+        // ファイルがある場合、最初のファイルだけコマンドに設定
+        if (node.files.length > 0) {
+            item.command = {
+                command: 'vs-journal.previewEntry',
+                title: 'Preview Entry',
+                arguments: [node.files[0].filePath]
+            };
+            item.tooltip = node.files.map(f => f.title).join('\n');
+        }
+
+        return item;
+    }
 
     /**
      * データ更新
      */
-    refresh(tags?: string[], untaggedFiles?: FileInfo[], tagIndex?: Map<string, FileInfo[]>, scanning?: boolean) {
-        if (tags) {
-            this.tags = tags;
-        }
-        if (untaggedFiles) {
-            this.untaggedFiles = untaggedFiles;
-        }
-        if (tagIndex) {
-            this.tagIndex = tagIndex;
-        }
+    refresh(nodes: TagHierarchyNode[], scanning?: boolean) {
+        this.nodes = nodes;
         if (scanning !== undefined) {
             this.isScanning = scanning;
         }
-
         this._onDidChangeTreeData.fire();
     }
 
@@ -43,64 +59,51 @@ export class TagTreeProvider implements vscode.TreeDataProvider<TreeItem> {
     }
 
     getChildren(element?: TreeItem): Thenable<TreeItem[]> {
-        // ルート要素
+        // スキャン中はスピナー表示
+        if (this.isScanning) {
+            const spinner = new TreeItem('Scanning...', vscode.TreeItemCollapsibleState.None);
+            spinner.iconPath = new vscode.ThemeIcon('sync~spin');
+            return Promise.resolve([spinner]);
+        }
+
+        // ルートレベル
         if (!element) {
-            if (this.isScanning) {
-                const spinner = new TreeItem('Scanning...', vscode.TreeItemCollapsibleState.None);
-                spinner.iconPath = new vscode.ThemeIcon('sync~spin'); // 標準回転アイコン
-                return Promise.resolve([spinner]);
-            }
-
-            const tagNodes = this.tags
-                .sort()
-                .map(tag => {
-                    const item = new TreeItem(
-                        tag,
-                        vscode.TreeItemCollapsibleState.Collapsed,
-                        'tag'
-                    );
-                    return item;
-                }); 
-
-            if (this.untaggedFiles.length > 0) {
-                tagNodes.push(new TreeItem('Untagged', vscode.TreeItemCollapsibleState.Collapsed, 'untagged'));
-            }
-
-            if (tagNodes.length === 0) {
+            if (this.nodes.length === 0) {
                 const emptyNode = new TreeItem('No entries', vscode.TreeItemCollapsibleState.None);
                 emptyNode.iconPath = new vscode.ThemeIcon('info');
                 return Promise.resolve([emptyNode]);
             }
-
-            return Promise.resolve(tagNodes);
+            return Promise.resolve(this.nodes.map(n => this.nodeToTreeItem(n)));
         }
 
-        // 子要素（ファイル一覧）
-        let files: FileInfo[] = [];
-        if (element.contextValue === 'untagged') {
-            files = this.untaggedFiles;
-        } else if (element.contextValue === 'tag') {
-            files = this.tagIndex.get(element.label as string) || [];
+        // 子ノード
+        const node = element.node!;
+        const children: TreeItem[] = [];
+
+        // タグの子ノードを TreeItem に変換
+        for (const child of node.children.values()) {
+            children.push(this.nodeToTreeItem(child));
         }
 
-        const fileNodes = files.map(f => {
-            const item = new TreeItem(f.title, vscode.TreeItemCollapsibleState.None, 'file');
+        // ファイルノード
+        for (const file of node.files) {
+            const item = new TreeItem(file.title, vscode.TreeItemCollapsibleState.None, 'file');
             item.command = {
                 command: 'vs-journal.previewEntry',
                 title: 'Preview Entry',
-                arguments: [f.filePath] // ファイルパスを渡す
+                arguments: [file.filePath]
             };
-            item.tooltip = f.filePath;
-            return item;
-        });
-
-        if (fileNodes.length === 0) {
-            const emptyChild = new TreeItem('No files', vscode.TreeItemCollapsibleState.None);
-            emptyChild.iconPath = new vscode.ThemeIcon('info');
-            return Promise.resolve([emptyChild]);
+            item.tooltip = file.filePath;
+            children.push(item);
         }
 
-        return Promise.resolve(fileNodes);
+        if (children.length === 0) {
+            const emptyChild = new TreeItem('No files', vscode.TreeItemCollapsibleState.None);
+            emptyChild.iconPath = new vscode.ThemeIcon('info');
+            children.push(emptyChild);
+        }
+
+        return Promise.resolve(children);
     }
 }
 
@@ -108,7 +111,8 @@ export class TreeItem extends vscode.TreeItem {
     constructor(
         public readonly label: string,
         public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-        public readonly contextValue?: string
+        public readonly contextValue?: string,
+        public readonly node?: TagHierarchyNode // ←ここに node を保持
     ) {
         super(label, collapsibleState);
     }

@@ -6,6 +6,7 @@ import { marked } from 'marked';
 import { formatDate } from './utils/date';
 import { getWorkspaceRoot } from './utils/workspace';
 import { TagTreeProvider } from './sidebar/TagTreeProvider';
+import { TagHierarchyBuilder, TagHierarchyNode } from './services/TagHierarchyBuilder';
 import { createFileMeta } from './services/fileMetaService';
 import { FileMeta } from './models/FileMeta';
 import { measure } from './perf';
@@ -94,8 +95,14 @@ function updateSingleFile(filePath: string) {
 }
 
 function notifyProvider(scanning?: boolean) {
-    const allTags = Array.from(tagIndexForProvider.keys()).sort();
-    tagProvider.refresh(allTags, untaggedFiles, tagIndexForProvider, scanning);
+    // TagHierarchyBuilder インスタンスを作成
+    const hierarchyBuilder = new TagHierarchyBuilder();
+
+    // 既存のタグデータをもとに階層ノードを生成
+    const nodes: TagHierarchyNode[] = hierarchyBuilder.build(tagIndexForProvider, untaggedFiles);
+
+    // TreeProvider に渡す
+    tagProvider.refresh(nodes, scanning);
 }
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -140,19 +147,29 @@ export async function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(fileWatcher);
     };
 
-    tagProvider = new TagTreeProvider([], [], new Map());
+    tagProvider = new TagTreeProvider([]);
     vscode.window.createTreeView('vsJournalTags', {
         treeDataProvider: tagProvider,
         showCollapseAll: true,
     });
 
     const performScan = async (message: string) => {
-        tagProvider.refresh([], [], new Map(), true); // Treeにスピナー表示
+        // スピナー用ノードを作る
+        const spinnerNode: TagHierarchyNode = {
+            name: 'Scanning...',
+            children: new Map(),
+            files: [],
+            contextValue: undefined // contextValue は不要
+        };
+        tagProvider.refresh([spinnerNode], true); // Treeにスピナー表示
         await refreshAllData();
 
         await new Promise(r => setTimeout(r, 10000)); // 3秒待つ
 
-        tagProvider.refresh(Array.from(tagIndexForProvider.keys()).sort(), untaggedFiles, tagIndexForProvider, false);
+        // タグ階層ノードを作成
+        const hierarchyBuilder = new TagHierarchyBuilder();
+        const nodes: TagHierarchyNode[] = hierarchyBuilder.build(tagIndexForProvider, untaggedFiles);
+        tagProvider.refresh(nodes, false);
         updateStatusBar();
     };
 
