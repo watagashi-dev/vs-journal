@@ -22,16 +22,16 @@
     "commands": [
       {
         "command": "vs-journal.newEntry",
-        "title": "VS Journal: New Entry",
+        "title": "%command.newEntry%",
         "icon": "$(add)"
       },
       {
         "command": "vs-journal.previewEntry",
-        "title": "VS Journal: Preview Entry"
+        "title": "%command.previewEntry%"
       },
       {
         "command": "vs-journal.selectJournalDir",
-        "title": "VS Journal: Select Journal Directory",
+        "title": "%command.selectJournalDir%",
         "icon": "$(gear)"
       }
     ],

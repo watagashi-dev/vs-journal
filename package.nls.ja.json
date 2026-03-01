@@ -5,5 +5,8 @@
   "vsJournal.configuration.autoSaveMarkdown": "自動保存を有効にする場合、指定した時間（ms）後に保存されます。0 に設定すると無効になります。",
   "config.journalDir.markdownDescription": "ジャーナルファイルの保存先ディレクトリ [ここをクリックしてフォルダを選択](command:vs-journal.selectJournalDir)",
   "view.vsJournal.tags.empty": "エントリーがありません",
-  "tagsViewName": "タグビュー"
+  "tagsViewName": "タグビュー",
+  "command.newEntry": "VS Journal: 新規メモ作成",
+  "command.previewEntry": "VS Journal: メモプレビュー",
+  "command.selectJournalDir": "VS Journal: ジャーナルフォルダ選択"
 }

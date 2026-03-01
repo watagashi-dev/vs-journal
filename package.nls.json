@@ -5,5 +5,8 @@
   "vsJournal.configuration.autoSaveMarkdown": "If enabled, the document will be saved automatically after the specified delay (ms).",
   "config.journalDir.markdownDescription": "Directory where journal files are stored. [Click here to select a folder](command:vs-journal.selectJournalDir)",
   "view.vsJournal.tags.empty": "No entries",
-  "tagsViewName": "Tag View"
+  "tagsViewName": "Tag View",
+  "command.newEntry": "VS Journal: New Entry",
+  "command.previewEntry": "VS Journal: Preview Entry",
+  "command.selectJournalDir": "VS Journal: Select Journal Directory"
 }
