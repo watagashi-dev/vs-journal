@@ -37,11 +37,18 @@
     ],
     "configuration": {
       "type": "object",
-      "title": "VS Journal",
+      "title": "%vsJournal.configuration.title%",
       "properties": {
         "vsJournal.journalDir": {
           "type": "string",
-          "markdownDescription": "Directory to store journal files. [Select Directory](command:vs-journal.selectJournalDir)"
+          "markdownDescription": "%config.journalDir.markdownDescription%"
+        },
+        "vsJournal.autoSave": {
+          "type": "number",
+          "default": 800,
+          "minimum": 0,
+          "description": "%vsJournal.configuration.autoSave%",
+          "markdownDescription": "%vsJournal.configuration.autoSaveMarkdown%"
         }
       }
     },

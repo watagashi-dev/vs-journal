@@ -1,5 +1,8 @@
 {
   "extension.description": "タグで整理する、快適なMarkdownジャーナル作成支援ツール",
+  "vsJournal.configuration.title": "VS Journal",
+  "vsJournal.configuration.autoSave": "自動保存の待機時間（ミリ秒）です。0 にすると自動保存を無効化します。",
+  "vsJournal.configuration.autoSaveMarkdown": "自動保存を有効にする場合、指定した時間（ms）後に保存されます。0 に設定すると無効になります。",
   "config.journalDir.markdownDescription": "ジャーナルファイルの保存先ディレクトリ [ここをクリックしてフォルダを選択](command:vs-journal.selectJournalDir)",
   "view.vsJournal.tags.empty": "エントリーがありません",
   "tagsViewName": "タグビュー"

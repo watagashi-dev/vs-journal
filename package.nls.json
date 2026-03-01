@@ -1,5 +1,8 @@
 {
   "extension.description": "A tag-based Markdown journaling tool for easy daily note-taking.",
+  "vsJournal.configuration.title": "VS Journal",
+  "vsJournal.configuration.autoSave": "Delay for auto-save in milliseconds. Set 0 to disable.",
+  "vsJournal.configuration.autoSaveMarkdown": "If enabled, the document will be saved automatically after the specified delay (ms).",
   "config.journalDir.markdownDescription": "Directory where journal files are stored. [Click here to select a folder](command:vs-journal.selectJournalDir)",
   "view.vsJournal.tags.empty": "No entries",
   "tagsViewName": "Tag View"
