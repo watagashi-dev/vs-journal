@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { FileMeta } from '../models/FileMeta';
 
-const TAG_REGEX_GLOBAL = /#([0-9a-zA-Z\-\/_]+)/g;
+const TAG_REGEX_GLOBAL = /#([\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}0-9a-zA-Z\-\/_]+)/gu;
 
 export function createFileMeta(filePath: string): FileMeta {
   const content = fs.readFileSync(filePath, 'utf-8');
