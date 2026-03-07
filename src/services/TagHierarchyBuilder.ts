@@ -1,4 +1,5 @@
 // TagHierarchyBuilder.ts
+import * as vscode from 'vscode';
 import { FileInfo } from "../sidebar/TagTreeProvider";
 
 export interface TagHierarchyNode {
@@ -49,7 +50,7 @@ export class TagHierarchyBuilder {
         // 未タグファイルは Utagged ノードに
         if (untagged.length > 0) {
             const untaggedNode: TagHierarchyNode = {
-                name: 'Untagged',
+                name: vscode.l10n.t("Untagged"),
                 children: new Map(),
                 files: untagged,
                 contextValue: 'untagged'

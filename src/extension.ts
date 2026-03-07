@@ -106,7 +106,10 @@ function notifyProvider(scanning?: boolean) {
 
 export async function activate(context: vscode.ExtensionContext) {
     let fileWatcher: vscode.FileSystemWatcher | undefined;
-
+//    await l10n.config({
+//        fsPath: context.asAbsolutePath('./l10n/bundle.l10n.json')
+////        uri: new URL('../l10n/bundle.l10n.json', import.meta.url)
+//    });
     extensionContext = context;
 
     // ステータスバー作成
@@ -152,7 +155,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     const performScan = async (message: string) => {
         const spinnerNode: TagHierarchyNode = {
-            name: 'Scanning...',
+            name: '',
             children: new Map(),
             files: [],
             contextValue: undefined

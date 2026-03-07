@@ -61,7 +61,9 @@ export class TagTreeProvider implements vscode.TreeDataProvider<TreeItem> {
     getChildren(element?: TreeItem): Thenable<TreeItem[]> {
         // スキャン中はスピナー表示
         if (this.isScanning) {
-            const spinner = new TreeItem('Scanning...', vscode.TreeItemCollapsibleState.None);
+            const spinner = new TreeItem(
+                vscode.l10n.t("Scanning tags..."),
+                vscode.TreeItemCollapsibleState.None);
             spinner.iconPath = new vscode.ThemeIcon('sync~spin');
             return Promise.resolve([spinner]);
         }
