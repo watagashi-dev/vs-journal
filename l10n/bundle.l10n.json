@@ -1,4 +1,6 @@
 {
   "Scanning tags...": "Scanning tags...",
-  "Untagged": "Untagged"
+  "Untagged": "Untagged",
+  "date {1}/{2}/{0}": "{1}/{2}/{0}",
+  "time {0}:{1}": "{0}:{1}"
 }

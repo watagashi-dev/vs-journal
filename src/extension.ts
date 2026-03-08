@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
 import { marked } from 'marked';
-import { formatDate } from './utils/date';
+import { formatFileNameDate, formatDateString, formatTimeString } from './utils/date';
 import { getWorkspaceRoot } from './utils/workspace';
 import { TagTreeProvider } from './sidebar/TagTreeProvider';
 import { TagHierarchyBuilder, TagHierarchyNode } from './services/TagHierarchyBuilder';
@@ -106,10 +106,6 @@ function notifyProvider(scanning?: boolean) {
 
 export async function activate(context: vscode.ExtensionContext) {
     let fileWatcher: vscode.FileSystemWatcher | undefined;
-//    await l10n.config({
-//        fsPath: context.asAbsolutePath('./l10n/bundle.l10n.json')
-////        uri: new URL('../l10n/bundle.l10n.json', import.meta.url)
-//    });
     extensionContext = context;
 
     // ステータスバー作成
@@ -213,14 +209,29 @@ export async function activate(context: vscode.ExtensionContext) {
             if (!fullDir) {
                 return;
             }
-            const filename = `${formatDate(new Date())}.md`;
+            const filename = `${formatFileNameDate(new Date())}.md`;
             const fullPath = path.join(fullDir, filename);
             fs.mkdirSync(fullDir, { recursive: true });
             if (!fs.existsSync(fullPath)) {
-                fs.writeFileSync(fullPath, `# ${filename}\n\n`);
+                const config = vscode.workspace.getConfiguration('vsJournal');
+                const enableDateTime = config.get<boolean>('enableDateTime') ?? true;
+
+                let content = '# \n';
+
+                if (enableDateTime) {
+                    const now = new Date();
+                    const dateTimeLine = `_${formatDateString(now)}\t${formatTimeString(now)}_\n\n`;
+                    content += dateTimeLine;
+                }
+                fs.writeFileSync(fullPath, content);
             }
             const doc = await vscode.workspace.openTextDocument(fullPath);
-            await vscode.window.showTextDocument(doc);
+            const editor = await vscode.window.showTextDocument(doc);
+
+            // カーソルを見出し1に戻す
+            const firstLine = doc.lineAt(0);
+            const position = new vscode.Position(0, 2); // "# " の後
+            editor.selection = new vscode.Selection(position, position);
         }),
         vscode.commands.registerCommand('vs-journal.previewEntry', async (filePath?: string) => {
             let document: vscode.TextDocument | undefined;

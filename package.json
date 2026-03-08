@@ -38,7 +38,7 @@
     ],
     "configuration": {
       "type": "object",
-      "title": "%vsJournal.configuration.title%",
+      "title": "%config.title%",
       "properties": {
         "vsJournal.journalDir": {
           "type": "string",
@@ -48,8 +48,14 @@
           "type": "number",
           "default": 800,
           "minimum": 0,
-          "description": "%vsJournal.configuration.autoSave%",
-          "markdownDescription": "%vsJournal.configuration.autoSaveMarkdown%"
+          "description": "%config.autoSave%",
+          "markdownDescription": "%config.autoSaveMarkdown%"
+        },
+        "vsJournal.enableDateTime": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.enableDateTime.description%",
+          "markdownDescription": "%config.enableDateTime.markdownDescription%"
         }
       }
     },
