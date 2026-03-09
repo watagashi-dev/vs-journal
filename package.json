@@ -111,11 +111,13 @@
     "keybindings": [
       {
         "command": "vs-journal.newEntry",
-        "key": "ctrl+k ctrl+n"
+        "key": "ctrl+alt+n",
+        "mac": "cmd+option+n"
       },
       {
         "command": "vsJournalTags.focus",
-        "key": "ctrl+k ctrl+j"
+        "key": "ctrl+alt+j",
+        "mac": "cmd+option+j"
       }
     ]
   },
