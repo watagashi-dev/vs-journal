@@ -220,7 +220,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
                 if (enableDateTime) {
                     const now = new Date();
-                    const dateTimeLine = `_${formatDateString(now)}\t${formatTimeString(now)}_\n\n`;
+                    const dateTimeLine = `\n_${formatDateString(now)}_ _${formatTimeString(now)}_\n\n`;
                     content += dateTimeLine;
                 }
                 fs.writeFileSync(fullPath, content);
@@ -259,16 +259,55 @@ export async function activate(context: vscode.ExtensionContext) {
                     column,
                     { enableScripts: true, retainContextWhenHidden: true }
                 );
+                currentPanel.reveal(column, true);
+
                 currentPanel.onDidDispose(() => {
                     currentPanel = undefined;
                     currentDocument = undefined;
                 });
-                currentPanel.webview.onDidReceiveMessage(message => {
-                    if (message.command === 'edit' && currentDocument) {
-                        vscode.window.showTextDocument(currentDocument);
+
+                vscode.commands.registerCommand('vs-journal.openExternal', async (url: string) => {
+                    try {
+                        await vscode.env.openExternal(vscode.Uri.parse(url));
+                    } catch (err) {
+                        console.error('Failed to open external URL:', url, err);
                     }
                 });
-                currentPanel.reveal(column, true);
+
+                currentPanel.webview.onDidReceiveMessage(async message => {
+                    // Webview からのメッセージ受信
+                    if (message.command === 'openExternal' && message.url) {
+                        vscode.commands.executeCommand('vs-journal.openExternal', message.url);
+                    }
+                    if (message.command === 'edit') {
+                        if (!currentDocument) {
+                            return;
+                        }
+                        const uri = currentDocument.uri;
+                        const alreadyOpened = vscode.workspace.textDocuments.some(
+                            d => d.uri.toString() === uri.toString()
+                        );
+
+                        const doc = await vscode.workspace.openTextDocument(uri);
+
+                        let selection: vscode.Range | undefined;
+
+                        if (message.line !== undefined) {
+                            // クリック
+                            const pos = new vscode.Position(message.line, 0);
+                            selection = new vscode.Range(pos, pos);
+                        } 
+                        else if (!alreadyOpened) {
+                            // 新規オープン → 先頭
+                            const pos = new vscode.Position(0, 0);
+                            selection = new vscode.Range(pos, pos);
+                        }
+
+                        await vscode.window.showTextDocument(doc, {
+                            selection
+                        });
+                    }
+                });
             }
 
             await measure("preview generation", async () => {
@@ -313,22 +352,72 @@ function updatePreview() {
     }
 
     try {
-        const htmlContent = marked.parse(currentDocument?.getText() || "");
+        const text = currentDocument?.getText() || "";
+        const tokens = marked.lexer(text);
+        let line = 0;
+
+        const htmlContent = tokens.map((token) => {
+            const startLine = line;
+            const html = marked.parser([token]);
+            const raw = token.raw || "";
+            const lineCount = raw.split("\n").length - 1;
+            line += lineCount;
+
+            return `<div class="vjs-line" data-line="${startLine}">${html}</div>`;
+        }).join("\n");
         const cssPath = vscode.Uri.file(path.join(extensionContext.extensionPath, 'resources/webview.css'));
         const cssUri = currentPanel.webview.asWebviewUri(cssPath);
+        const hintText = vscode.l10n.t("preview.editHint");
+
         currentPanel.webview.html = `
             <!DOCTYPE html>
             <html>
             <head>
                 <meta charset="UTF-8">
                 <link rel="stylesheet" type="text/css" href="${cssUri}">
+                <style>
+                    .edit-hint {
+                        position: sticky;
+                        top: 4px;
+                        right: 8px;
+                        font-size: 0.8em;
+                        color: rgba(0,0,0,0.5);
+                        pointer-events: none;
+                    }
+                </style>                
             </head>
             <body>
+                <div class="edit-hint">${hintText}</div>
                 ${htmlContent}
                 <script>
                     const vscode = acquireVsCodeApi();
                     document.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter') vscode.postMessage({ command: 'edit' });
+                        if (e.key === 'Enter' || e.key === 'Escape')
+                            vscode.postMessage({ command: 'edit' });
+                    });
+
+                    // クリックで編集
+                    document.body.addEventListener('click', (e) => {
+                        const target = e.target.closest('a');
+                        if (target) {
+                            const href = target.getAttribute('href');
+                            if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
+                                e.preventDefault();
+                                vscode.postMessage({ command: 'openExternal', url: href });
+                            }
+                            return; // リンクは編集に行かない
+                        }
+
+                        // div.vjs-line に対してクリック判定
+                        const lineDivs = document.querySelectorAll('div.vjs-line');
+                        for (const div of lineDivs) {
+                            const rect = div.getBoundingClientRect();
+                            if (e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                                const line = div.getAttribute('data-line');
+                                vscode.postMessage({ command: 'edit', line: line ? parseInt(line, 10) : null });
+                                break;
+                            }
+                        }
                     });
                 </script>
             </body>

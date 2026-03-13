@@ -31,14 +31,15 @@ export class TagTreeProvider implements vscode.TreeDataProvider<TreeItem> {
         );
 
         // ファイルがある場合、最初のファイルだけコマンドに設定
-        if (node.files.length > 0) {
-            item.command = {
-                command: 'vs-journal.previewEntry',
-                title: 'Preview Entry',
-                arguments: [node.files[0].filePath]
-            };
-            item.tooltip = node.files.map(f => f.title).join('\n');
-        }
+        // if (node.files.length > 0) {
+        //     item.command = {
+        //         command: 'vs-journal.previewEntry',
+        //         title: 'Preview Entry',
+        //         arguments: [node.files[0].filePath]
+        //     };
+        //     item.tooltip = node.files.map(f => f.title).join('\n');
+        // }
+        item.tooltip = node.files.map(f => f.title).join('\n');
 
         return item;
     }

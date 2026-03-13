@@ -2,5 +2,6 @@
   "Scanning tags...": "Scanning tags...",
   "Untagged": "Untagged",
   "date {1}/{2}/{0}": "{1}/{2}/{0}",
-  "time {0}:{1}": "{0}:{1}"
+  "time {0}:{1}": "{0}:{1}",
+  "preview.editHint": "Click or press Enter to edit"
 }
