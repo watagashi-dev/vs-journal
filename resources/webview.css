@@ -1,80 +1,212 @@
-/* resources/webview.css */
+/* =========================================================
+   VS Journal Webview CSS
+   Optimized for reading notes
+   ========================================================= */
 
-/* ベースレイアウト */
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    line-height: 1.6;
-    padding: 1rem;
-    color: #24292e;
-    background-color: #ffffff;
+  margin: 0 auto;
+  padding: 18px 22px;
+  max-width: 860px;
+
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Helvetica,
+    Arial,
+    sans-serif;
+
+  font-size: 14px;
+  line-height: 1.5;
+
+  color: var(--vscode-editor-foreground);
+  background-color: var(--vscode-editor-background);
+
+  text-rendering: optimizeLegibility;
 }
 
-/* 見出し */
+/* =========================================================
+   HEADINGS
+   ========================================================= */
+
 h1, h2, h3, h4, h5, h6 {
-    font-weight: 600;
-    margin-top: 1.2em;
-    margin-bottom: 0.6em;
+  font-weight: 600;
+  line-height: 1.25;
 }
 
-/* リスト */
+h1 {
+  font-size: 1.9em;
+  margin-top: 26px;
+  margin-bottom: 12px;
+
+  border-bottom: 1px solid var(--vscode-editorWidget-border);
+  padding-bottom: 4px;
+}
+
+h2 {
+  font-size: 1.55em;
+  margin-top: 24px;
+  margin-bottom: 10px;
+}
+
+h3 {
+  font-size: 1.32em;
+  margin-top: 20px;
+  margin-bottom: 8px;
+}
+
+h4 {
+  font-size: 1.15em;
+  margin-top: 16px;
+  margin-bottom: 6px;
+}
+
+h5 {
+  font-size: 1.05em;
+  margin-top: 14px;
+  margin-bottom: 4px;
+}
+
+h6 {
+  font-size: 0.95em;
+  margin-top: 12px;
+  margin-bottom: 4px;
+}
+
+/* =========================================================
+   PARAGRAPH
+   ========================================================= */
+
+p {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+/* =========================================================
+   LISTS
+   ========================================================= */
+
 ul, ol {
-    padding-left: 2rem;
-    margin: 0.5em 0;
+  margin-top: 4px;
+  margin-bottom: 10px;
+  padding-left: 24px;
 }
 
-/* コードブロック */
-pre {
-    background-color: #f6f8fa;
-    border-radius: 6px;
-    padding: 0.8em;
-    overflow: auto;
+li {
+  margin-bottom: 3px;
 }
+
+/* task list */
+
+input[type="checkbox"] {
+  margin-right: 6px;
+}
+
+/* =========================================================
+   BLOCKQUOTE
+   ========================================================= */
+
+blockquote {
+  margin: 10px 0;
+  padding: 6px 12px;
+
+  border-left: 4px solid var(--vscode-editorWidget-border);
+
+  color: var(--vscode-descriptionForeground);
+}
+
+/* =========================================================
+   CODE
+   ========================================================= */
 
 code {
-    font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
-    background-color: #f6f8fa;
-    border-radius: 3px;
-    padding: 0.2em 0.4em;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 13px;
+
+  background-color: var(--vscode-textBlockQuote-background);
+
+  padding: 2px 5px;
+  border-radius: 4px;
 }
 
-/* 強調 */
-strong {
-    font-weight: 600;
+pre {
+  margin: 12px 0;
+  padding: 12px;
+
+  overflow-x: auto;
+
+  border-radius: 6px;
+
+  background-color: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-editorWidget-border);
 }
 
-em {
-    font-style: italic;
+pre code {
+  padding: 0;
+  background: none;
 }
 
-/* リンク */
+/* =========================================================
+   LINKS
+   ========================================================= */
+
 a {
-    color: #0366d6;
-    text-decoration: none;
+  color: var(--vscode-textLink-foreground);
+  text-decoration: none;
 }
 
 a:hover {
-    text-decoration: underline;
+  text-decoration: underline;
 }
 
-/* 水平線 */
-hr {
-    border: none;
-    border-top: 1px solid #d0d7de;
-    margin: 1.5em 0;
-}
+/* =========================================================
+   TABLES
+   ========================================================= */
 
-/* 表 */
 table {
-    border-collapse: collapse;
-    margin: 1em 0;
+  border-collapse: collapse;
+  margin: 14px 0;
 }
 
 th, td {
-    border: 1px solid #d0d7de;
-    padding: 0.5em 1em;
+  border: 1px solid var(--vscode-editorWidget-border);
+  padding: 6px 10px;
 }
 
 th {
-    background-color: #f6f8fa;
-    font-weight: 600;
+  font-weight: 600;
+}
+
+/* =========================================================
+   HORIZONTAL RULE
+   ========================================================= */
+
+hr {
+  border: none;
+  border-top: 1px solid var(--vscode-editorWidget-border);
+  margin: 24px 0;
+}
+
+/* =========================================================
+   IMAGES
+   ========================================================= */
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* =========================================================
+   FIRST ELEMENT ADJUSTMENT
+   ========================================================= */
+
+body > *:first-child {
+  margin-top: 0;
+}
+
+.edit-hint {
+  color: var(--vscode-descriptionForeground);
+  font-size: 0.9em;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
 }

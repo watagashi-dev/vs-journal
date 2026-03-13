@@ -375,16 +375,6 @@ function updatePreview() {
             <head>
                 <meta charset="UTF-8">
                 <link rel="stylesheet" type="text/css" href="${cssUri}">
-                <style>
-                    .edit-hint {
-                        position: sticky;
-                        top: 4px;
-                        right: 8px;
-                        font-size: 0.8em;
-                        color: rgba(0,0,0,0.5);
-                        pointer-events: none;
-                    }
-                </style>                
             </head>
             <body>
                 <div class="edit-hint">${hintText}</div>
