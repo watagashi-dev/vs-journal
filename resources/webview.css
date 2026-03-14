@@ -38,9 +38,6 @@ h1 {
   font-size: 1.9em;
   margin-top: 26px;
   margin-bottom: 12px;
-
-  border-bottom: 1px solid var(--vscode-editorWidget-border);
-  padding-bottom: 4px;
 }
 
 h2 {
@@ -208,5 +205,6 @@ body > *:first-child {
   color: var(--vscode-descriptionForeground);
   font-size: 0.9em;
   margin-bottom: 12px;
+  border-bottom: 1px solid var(--vscode-editorWidget-border);
   padding-bottom: 6px;
 }

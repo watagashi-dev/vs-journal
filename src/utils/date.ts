@@ -19,9 +19,8 @@ export function formatDateString(date: Date): string {
     const month = pad(date.getMonth() + 1);
     const day = pad(date.getDate());
 
-    console.log(vscode.l10n.t('date {1}/{2}/{0}', year, month, day));
     // フォールバックは英語形
-    return vscode.l10n.t('date {1}/{2}/{0}', year, month, day);
+    return vscode.l10n.t('{month}/{day}/{year}', {year: year, month: month, day: day});
 }
 
 /**
@@ -33,5 +32,5 @@ export function formatTimeString(date: Date): string {
     const hour = pad(date.getHours());
     const minute = pad(date.getMinutes());
 
-    return vscode.l10n.t('time {0}:{1}', hour, minute);
+    return vscode.l10n.t('{hour}:{minute}', {hour: hour, minute: minute});
 }

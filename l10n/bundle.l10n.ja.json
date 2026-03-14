@@ -1,7 +1,7 @@
 {
   "Scanning tags...": "タグをスキャン中...",
   "Untagged": "タグ無",
-  "date {1}/{2}/{0}": "{0}年{1}月{2}日",
-  "time {0}:{1}": "{0}:{1}",
-  "preview.editHint": "クリックまたはEnterで編集"
+  "{month}/{day}/{year}": "{year}年{month}月{day}日",
+  "{hour}:{minute}": "{hour}:{minute}",
+  "Click or press Enter to edit": "クリックまたはEnterで編集"
 }
