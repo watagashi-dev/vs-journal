@@ -126,10 +126,10 @@ export async function activate(context: vscode.ExtensionContext) {
     // --- ファイルウォッチャー ---
     let fileWatcher: vscode.FileSystemWatcher | undefined;
     const setupWatcher = () => {
-        if (fileWatcher) fileWatcher.dispose();
+        if (fileWatcher) {fileWatcher.dispose();}
 
         const absDir = getAbsoluteJournalDir(getJournalDir());
-        if (!absDir) return;
+        if (!absDir) {return;}
 
         const pattern = new vscode.RelativePattern(absDir, '**/*.md');
         fileWatcher = vscode.workspace.createFileSystemWatcher(pattern);
@@ -160,7 +160,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
         vscode.commands.registerCommand('vs-journal.newEntry', async () => {
             const fullDir = getAbsoluteJournalDir(getJournalDir());
-            if (!fullDir) return;
+            if (!fullDir) {return;}
 
             const filename = `${formatFileNameDate(new Date())}.md`;
             const fullPath = path.join(fullDir, filename);
@@ -185,10 +185,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
         vscode.commands.registerCommand('vs-journal.previewEntry', async (filePath?: string) => {
             let document: vscode.TextDocument | undefined;
-            if (filePath) document = await vscode.workspace.openTextDocument(filePath);
+            if (filePath) {document = await vscode.workspace.openTextDocument(filePath);}
             else if (vscode.window.activeTextEditor && isJournalFile(vscode.window.activeTextEditor.document)) {
                 document = vscode.window.activeTextEditor.document;
-            } else return;
+            } else {return;}
 
             currentDocument = document;
             const column = vscode.ViewColumn.Active;
@@ -248,9 +248,9 @@ export async function activate(context: vscode.ExtensionContext) {
             { scheme: 'file', language: 'markdown' },
             {
                 provideCompletionItems(document, position) {
-                    if (!isJournalFile(document)) return undefined;
+                    if (!isJournalFile(document)) {return undefined;}
                     const linePrefix = document.lineAt(position).text.substr(0, position.character);
-                    if (!linePrefix.startsWith('#')) return undefined;
+                    if (!linePrefix.startsWith('#')) {return undefined;}
 
                     return Array.from(tagIndexForProvider.keys())
                         .map(tag => new vscode.CompletionItem(tag, vscode.CompletionItemKind.Keyword));
@@ -277,7 +277,7 @@ export async function activate(context: vscode.ExtensionContext) {
     // --- 保存/変更イベント ---
     context.subscriptions.push(
         vscode.workspace.onDidSaveTextDocument(document => {
-            if (!isJournalFile(document)) return;
+            if (!isJournalFile(document)) {return;}
             updateSingleFile(document.uri.fsPath);
 
             if (currentPanel?.visible && currentDocument?.uri.toString() === document.uri.toString()) {
@@ -285,7 +285,7 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         }),
         vscode.workspace.onDidChangeTextDocument(event => {
-            if (!isJournalFile(event.document)) return;
+            if (!isJournalFile(event.document)) {return;}
             scheduleAutoSave(event.document);
         })
     );
