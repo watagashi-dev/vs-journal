@@ -1,16 +1,18 @@
 // src/extension.ts
 import * as vscode from 'vscode';
-import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
+import * as path from 'path';
+
 import { marked } from 'marked';
-import { formatFileNameDate, formatDateString, formatTimeString } from './utils/date';
-import { getWorkspaceRoot } from './utils/workspace';
-import { TagTreeProvider } from './sidebar/TagTreeProvider';
-import { TagHierarchyBuilder, TagHierarchyNode } from './services/TagHierarchyBuilder';
-import { createFileMeta } from './services/fileMetaService';
+
 import { FileMeta } from './models/FileMeta';
 import { measure } from './perf';
+import { TagHierarchyBuilder, TagHierarchyNode } from './services/TagHierarchyBuilder';
+import { createFileMeta } from './services/fileMetaService';
+import { TagTreeProvider } from './sidebar/TagTreeProvider';
+import { formatFileNameDate, formatDateString, formatTimeString } from './utils/date';
+import { getWorkspaceRoot } from './utils/workspace';
 
 let currentPanel: vscode.WebviewPanel | undefined;
 let currentDocument: vscode.TextDocument | undefined;
@@ -264,18 +266,15 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(async event => {
             if (event.affectsConfiguration('vsJournal.journalDir')) {
-                await performScan('VS Journal: journalDir updated');
+                await performScan();
                 setupWatcher();
             }
             if (event.affectsConfiguration('vsJournal.autoSave')) {
                 autoSaveTimers.forEach(timer => clearTimeout(timer));
                 autoSaveTimers.clear();
             }
-        })
-    );
+        }),
 
-    // --- 保存/変更イベント ---
-    context.subscriptions.push(
         vscode.workspace.onDidSaveTextDocument(document => {
             if (!isJournalFile(document)) {return;}
             updateSingleFile(document.uri.fsPath);
@@ -291,7 +290,7 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     // --- 初期スキャン ---
-    const performScan = async (message: string) => {
+    const performScan = async () => {
         const spinnerNode: TagHierarchyNode = { name: '', children: new Map(), files: [], contextValue: undefined };
         tagProvider.refresh([spinnerNode], true);
         await refreshAllData();
@@ -302,7 +301,7 @@ export async function activate(context: vscode.ExtensionContext) {
         updateStatusBar();
     };
 
-    await performScan('VS Journal: scanning...');
+    await performScan();
     setupWatcher();
     updateStatusBar();
 }
@@ -377,7 +376,7 @@ function updatePreview() {
             </html>
         `;
     } catch (e) {
-        console.log("Preview update skipped (panel might be busy)");
+        // console.log("Preview update skipped (panel might be busy)");
     }
 }
 
