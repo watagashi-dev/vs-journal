@@ -1,71 +1,214 @@
-# vs-journal README
+# VS Journal
 
-This is the README for your extension "vs-journal". After writing up a brief description, we recommend including the following sections.
+VS Journal is a lightweight journaling extension for Visual Studio Code, designed for quickly capturing daily work notes.
 
-## Features
+It allows you to organize Markdown-based notes with hashtags, letting you keep a seamless work log without ever leaving your editor.
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
-
-For example if there is an image subfolder under your extension project workspace:
-
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
-
-## Requirements
-
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
-
-## Extension Settings
-
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
-
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+GitHub: https://github.com/watagashi-dev/vs-journal
 
 ---
 
-## Following extension guidelines
+## Overview
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+VS Journal is designed for developers who use VS Code daily and want a frictionless way to keep work notes.
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+- **Fully Local**: All data is stored as local Markdown files.
+- **No Database Required**: Notes are managed on a simple file-based system.
+- **High Performance**: The lightweight design ensures it won't interrupt your workflow.
 
-## Working with Markdown
+---
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+## Installation
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+Install **VS Journal** from the VS Code Marketplace.
 
-## For more information
+1. Open the **Extensions** view (`Ctrl+Shift+X`)
+2. Search for **VS Journal**
+3. Click **Install**
 
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+Alternatively, install it directly from the marketplace:
 
-**Enjoy!**
+https://marketplace.visualstudio.com/
+
+---
+
+## Quick Start
+
+1. Open the **Command Palette** (`Ctrl+Shift+P` / `Cmd+Shift+P`)
+2. Run **VS Journal: New Entry**
+3. Start writing your notes in Markdown and organize them using hashtags.
+
+**Example:**
+```markdown
+# Work Notes — 2026-03-05
+
+_March 5, 2026_ _10:15_
+
+## Today's Work
+
+- Updated the README
+- Implemented tag support
+- Improved the UI
+
+#work #project/vs-journal
+```
+
+---
+## Screenshots
+
+### Editing an Entry
+
+Easily write notes in Markdown. Tag autocompletion is also supported.  
+![](images/screenshot-entry.png)
+
+### Markdown Preview
+
+Click a title in the tag tree to open the preview.
+In the preview, click anywhere or press `Enter` to switch back to the editor.  
+![](images/screenshot-preview.png)
+
+### Tag View
+
+Organize and browse your notes in a tree structure based on hashtags.  
+![](images/screenshot-tagtree.png)
+
+---
+
+## Features
+
+### 1. Lightweight by Design
+
+VS Journal is built to be fast. It doesn't require complex setups or heavy databases.
+
+### 2. Markdown-Based
+
+All notes are saved as standard `.md` files.
+- Leverage VS Code's powerful editing features.
+- Your data is portable, making backups or migrations to other tools easy.
+
+### 3. Hashtag-Based Organization
+
+Flexibly organize your content using hashtags.
+
+**Example:**
+```markdown
+#work
+#idea
+#project/vs-journal
+```
+
+**Hierarchical Tags:**
+Tags can be nested using a `/` separator (up to 4 levels deep).
+Example: `#project/dev/frontend`
+
+> **Note:** Hashtags are only recognized as tags when they appear on their own line or on a heading line. Hashtags within a sentence are ignored.
+
+### 4. Tag Autocompletion
+
+Existing tags are suggested as you type, helping you avoid typos and classify notes efficiently.
+
+### 5. Local File Storage
+
+By default, notes are saved in `$HOME/vsJournal`, but you can configure this to any folder you prefer.
+
+---
+
+## Usage
+
+### Creating a New Entry
+
+Run the following command from the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
+
+```plaintext
+VS Journal: New Entry
+```
+
+**Shortcut:**
+- Windows / Linux: `Ctrl+Alt+N`
+- macOS: `Cmd+Option+N`
+
+### Writing a Note
+
+Simply write your notes in Markdown. When creating a new file, the current date and time can be automatically inserted based on your settings.
+
+### Previewing a Note
+
+Click on a file in the tag tree to open a preview.
+- Click anywhere in the preview or press `Enter` to switch to edit mode.
+- Click an external link to open it in your browser.
+
+---
+
+## Commands
+
+| Command | Description |
+| :--- | :--- |
+| `VS Journal: New Entry` | Creates a new journal entry. |
+| `VS Journal: Preview Entry` | Previews the current entry. |
+| `VS Journal: Select Journal Directory` | Changes the folder where notes are saved. |
+
+---
+
+## Keyboard Shortcuts
+
+| Action | Windows / Linux | macOS |
+| :--- | :--- | :--- |
+| Create a new entry | `Ctrl+Alt+N` | `Cmd+Option+N` |
+| Focus on Tag View | `Ctrl+Alt+J` | `Cmd+Option+J` |
+
+---
+
+## Configuration
+
+You can customize the extension's behavior in your VS Code settings (`settings.json`).
+
+| ID | Description | Default |
+| :--- | :--- | :--- |
+| `vsJournal.journalDir` | The folder path where journal files are stored. | `$HOME/vsJournal` |
+| `vsJournal.autoSave` | The delay in milliseconds before auto-saving. Set to `0` to disable. | `800` |
+| `vsJournal.enableDateTime` | Whether to automatically insert the date and time into new files. | `true` |
+
+**Example `settings.json`:**
+```json
+{
+  "vsJournal.journalDir": "/Users/username/Dropbox/Journal",
+  "vsJournal.autoSave": 3000,
+  "vsJournal.enableDateTime": false
+}
+```
+
+---
+
+## Directory Structure
+
+Files are stored flatly in the specified directory without creating subfolders, simplifying file management.
+
+```text
+vsJournal/
+├── 2025-03-07.md
+├── 2025-03-08.md
+└── 2026-01-01.md
+```
+
+---
+
+## Philosophy
+
+This tool was created for those who want a simple, fast, and self-contained note-taking system that lives inside VS Code. The goal is to reduce context switching and manage notes across different topics (tags) and dates.
+
+The design is heavily inspired by **HOWM** (Hitori Otegaru Wiki Modoki) for Emacs.
+
+---
+
+## Roadmap
+
+- [ ] Add support for virtual tags
+- [ ] Concatenated preview for multiple files
+- [ ] Enhanced Markdown input assistance
+- [ ] Improved tree view for heading tags
+
+---
+
+## License
+
+MIT License
