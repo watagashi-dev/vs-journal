@@ -19,7 +19,7 @@ let currentDocument: vscode.TextDocument | undefined;
 let tagProvider: TagTreeProvider;
 let extensionContext: vscode.ExtensionContext;
 
-// 状態管理
+// State management
 const fileMetaMap = new Map<string, FileMeta>();
 const tagIndexForProvider = new Map<string, any[]>(); 
 let untaggedFiles: { filePath: string; title: string }[] = [];
@@ -109,7 +109,7 @@ function notifyProvider(scanning?: boolean) {
 export async function activate(context: vscode.ExtensionContext) {
     extensionContext = context;
 
-    // --- ステータスバー ---
+    // --- Status Bar ---
     const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
     context.subscriptions.push(statusBar);
 
@@ -125,7 +125,7 @@ export async function activate(context: vscode.ExtensionContext) {
         }
     };
 
-    // --- ファイルウォッチャー ---
+    // --- File Watcher ---
     let fileWatcher: vscode.FileSystemWatcher | undefined;
     const setupWatcher = () => {
         if (fileWatcher) {fileWatcher.dispose();}
@@ -143,14 +143,14 @@ export async function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(fileWatcher);
     };
 
-    // --- タグツリー ---
+    // --- Tag Tree ---
     tagProvider = new TagTreeProvider([]);
     vscode.window.createTreeView('vsJournalTags', {
         treeDataProvider: tagProvider,
         showCollapseAll: true,
     });
 
-    // --- コマンド登録 ---
+    // --- Command Registration ---
     context.subscriptions.push(
         vscode.commands.registerCommand('vs-journal.openExternal', async (url: string) => {
             try {
@@ -262,7 +262,7 @@ export async function activate(context: vscode.ExtensionContext) {
         )
     );
 
-    // --- 設定変更 ---
+    // --- Configuration Changes ---
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(async event => {
             if (event.affectsConfiguration('vsJournal.journalDir')) {
@@ -289,7 +289,7 @@ export async function activate(context: vscode.ExtensionContext) {
         })
     );
 
-    // --- 初期スキャン ---
+    // --- Initial Scan ---
     const performScan = async () => {
         const spinnerNode: TagHierarchyNode = { name: '', children: new Map(), files: [], contextValue: undefined };
         tagProvider.refresh([spinnerNode], true);
@@ -307,7 +307,7 @@ export async function activate(context: vscode.ExtensionContext) {
 }
 
 
-// --- 以下ユーティリティ ---
+// --- Utilities below ---
 function updatePreview() {
     if (!currentPanel) {
         return;
@@ -348,7 +348,7 @@ function updatePreview() {
                             vscode.postMessage({ command: 'edit' });
                     });
 
-                    // クリックで編集
+                    // Edit on click
                     document.body.addEventListener('click', (e) => {
                         const target = e.target.closest('a');
                         if (target) {
@@ -357,10 +357,10 @@ function updatePreview() {
                                 e.preventDefault();
                                 vscode.postMessage({ command: 'openExternal', url: href });
                             }
-                            return; // リンクは編集に行かない
+                            return; // Links do not trigger edit
                         }
 
-                        // div.vjs-line に対してクリック判定
+                        // Click detection for div.vjs-line
                         const lineDivs = document.querySelectorAll('div.vjs-line');
                         for (const div of lineDivs) {
                             const rect = div.getBoundingClientRect();
@@ -410,7 +410,7 @@ const autoSaveTimers = new Map<string, NodeJS.Timeout>();
 function scheduleAutoSave(document: vscode.TextDocument) {
     const delay = vscode.workspace.getConfiguration('vsJournal').get<number>('autoSave') ?? 800;
     if (delay === 0) {
-        return; // OFFなら何もしない
+        return; // Do nothing if OFF
     }
 
     const filePath = document.uri.fsPath;
@@ -421,7 +421,7 @@ function scheduleAutoSave(document: vscode.TextDocument) {
     const timer = setTimeout(async () => {
         autoSaveTimers.delete(filePath);
         await saveDocument(document);
-    }, delay); // 800ms 待機後に保存
+    }, delay); // Save after 800ms delay
 
     autoSaveTimers.set(filePath, timer);
 }
