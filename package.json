@@ -1,10 +1,11 @@
 {
   "name": "vs-journal",
   "displayName": "VS Journal",
+  "publisher": "watagashi-dev",
   "description": "%extension.description%",
   "version": "0.1.0",
   "engines": {
-    "vscode": "^1.109.0"
+    "vscode": "^1.85.0"
   },
   "categories": [
     "Other"
@@ -14,9 +15,16 @@
     "journal",
     "memo",
     "notes",
-    "tagging",
-    "howm-inspired"
+    "tags"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/watagashi-dev/vs-journal"
+  },
+  "bugs": {
+    "url": "https://github.com/watagashi-dev/vs-journal/issues"
+  },
+  "homepage": "https://github.com/watagashi-dev/vs-journal#readme",
   "main": "./dist/extension.js",
   "l10n": "./l10n",
   "contributes": {
