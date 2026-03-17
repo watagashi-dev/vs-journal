@@ -2,7 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { FileMeta } from '../models/FileMeta';
 
-const TAG_REGEX_GLOBAL = /#([\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}0-9a-zA-Z\-\/_]+)/gu;
+const TAG_REGEX_GLOBAL = /#([\p{L}\p{N}_\-/ー]+)/gu;
+
 
 export function createFileMeta(
     filePath: string,

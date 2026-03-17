@@ -161,6 +161,9 @@ export async function activate(context: vscode.ExtensionContext) {
         }),
 
         vscode.commands.registerCommand('vs-journal.newEntry', async () => {
+            let doc: vscode.TextDocument;
+            let position: vscode.Position;
+
             const fullDir = getAbsoluteJournalDir(getJournalDir());
             if (!fullDir) {return;}
 
@@ -178,11 +181,18 @@ export async function activate(context: vscode.ExtensionContext) {
                     content += `\n_${formatDateString(now)}_ _${formatTimeString(now)}_\n\n`;
                 }
                 fs.writeFileSync(fullPath, content);
+                doc = await vscode.workspace.openTextDocument(fullPath);
+                position = new vscode.Position(0, 2);
+            }
+            else {
+                doc = await vscode.workspace.openTextDocument(fullPath);
+                const lastLine = doc.lineCount - 1;
+                const char = doc.lineAt(lastLine).text.length;
+                position = new vscode.Position(lastLine, char);
             }
 
-            const doc = await vscode.workspace.openTextDocument(fullPath);
             const editor = await vscode.window.showTextDocument(doc);
-            editor.selection = new vscode.Selection(new vscode.Position(0, 2), new vscode.Position(0, 2));
+            editor.selection = new vscode.Selection(position, position);
         }),
 
         vscode.commands.registerCommand('vs-journal.previewEntry', async (filePath?: string) => {
