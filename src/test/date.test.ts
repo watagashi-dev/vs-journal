@@ -29,23 +29,23 @@ suite('formatDateString / formatTimeString Tests', () => {
     test('formats time string correctly (fallback)', () => {
         const date = new Date(2026, 2, 8, 14, 5); // 14:05
         const formatted = formatTimeString(date);
-        assert.strictEqual(formatted, '14:05');
+        assert.strictEqual(formatted, '14:5');
     });
 
     test('formats single-digit month/day/hour/minute correctly', () => {
         const date = new Date(2026, 0, 5, 3, 7); // 2026-01-05 03:07
         const dateStr = formatDateString(date);
         const timeStr = formatTimeString(date);
-        assert.strictEqual(dateStr, 'date 01/05/2026'); // 英語フォールバック
-        assert.strictEqual(timeStr, 'time 03:07');
+        assert.strictEqual(dateStr, '1/5/2026'); // 英語フォールバック
+        assert.strictEqual(timeStr, '3:7');
     });
 
     test('formats double-digit month/day/hour/minute correctly', () => {
         const date = new Date(2026, 11, 15, 14, 59); // 2026-12-15 14:59
         const dateStr = formatDateString(date);
         const timeStr = formatTimeString(date);
-        assert.strictEqual(dateStr, 'date 12/15/2026'); // 英語フォールバック
-        assert.strictEqual(timeStr, 'time 14:59');
+        assert.strictEqual(dateStr, '12/15/2026'); // 英語フォールバック
+        assert.strictEqual(timeStr, '14:59');
     });
 
 });

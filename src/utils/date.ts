@@ -14,10 +14,9 @@ export function formatFileNameDate(date: Date): string {
  * 言語に応じて「年・月・日」や「MM/DD/YYYY」に変換
  */
 export function formatDateString(date: Date): string {
-    const pad = (n: number) => n.toString().padStart(2, '0');
     const year = date.getFullYear();
-    const month = pad(date.getMonth() + 1);
-    const day = pad(date.getDate());
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
 
     // フォールバックは英語形
     return vscode.l10n.t('{month}/{day}/{year}', {year: year, month: month, day: day});
@@ -29,7 +28,7 @@ export function formatDateString(date: Date): string {
  */
 export function formatTimeString(date: Date): string {
     const pad = (n: number) => n.toString().padStart(2, '0');
-    const hour = pad(date.getHours());
+    const hour = date.getHours();
     const minute = pad(date.getMinutes());
 
     return vscode.l10n.t('{hour}:{minute}', {hour: hour, minute: minute});
