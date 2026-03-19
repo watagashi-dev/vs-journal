@@ -13,6 +13,7 @@ import { createFileMeta } from './services/fileMetaService';
 import { TagTreeProvider } from './sidebar/TagTreeProvider';
 import { formatFileNameDate, formatDateString, formatTimeString } from './utils/date';
 import { getWorkspaceRoot } from './utils/workspace';
+import { shouldShowCompletion, getTagRanges } from './services/tagLogic';
 
 let currentPanel: vscode.WebviewPanel | undefined;
 let currentDocument: vscode.TextDocument | undefined;
@@ -260,12 +261,33 @@ export async function activate(context: vscode.ExtensionContext) {
             { scheme: 'file', language: 'markdown' },
             {
                 provideCompletionItems(document, position) {
-                    if (!isJournalFile(document)) {return undefined;}
-                    const linePrefix = document.lineAt(position).text.substr(0, position.character);
-                    if (!linePrefix.startsWith('#')) {return undefined;}
 
-                    return Array.from(tagIndexForProvider.keys())
-                        .map(tag => new vscode.CompletionItem(tag, vscode.CompletionItemKind.Keyword));
+                    // 対象ファイルチェック（必要なら）
+                    // if (!isJournalFile(document)) return;
+
+                    const line = document.lineAt(position.line).text;
+                    const cursor = position.character;
+
+                    if (!shouldShowCompletion(line, cursor)) {
+                        return undefined;
+                    }
+
+                    const ranges = getTagRanges(line);
+                    const target = ranges.find(r => cursor >= r.start && cursor <= r.end);
+                    if (!target) { return undefined; }
+
+                    const range = new vscode.Range(
+                        position.line,
+                        target.start,
+                        position.line,
+                        cursor
+                    );
+
+                    return Array.from(tagIndexForProvider.keys()).map(tag => {
+                        const item = new vscode.CompletionItem(tag, vscode.CompletionItemKind.Keyword);
+                        item.range = range;
+                        return item;
+                    });
                 }
             },
             '#'
