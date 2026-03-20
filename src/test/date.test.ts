@@ -29,7 +29,7 @@ suite('formatDateString / formatTimeString Tests', () => {
     test('formats time string correctly (fallback)', () => {
         const date = new Date(2026, 2, 8, 14, 5); // 14:05
         const formatted = formatTimeString(date);
-        assert.strictEqual(formatted, '14:5');
+        assert.strictEqual(formatted, '14:05');
     });
 
     test('formats single-digit month/day/hour/minute correctly', () => {
@@ -37,7 +37,7 @@ suite('formatDateString / formatTimeString Tests', () => {
         const dateStr = formatDateString(date);
         const timeStr = formatTimeString(date);
         assert.strictEqual(dateStr, '1/5/2026'); // 英語フォールバック
-        assert.strictEqual(timeStr, '3:7');
+        assert.strictEqual(timeStr, '3:07');
     });
 
     test('formats double-digit month/day/hour/minute correctly', () => {
