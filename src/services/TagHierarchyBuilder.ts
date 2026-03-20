@@ -16,11 +16,11 @@ export class TagHierarchyBuilder {
     ): TagHierarchyNode[] {
         const nodesMap: Map<string, TagHierarchyNode> = new Map();
 
-        // タグごとに階層化して追加
+        // Add hierarchically for each tag
         for (const [tagPath, files] of tagIndex.entries()) {
             let currentMap = nodesMap;
             let currentNode: TagHierarchyNode | undefined;
-            let parts = tagPath.split('/'); // '/' で階層に分解
+            let parts = tagPath.split('/'); // Split hierarchy by '/'
 
             if (parts.length > 4) {
                 parts = parts.slice(0, 3).concat([parts.slice(3).join('/')]);
@@ -41,13 +41,13 @@ export class TagHierarchyBuilder {
                 }
                 currentNode = currentMap.get(part)!;
 
-                // 次の階層へ
+                // Move to next level
                 currentMap = currentNode.children;
             }
             currentNode!.files.push(...files);
         }
 
-        // 未タグファイルは Utagged ノードに
+        // Add untagged files to Untagged node
         if (untagged.length > 0) {
             const untaggedNode: TagHierarchyNode = {
                 name: vscode.l10n.t("Untagged"),
@@ -58,7 +58,7 @@ export class TagHierarchyBuilder {
             nodesMap.set('Untagged', untaggedNode);
         }
 
-        // 配列に変換して返す
+        // Convert to array and return
         return Array.from(nodesMap.values());
     }
 }

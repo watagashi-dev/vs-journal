@@ -15,7 +15,7 @@ export function createFileMeta(
     let title = path.basename(filePath);
     let tags: string[] = [];
 
-    // タイトル取得
+    // Get title
     for (const line of lines) {
         const trimmed = line.trim();
         if (trimmed.length === 0) {
@@ -28,7 +28,7 @@ export function createFileMeta(
         break;
     }
 
-    // タグ抽出（行全体がハッシュタグのみ）
+    // Extract tags (entire line contains hashtags only)
     for (const line of lines) {
         const extracted = extractTags(line);
         if (extracted.length > 0) {

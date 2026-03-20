@@ -262,7 +262,7 @@ export async function activate(context: vscode.ExtensionContext) {
             {
                 provideCompletionItems(document, position) {
 
-                    // 対象ファイルチェック（必要なら）
+                    // Check if it is a target file (if necessary)
                     // if (!isJournalFile(document)) return;
 
                     const line = document.lineAt(position.line).text;

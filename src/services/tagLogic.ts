@@ -1,33 +1,33 @@
 const TAG_BODY = '[\\p{L}\\p{N}_\\-／/ー]+';
 const TAG_REGEX = new RegExp(`#(${TAG_BODY})`, 'u');
 
-// 行をトークン化して余計な空白を削除
+// Tokenize the line and remove excess whitespace
 function normalize(line: string): string {
     return line.trim();
 }
 
-// タグトークンかどうか判定
+// Determine if it is a tag token
 function isTagToken(token: string): boolean {
     return TAG_REGEX.test(token);
 }
 
-// 行タイプ判定
+// Determine line type
 export function getLineType(line: string): 'tag' | 'heading' | 'other' | 'partial' {
     const trimmed = line.trim();
 
-    // 単独 #
+    // Single #
     if (trimmed === '#') {return 'partial';}
 
-    // 見出し（# + space 必須）
+    // Heading (# + space required)
     if (/^#+\s/.test(trimmed)) {return 'heading';}
 
-    // タグ（# + 非スペース）※ただし ##... は除外
+    // Tag (# + non-space) *Excluding ##...
     if (/^#\S/.test(trimmed) && !/^#{2,}\S/.test(trimmed)) {return 'tag';}
 
     return 'other';
 }
 
-// タグ行の正当性チェック
+// Check tag line validity
 function isTagLineValid(line: string, allowSingleHash = false): boolean {
     const tokens = line.trim().split(/\s+/);
 
@@ -42,37 +42,37 @@ function isTagLineValid(line: string, allowSingleHash = false): boolean {
     return true;
 }
 
-// 見出し行の正当性チェック（タイトル部分は無視）
+// Check heading line validity (ignore title part)
 function isHeadingTagPartValid(line: string, allowSingleHash = false): boolean {
     const match = line.match(/^(#+)\s+(.*)$/);
     if (!match) {return false;}
 
     const rest = match[2];
 
-    // タグ開始位置を探す（# + 何か）
+    // Find tag start position (# + something)
     const tagStart = rest.search(/(^|[\s　])#/);
-    if (tagStart === -1) {return true;} // タグがないならOK
+    if (tagStart === -1) {return true;} // OK if no tag exists
 
     const tagPart = rest.slice(tagStart).trim();
 
-    // ここでタグ行バリデーションに委譲
+    // Delegate to tag line validation here
     return isTagLineValid(tagPart, allowSingleHash);
 }
 
 
-// タグ抽出
+// Extract tags
 export function extractTags(line: string): string[] {
     const type = getLineType(line);
     if (type === 'other') {return [];}
     if (type === 'tag' && !isTagLineValid(line, false)) {return [];}
     if (type === 'heading' && !isHeadingTagPartValid(line, false)) {return [];}
 
-    // タグ部分のみ抽出
+    // Extract only tag parts
     const ranges = getTagRanges(line);
-    return ranges.map(r => line.slice(r.start + 1, r.end)); // "#"除去
+    return ranges.map(r => line.slice(r.start + 1, r.end)); // Remove "#"
 }
 
-// タグ範囲取得
+// Get tag ranges
 export function getTagRanges(line: string): { start: number; end: number }[] {
     const ranges: { start: number; end: number }[] = [];
     const regex = /(^|\s)#([^\s#]+)/g;
@@ -80,25 +80,25 @@ export function getTagRanges(line: string): { start: number; end: number }[] {
     let match;
     while ((match = regex.exec(line)) !== null) {
         const start = match.index + match[1].length;
-        const end = start + match[2].length + 1; // "#"含む
+        const end = start + match[2].length + 1; // Include "#"
         ranges.push({ start, end });
     }
     return ranges;
 }
 
-// 補完判定
+// Determine completion
 export function shouldShowCompletion(line: string, cursor: number): boolean {
     const before = line.slice(0, cursor);
     const type = getLineType(line);
 
-    // "#" 入力直後
+    // Immediately after "#" input
     if (type === 'other') {return false;}
 
     if (type === 'partial') {return true;}
     if (type === 'tag') {return isTagLineValid(line, true);}
     if (type === 'heading') {return isHeadingTagPartValid(line, true);}
 
-    // タグの途中
+    // In the middle of a tag
     const ranges = getTagRanges(line);
     return ranges.some(r => cursor >= r.start && cursor <= r.end);
 }
