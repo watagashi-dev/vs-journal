@@ -224,17 +224,23 @@ export async function activate(context: vscode.ExtensionContext) {
                     }
                     if (message.command === 'edit' && currentDocument) {
                         const uri = currentDocument.uri;
-                        const doc = await vscode.workspace.openTextDocument(uri);
+                        const isOpenedInTab = vscode.window.tabGroups.all.some(group =>
+                            group.tabs.some(tab => {
+                                const input = tab.input as vscode.TabInputText;
+                                return input?.uri?.fsPath === uri.fsPath;
+                            })
+                        );
                         let selection: vscode.Range | undefined;
 
                         if (message.line !== undefined) {
                             const pos = new vscode.Position(message.line, 0);
                             selection = new vscode.Range(pos, pos);
-                        } else if (!vscode.workspace.textDocuments.some(d => d.uri.toString() === uri.toString())) {
+                        } else if (!isOpenedInTab) {
                             const pos = new vscode.Position(0, 0);
                             selection = new vscode.Range(pos, pos);
                         }
 
+                        const doc = await vscode.workspace.openTextDocument(uri);
                         await vscode.window.showTextDocument(doc, { selection });
                     }
                 });
