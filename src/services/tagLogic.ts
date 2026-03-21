@@ -1,13 +1,8 @@
-const TAG_BODY = '[\\p{L}\\p{N}_\\-／/ー]+';
-const TAG_REGEX = new RegExp(`#(${TAG_BODY})`, 'u');
-
-// Tokenize the line and remove excess whitespace
-function normalize(line: string): string {
-    return line.trim();
-}
+// const TAG_REGEX = /^#([\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}0-9a-zA-Z_\-\/ー]+)$/u;
+const TAG_REGEX = /#([\p{L}\p{N}_\-/ー]+)$/u;
 
 // Determine if it is a tag token
-function isTagToken(token: string): boolean {
+export function isTagToken(token: string): boolean {
     return TAG_REGEX.test(token);
 }
 
@@ -98,7 +93,5 @@ export function shouldShowCompletion(line: string, cursor: number): boolean {
     if (type === 'tag') {return isTagLineValid(line, true);}
     if (type === 'heading') {return isHeadingTagPartValid(line, true);}
 
-    // In the middle of a tag
-    const ranges = getTagRanges(line);
-    return ranges.some(r => cursor >= r.start && cursor <= r.end);
+    return false;
 }

@@ -34,4 +34,29 @@ suite('fileMetaService tests', () => {
         assert.deepStrictEqual(meta.tags, ['tag4', 'tag5']);
     });
 
+    test('headings tags', () => {
+        const mockContent = `# Heading
+## Another heading #tag4 #tag5
+
+#tag6
+`;
+        const meta = createFileMeta('test.md', () => mockContent);
+
+        assert.strictEqual(meta.title, 'Heading');
+        assert.deepStrictEqual(meta.tags, ['tag4', 'tag5', 'tag6']);
+    });
+
+    test('hierarchy tags', () => {
+        const mockContent = `# Heading
+## Another heading
+
+#tag4/tag5 #tag6
+`;
+        const meta = createFileMeta('test.md', () => mockContent);
+
+        assert.strictEqual(meta.title, 'Heading');
+        assert.deepStrictEqual(meta.tags, ['tag4/tag5', 'tag6']);
+    });
+
+
 });

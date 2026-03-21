@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { shouldShowCompletion, extractTags } from '../services/tagLogic';
+import { shouldShowCompletion, extractTags, isTagToken } from '../services/tagLogic';
 
 function runCompletionTest(input: string, expected: boolean) {
     const cursor = input.indexOf('|');
@@ -14,7 +14,29 @@ function runExtractTest(line: string, expected: string[]) {
     assert.deepStrictEqual(result, expected, line);
 }
 
+function runValidationTest(line: string, expected: boolean) {
+    const result = isTagToken(line);
+    assert.strictEqual(result, expected);
+}
+
 suite('Tag Logic Tests', () => {
+
+    test('tag validation', () => {
+        runValidationTest('#oktag', true);
+        runValidationTest('#tag1', true);
+        runValidationTest('#layer1/layer2', true);
+        runValidationTest('#ngtag+', false);
+        runValidationTest('#oktag-', true);
+        runValidationTest('#oktag_', true);
+        runValidationTest('#リリース', true);
+        runValidationTest('#台鐵', true);
+        runValidationTest('#@foo', false);
+        runValidationTest('#fo@o', false);
+        runValidationTest('#foo@', false);
+        runValidationTest('#foo＠', false);
+        runValidationTest('#fo＠o', false);
+        runValidationTest('#layer1／layer2', false);
+    });
 
     test('completion', () => {
 
@@ -61,5 +83,4 @@ suite('Tag Logic Tests', () => {
         runExtractTest('#tag1　#tag2', ['tag1', 'tag2']);
         runExtractTest('#リリース', ['リリース']);
     });
-
 });

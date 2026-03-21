@@ -261,7 +261,6 @@ export async function activate(context: vscode.ExtensionContext) {
             { scheme: 'file', language: 'markdown' },
             {
                 provideCompletionItems(document, position) {
-
                     // Check if it is a target file (if necessary)
                     // if (!isJournalFile(document)) return;
 
@@ -271,23 +270,28 @@ export async function activate(context: vscode.ExtensionContext) {
                     if (!shouldShowCompletion(line, cursor)) {
                         return undefined;
                     }
+/*
+                    const before = line.slice(0, cursor);
+                    const match = before.match(/(^|\s)#([^\s]*)$/);
+                    if (!match) { return undefined; }
 
-                    const ranges = getTagRanges(line);
-                    const target = ranges.find(r => cursor >= r.start && cursor <= r.end);
-                    if (!target) { return undefined; }
+                    const tagBody = match[2];
+                    const start = cursor - tagBody.length;
 
                     const range = new vscode.Range(
                         position.line,
-                        target.start,
+                        start,
                         position.line,
                         cursor
                     );
-
-                    return Array.from(tagIndexForProvider.keys()).map(tag => {
+*/
+                    const items = Array.from(tagIndexForProvider.keys()).map(tag => {
                         const item = new vscode.CompletionItem(tag, vscode.CompletionItemKind.Keyword);
-                        item.range = range;
+ //                       item.range = range;
                         return item;
                     });
+
+                    return items;
                 }
             },
             '#'
