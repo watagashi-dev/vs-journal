@@ -276,24 +276,8 @@ export async function activate(context: vscode.ExtensionContext) {
                     if (!shouldShowCompletion(line, cursor)) {
                         return undefined;
                     }
-/*
-                    const before = line.slice(0, cursor);
-                    const match = before.match(/(^|\s)#([^\s]*)$/);
-                    if (!match) { return undefined; }
-
-                    const tagBody = match[2];
-                    const start = cursor - tagBody.length;
-
-                    const range = new vscode.Range(
-                        position.line,
-                        start,
-                        position.line,
-                        cursor
-                    );
-*/
                     const items = Array.from(tagIndexForProvider.keys()).map(tag => {
                         const item = new vscode.CompletionItem(tag, vscode.CompletionItemKind.Keyword);
- //                       item.range = range;
                         return item;
                     });
 
