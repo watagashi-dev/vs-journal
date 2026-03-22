@@ -1,14 +1,23 @@
-.vscode/**
-.vscode-test/**
-out/**
-node_modules/**
-src/**
+# 開発用
+src/
+test/
+out/
+.vscode/
+.vscode-test/
+.vscode-test.*
+.eslintrc*
+eslint.config.*
+esbuild.js
+tsconfig.json
 .gitignore
 .yarnrc
-esbuild.js
+
+# 不要リソース
+benchmarks/
+tools/
 vsc-extension-quickstart.md
-**/tsconfig.json
-**/eslint.config.mjs
+images/icon.cand.png
+
+# その他
 **/*.map
-**/*.ts
-**/.vscode-test.*
+*.ts
