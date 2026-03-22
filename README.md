@@ -28,7 +28,7 @@ Install **VS Journal** from the VS Code Marketplace.
 
 Alternatively, install it directly from the marketplace:
 
-https://marketplace.visualstudio.com/
+https://marketplace.visualstudio.com/items?itemName=watagashi-dev.vs-journal-tag
 
 ---
 
