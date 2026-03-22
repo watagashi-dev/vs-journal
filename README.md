@@ -171,7 +171,7 @@ You can customize the extension's behavior in your VS Code settings (`settings.j
 **Example `settings.json`:**
 ```json
 {
-  "vsJournal.journalDir": "/Users/username/Dropbox/Journal",
+  "vsJournal.journalDir": "/Users/username/Document/Journal",
   "vsJournal.autoSave": 3000,
   "vsJournal.enableDateTime": false
 }
@@ -185,9 +185,9 @@ Files are stored flatly in the specified directory without creating subfolders, 
 
 ```text
 vsJournal/
-├── 2025-03-07.md
-├── 2025-03-08.md
-└── 2026-01-01.md
+├── 2025-03-07-10-08.md
+├── 2025-03-08-14-30.md
+└── 2026-01-01-18-23.md
 ```
 
 ---
