@@ -219,9 +219,6 @@ export async function activate(context: vscode.ExtensionContext) {
                 });
 
                 currentPanel.webview.onDidReceiveMessage(async message => {
-                    if (message.command === 'openExternal' && message.url) {
-                        vscode.commands.executeCommand('vs-journal.openExternal', message.url);
-                    }
                     if (message.command === 'edit' && currentDocument) {
                         const uri = currentDocument.uri;
                         const isOpenedInTab = vscode.window.tabGroups.all.some(group =>
@@ -381,7 +378,6 @@ function updatePreview() {
                             const href = target.getAttribute('href');
                             if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
                                 e.preventDefault();
-                                vscode.postMessage({ command: 'openExternal', url: href });
                             }
                             return; // Links do not trigger edit
                         }
