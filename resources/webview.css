@@ -86,7 +86,40 @@ p, li {
 /* task list */
 
 input[type="checkbox"] {
+  appearance: none;
+  width: 14px;
+  height: 14px;
   margin-right: 6px;
+
+  /* 枠線強調 */
+  border: 2.3px solid var(--vscode-editorWidget-border); 
+  border-radius: 3px;
+  background: var(--vscode-editor-background);
+
+  cursor: pointer;
+  display: inline-block;
+  position: relative;
+
+  /* 日本語ベースライン補正 */
+  vertical-align: text-bottom; 
+  margin-top: 0px; /* 微調整 */
+}
+
+input[type="checkbox"]:checked {
+  background: var(--vscode-editorWidget-background);
+  border-color: var(--vscode-editorWidget-border);
+}
+
+input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 8px;
+  border: solid var(--vscode-button-foreground);
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -50%) rotate(45deg);
 }
 
 /* =========================================================
