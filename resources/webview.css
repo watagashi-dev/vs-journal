@@ -4,9 +4,9 @@
    ========================================================= */
 
 body {
-  margin: 0 auto;
-  padding: 18px 22px;
-  max-width: 860px;
+  margin: 0;
+  padding: 18px 18px;
+  max-width: none;
 
   font-family:
     -apple-system,
