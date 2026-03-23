@@ -20,6 +20,8 @@ let currentDocument: vscode.TextDocument | undefined;
 let tagProvider: TagTreeProvider;
 let extensionContext: vscode.ExtensionContext;
 
+let needsRefresh = false;
+
 // State management
 const fileMetaMap = new Map<string, FileMeta>();
 const tagIndexForProvider = new Map<string, any[]>(); 
@@ -223,6 +225,12 @@ export async function activate(context: vscode.ExtensionContext) {
                     currentPanel = undefined;
                     currentDocument = undefined;
                 });
+                currentPanel.onDidChangeViewState(e => {
+                    if (e.webviewPanel.visible && needsRefresh) {
+                        updatePreview();
+                        needsRefresh = false;
+                    }
+                });
 
                 currentPanel.webview.onDidReceiveMessage(async message => {
                     if (message.command === 'edit' && currentDocument) {
@@ -305,11 +313,15 @@ export async function activate(context: vscode.ExtensionContext) {
         }),
 
         vscode.workspace.onDidSaveTextDocument(document => {
-            if (!isJournalFile(document)) {return;}
+            if (!isJournalFile(document)) {
+                return;
+            }
             updateSingleFile(document.uri.fsPath);
+            needsRefresh = true;
 
-            if (currentPanel?.visible && currentDocument?.uri.toString() === document.uri.toString()) {
+            if (currentPanel && currentDocument?.uri.toString() === document.uri.toString()) {
                 updatePreview();
+                needsRefresh = false;
             }
         }),
         vscode.workspace.onDidChangeTextDocument(event => {
