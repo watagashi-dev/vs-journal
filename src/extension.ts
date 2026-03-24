@@ -279,7 +279,7 @@ export async function activate(context: vscode.ExtensionContext) {
             {
                 provideCompletionItems(document, position) {
                     // Check if it is a target file (if necessary)
-                    // if (!isJournalFile(document)) return;
+                    if (!isJournalFile(document)) { return; }
 
                     const line = document.lineAt(position.line).text;
                     const cursor = position.character;
