@@ -211,7 +211,13 @@ export async function activate(context: vscode.ExtensionContext) {
                     'vsJournalPreview',
                     'VS Journal Preview',
                     column,
-                    { enableScripts: true, retainContextWhenHidden: true }
+                    {
+                        enableScripts: true,
+                        retainContextWhenHidden: true,
+                        localResourceRoots: [
+                            vscode.Uri.file(path.dirname(currentDocument.uri.fsPath))
+                        ]
+                    }
                 );
                 currentPanel.onDidDispose(() => {
                     currentPanel = undefined;
@@ -335,10 +341,29 @@ function updatePreview() {
     if (!currentPanel) {
         return;
     }
+    const webview = currentPanel.webview;
 
     try {
         const text = currentDocument?.getText() || "";
         const tokens = marked.lexer(text);
+        const baseUri = currentDocument?.uri;
+
+        const renderer = new marked.Renderer();
+        renderer.image = (href, title, text) => {
+            if (!href || !baseUri) { return ""; }
+
+            try {
+                const imageUri = vscode.Uri.joinPath(baseUri, "..", href);
+                const webviewUri = webview.asWebviewUri(imageUri);
+
+                return `<img src="${webviewUri}" alt="${text || ""}">`;
+            } catch {
+                return "";
+            }
+        };
+
+        marked.setOptions({ renderer });
+
         let line = 0;
 
         const htmlContent = tokens.map((token) => {
