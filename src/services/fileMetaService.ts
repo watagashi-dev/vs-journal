@@ -28,12 +28,22 @@ export function createFileMeta(
         break;
     }
 
-    // Extract tags (entire line contains hashtags only)
-    for (const line of lines) {
-        const extracted = extractTags(line);
+    // Extract tags safely with code block awareness
+    let inCodeBlock = false;
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+
+        if (line.startsWith('```')) {
+            inCodeBlock = !inCodeBlock; // toggle code block state
+            continue;
+        }
+
+        if (inCodeBlock) { continue; } // skip lines inside code blocks
+
+        const extracted = extractTags(line); // use existing multi-line aware function
         if (extracted.length > 0) {
             tags.push(...extracted);
-        }   
+        }
     }
 
     return {

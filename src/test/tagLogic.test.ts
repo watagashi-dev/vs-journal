@@ -1,15 +1,42 @@
 import * as assert from 'assert';
-import { shouldShowCompletion, extractTags, isTagToken } from '../services/tagLogic';
+import { shouldShowCompletionMultiLine, extractTags, isTagToken } from '../services/tagLogic';
 
 function runCompletionTest(input: string, expected: boolean) {
     const cursor = input.indexOf('|');
     const line = input.replace('|', '');
-    const result = shouldShowCompletion(line, cursor);
+    const lines = [line];       // single line as array
+    const lineIndex = 0;        // 0番目の行を対象
 
+    const result = shouldShowCompletionMultiLine(lines, lineIndex, cursor);
     assert.strictEqual(result, expected, input);
 }
 
+function runMultiLineCompletionTest(linesWithCursor: string[], expected: boolean) {
+    let lineIndex = -1;
+    let cursor = -1;
+
+    // Find the line with '|'
+    const lines = linesWithCursor.map((line, i) => {
+        const pos = line.indexOf('|');
+        if (pos !== -1) {
+            lineIndex = i;
+            cursor = pos;
+            return line.replace('|', '');
+        }
+        return line;
+    });
+
+    if (lineIndex === -1) {
+        throw new Error("Cursor '|' not found in any line");
+    }
+
+    const result = shouldShowCompletionMultiLine(lines, lineIndex, cursor);
+    assert.strictEqual(result, expected, `Line ${lineIndex}, cursor ${cursor}`);
+}
+
 function runExtractTest(line: string, expected: string[]) {
+    const lineIndex = 0;
+
     const result = extractTags(line);
     assert.deepStrictEqual(result, expected, line);
 }
@@ -39,7 +66,6 @@ suite('Tag Logic Tests', () => {
     });
 
     test('completion', () => {
-
         runCompletionTest('#|', true);
         runCompletionTest('#tag1 #|', true);
         runCompletionTest('#tag1 #t|', true);
@@ -65,8 +91,32 @@ suite('Tag Logic Tests', () => {
         runCompletionTest('#タグ1 #|', true);
     });
 
-    test('extract', () => {
+    test('completion multi line', () => {
+        runMultiLineCompletionTest([
+            "# Heading",
+            "Some text",
+            "```js",
+            "#if 0",
+            "void main()",
+            "#else",
+            "int main()",
+            "#endif",
+            "```",
+            "#タグ1 #|"
+        ], true); // 最後の行のタグで補完が出るはず
 
+        runMultiLineCompletionTest([
+            "# Heading",
+            "```js",
+            "#if 0",
+            "#|",
+            "#else",
+            "#endif",
+            "```"
+        ], false); // コードブロック内なので補完は出ない
+   });
+
+    test('extract', () => {
         runExtractTest('#tag1 #tag2', ['tag1', 'tag2']);
         runExtractTest('# title #tag1 #tag2', ['tag1', 'tag2']);
         runExtractTest('# title foo #tag', ['tag']);

@@ -13,7 +13,7 @@ import { createFileMeta } from './services/fileMetaService';
 import { TagTreeProvider } from './sidebar/TagTreeProvider';
 import { formatFileNameDate, formatDateString, formatTimeString } from './utils/date';
 import { getWorkspaceRoot } from './utils/workspace';
-import { shouldShowCompletion, getTagRanges } from './services/tagLogic';
+import { shouldShowCompletionMultiLine } from './services/tagLogic';
 
 let currentPanel: vscode.WebviewPanel | undefined;
 let currentDocument: vscode.TextDocument | undefined;
@@ -281,12 +281,14 @@ export async function activate(context: vscode.ExtensionContext) {
                     // Check if it is a target file (if necessary)
                     if (!isJournalFile(document)) { return; }
 
-                    const line = document.lineAt(position.line).text;
+                    const lines = document.getText().split(/\r?\n/); // Convert entire document to an array
+                    const lineIndex = position.line;
                     const cursor = position.character;
 
-                    if (!shouldShowCompletion(line, cursor)) {
+                    if (!shouldShowCompletionMultiLine(lines, lineIndex, cursor)) {
                         return undefined;
                     }
+
                     const items = Array.from(tagIndexForProvider.keys()).map(tag => {
                         const item = new vscode.CompletionItem(tag, vscode.CompletionItemKind.Keyword);
                         return item;

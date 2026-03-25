@@ -58,5 +58,58 @@ suite('fileMetaService tests', () => {
         assert.deepStrictEqual(meta.tags, ['tag4/tag5', 'tag6']);
     });
 
+    test('inside code block tags 1', () => {
+        const mockContent = `# Heading
+## Another heading
 
+\`\`\`
+#if 0
+void main(int argc, char *argv[])
+#else
+inv main(int argc, char *argv[])
+#endif
+\`\`\`
+`;
+        const meta = createFileMeta('test.md', () => mockContent);
+
+        assert.strictEqual(meta.title, 'Heading');
+        assert.deepStrictEqual(meta.tags, []);
+    });
+
+    test('inside code block tags 2', () => {
+        const mockContent = `# Heading
+## Another heading
+
+\`\`\`
+    #if 0
+    main(int argc, char *argv[])
+    #else
+    main(int argc, char *argv[])
+    #endif
+\`\`\`
+`;
+        const meta = createFileMeta('test.md', () => mockContent);
+
+        assert.strictEqual(meta.title, 'Heading');
+        assert.deepStrictEqual(meta.tags, []);
+    });
+
+    test('outside code block tags 1', () => {
+        const mockContent = `# Heading
+## Another heading
+
+\`\`\`
+    #if 0
+    main(int argc, char *argv[])
+    #else
+    main(int argc, char *argv[])
+\`\`\`
+
+#endif
+`;
+        const meta = createFileMeta('test.md', () => mockContent);
+
+        assert.strictEqual(meta.title, 'Heading');
+        assert.deepStrictEqual(meta.tags, ['endif']);
+    });
 });

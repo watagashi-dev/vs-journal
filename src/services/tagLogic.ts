@@ -1,4 +1,8 @@
-// const TAG_REGEX = /^#([\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}0-9a-zA-Z_\-\/ー]+)$/u;
+// ============================
+// Tag Logic Utilities
+// ============================
+
+// Regex for tag token (unchanged to preserve current behavior)
 const TAG_REGEX = /#([\p{L}\p{N}_\-/ー]+)$/u;
 
 // Determine if it is a tag token
@@ -35,6 +39,24 @@ function isTagLineValid(line: string, allowSingleHash = false): boolean {
     }
 
     return true;
+}
+
+// --------------------------------
+// Code block detection
+// --------------------------------
+/** Determine if a line is inside a Markdown code block */
+function isInCodeBlock(lines: string[], currentLineIndex: number): boolean {
+    let inCodeBlock = false;
+
+    for (let i = 0; i <= currentLineIndex; i++) {
+        const line = lines[i].trim();
+
+        if (line.startsWith('```')) {
+            inCodeBlock = !inCodeBlock;  // toggle state
+        }
+    }
+
+    return inCodeBlock;
 }
 
 // Check heading line validity (ignore title part)
@@ -82,8 +104,14 @@ export function getTagRanges(line: string): { start: number; end: number }[] {
 }
 
 // Determine completion
-export function shouldShowCompletion(line: string, cursor: number): boolean {
-    const before = line.slice(0, cursor);
+export function shouldShowCompletionMultiLine(
+    lines: string[],
+    lineIndex: number,
+    cursor: number
+): boolean {
+    if (isInCodeBlock(lines, lineIndex)) { return false; } // code block check first
+
+    const line = lines[lineIndex];
     const type = getLineType(line);
 
     // Immediately after "#" input
