@@ -17,66 +17,46 @@ body {
     sans-serif;
 
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
 
   color: var(--vscode-editor-foreground);
   background-color: var(--vscode-editor-background);
-
-  text-rendering: optimizeLegibility;
 }
 
 /* =========================================================
-   HEADINGS
+   HEADINGS (GitHub rhythm)
    ========================================================= */
 
 h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
   line-height: 1.25;
+  margin-top: 1.4em;
+  margin-bottom: 0.6em;
 }
 
 h1 {
   font-size: 1.9em;
-  margin-top: 26px;
-  margin-bottom: 12px;
+  margin-top: 0em;
+  margin-bottom: 1em;
 }
 
 h2 {
-  font-size: 1.55em;
-  margin-top: 24px;
-  margin-bottom: 10px;
+  font-size: 1.5em;
+  margin-top: 1.4em;
+  margin-bottom: 0.4em;
 }
 
-h3 {
-  font-size: 1.32em;
-  margin-top: 20px;
-  margin-bottom: 8px;
-}
-
-h4 {
-  font-size: 1.15em;
-  margin-top: 16px;
-  margin-bottom: 6px;
-}
-
-h5 {
-  font-size: 1.05em;
-  margin-top: 14px;
-  margin-bottom: 4px;
-}
-
-h6 {
-  font-size: 0.95em;
-  margin-top: 12px;
-  margin-bottom: 4px;
-}
+h3 { font-size: 1.3em; }
+h4 { font-size: 1.15em; }
+h5 { font-size: 1.05em; }
+h6 { font-size: 1em; }
 
 /* =========================================================
    PARAGRAPH
    ========================================================= */
 
 p {
-  margin-top: 0;
-  margin-bottom: 10px;
+  margin: 0.5em 0 1em;
 }
 
 /* =========================================================
@@ -84,13 +64,22 @@ p {
    ========================================================= */
 
 ul, ol {
-  margin-top: 4px;
-  margin-bottom: 10px;
-  padding-left: 24px;
+  padding-left: 1.6em;
+  margin: 0.5em 0 1em;
 }
 
 li {
-  margin-bottom: 3px;
+  margin: 0.25em 0;
+  line-height: 1.6;
+
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+p, li {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* task list */
@@ -104,43 +93,49 @@ input[type="checkbox"] {
    ========================================================= */
 
 blockquote {
-  margin: 10px 0;
-  padding: 6px 12px;
+  margin: 1em 0;
+  padding: 0.5em 1em;
 
-  border-left: 4px solid var(--vscode-editorWidget-border);
+  border-left: 4px solid var(--vscode-textBlockQuote-border);
 
-  color: var(--vscode-descriptionForeground);
+  color: var(--vscode-textBlockQuote-foreground);
+  background-color: var(--vscode-textBlockQuote-background);
 }
 
 /* =========================================================
-   CODE
+   CODE (inline)
    ========================================================= */
 
 code {
   font-family: var(--vscode-editor-font-family);
-  font-size: 13px;
+  font-size: 0.9em;
 
-  background-color: var(--vscode-textBlockQuote-background);
-
-  padding: 2px 5px;
+  padding: 0.2em 0.4em;
   border-radius: 4px;
+
+  background-color: var(--vscode-textCodeBlock-background);
 }
 
+/* =========================================================
+   CODE BLOCK
+   ========================================================= */
+
 pre {
-  margin: 12px 0;
-  padding: 12px;
+  margin: 1em 0;
+  padding: 12px 14px;
 
   overflow-x: auto;
 
   border-radius: 6px;
 
-  background-color: var(--vscode-editor-background);
+  background-color: var(--vscode-textCodeBlock-background);
   border: 1px solid var(--vscode-editorWidget-border);
 }
 
 pre code {
   padding: 0;
   background: none;
+  font-size: 0.9em;
 }
 
 /* =========================================================
@@ -162,7 +157,9 @@ a:hover {
 
 table {
   border-collapse: collapse;
-  margin: 14px 0;
+  margin: 1em 0;
+  width: auto;
+  max-width: 100%;
 }
 
 th, td {
@@ -172,6 +169,7 @@ th, td {
 
 th {
   font-weight: 600;
+  background-color: var(--vscode-editor-background);
 }
 
 /* =========================================================
@@ -180,8 +178,9 @@ th {
 
 hr {
   border: none;
-  border-top: 1px solid var(--vscode-editorWidget-border);
-  margin: 24px 0;
+  border-top: 1px solid var(--vscode-editorGroup-border);
+  margin: 2em 0;
+  opacity: 0.6;
 }
 
 /* =========================================================
@@ -193,13 +192,22 @@ img {
   height: auto;
 }
 
+/* インライン画像の暴れ防止 */
+p img {
+  max-width: 80%;
+}
+
 /* =========================================================
-   FIRST ELEMENT ADJUSTMENT
+   FIRST ELEMENT FIX
    ========================================================= */
 
 body > *:first-child {
   margin-top: 0;
 }
+
+/* =========================================================
+   EDIT HINT
+   ========================================================= */
 
 .edit-hint {
   color: var(--vscode-descriptionForeground);

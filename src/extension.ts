@@ -217,7 +217,8 @@ export async function activate(context: vscode.ExtensionContext) {
                         enableScripts: true,
                         retainContextWhenHidden: true,
                         localResourceRoots: [
-                            vscode.Uri.file(path.dirname(currentDocument.uri.fsPath))
+                            vscode.Uri.file(path.dirname(currentDocument.uri.fsPath)),
+                            vscode.Uri.file(path.join(context.extensionPath, 'resources'))
                         ]
                     }
                 );
