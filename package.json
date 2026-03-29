@@ -145,7 +145,7 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/marked": "^4.3.2",
+    "@types/markdown-it": "^14.1.2",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/vscode": "^1.109.0",
@@ -160,6 +160,6 @@
     "typescript-eslint": "^8.36.0"
   },
   "dependencies": {
-    "marked": "4.3.0"
+    "markdown-it": "^14.1.1"
   }
 }

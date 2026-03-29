@@ -3,8 +3,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-
-import { marked } from 'marked';
+import MarkdownIt from 'markdown-it';
 
 import { FileMeta } from './models/FileMeta';
 import { measure } from './perf';
@@ -234,26 +233,36 @@ export async function activate(context: vscode.ExtensionContext) {
                 });
 
                 currentPanel.webview.onDidReceiveMessage(async message => {
-                    if (message.command === 'edit' && currentDocument) {
+                    if (!currentDocument) { return; }
+
+                    // フェーズ3：クリックでMarkdown行ジャンプ
+                    if (message.type === 'jumpToLine') {
+                        const line = message.line ?? 0; // line が未定義なら0行目
+                        const editor = vscode.window.activeTextEditor;
                         const uri = currentDocument.uri;
+
+                        // 現在開いているタブに対象ファイルがあるか確認
                         const isOpenedInTab = vscode.window.tabGroups.all.some(group =>
                             group.tabs.some(tab => {
                                 const input = tab.input as vscode.TabInputText;
                                 return input?.uri?.fsPath === uri.fsPath;
                             })
                         );
-                        let selection: vscode.Range | undefined;
 
-                        if (message.line !== undefined) {
-                            const pos = new vscode.Position(message.line, 0);
-                            selection = new vscode.Range(pos, pos);
-                        } else if (!isOpenedInTab) {
-                            const pos = new vscode.Position(0, 0);
-                            selection = new vscode.Range(pos, pos);
-                        }
-
+                        // 選択範囲を作成
                         const doc = await vscode.workspace.openTextDocument(uri);
+                        const safeLine = Math.min(line, doc.lineCount - 1);
+                        const pos = new vscode.Position(safeLine, 0);
+                        const selection = new vscode.Selection(pos, pos);
+
                         await vscode.window.showTextDocument(doc, { selection });
+                    }
+
+                    // 既存の Enter / Escape 編集モード
+                    if (message.type === 'edit') {
+                        const uri = currentDocument.uri;
+                        const doc = await vscode.workspace.openTextDocument(uri);
+                        await vscode.window.showTextDocument(doc);
                     }
                 });
             } else {
@@ -352,6 +361,142 @@ export async function activate(context: vscode.ExtensionContext) {
 
 
 // --- Utilities below ---
+function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | undefined) {
+    const md = new MarkdownIt({
+        html: true,
+        linkify: true,
+        typographer: true
+    });
+
+    // ===== 行番号付与 =====
+    const defaultRender = md.renderer.renderToken.bind(md.renderer);
+
+    md.renderer.renderToken = (tokens, idx, options) => {
+        const token = tokens[idx];
+
+        // table系は除外（専用ルールに任せる）
+        if (
+            token.type === "table_open" ||
+            token.type === "thead_open" ||
+            token.type === "tbody_open"
+        ) {
+            return defaultRender(tokens, idx, options);
+        }
+
+        // block要素の開始タグだけ対象
+        if (token.map && token.nesting === 1) {
+            const startLine = token.map[0];
+
+            token.attrSet("data-line", String(startLine));
+            token.attrJoin("class", "vjs-line");
+        }
+
+        return defaultRender(tokens, idx, options);
+    };
+
+    const defaultImageRule = md.renderer.rules.image;
+
+    md.renderer.rules.image = (tokens, idx, options, env, self) => {
+        const token = tokens[idx];
+
+        const src = token.attrGet("src");
+        if (!src || !baseUri) {
+            return defaultImageRule
+                ? defaultImageRule(tokens, idx, options, env, self)
+                : "";
+        }
+
+        try {
+            const imageUri = vscode.Uri.joinPath(baseUri, "..", src);
+            const webviewUri = webview.asWebviewUri(imageUri);
+
+            token.attrSet("src", webviewUri.toString());
+        } catch {
+            return "";
+        }
+
+        // altはそのまま使う
+        return defaultImageRule
+            ? defaultImageRule(tokens, idx, options, env, self)
+            : self.renderToken(tokens, idx, options);
+    };
+
+    // ===== table対応 =====
+
+    const addLineAttr = (tokens: any[], idx: number) => {
+        const token = tokens[idx];
+
+        if (!token.map) { return; }
+        const line = token.map[0];
+
+        if (!token.attrGet("data-line")) {
+            token.attrSet("data-line", String(line));
+        }
+        token.attrJoin("class", "vjs-line");
+    };
+
+    // table
+    md.renderer.rules.table_open = (tokens, idx, options, env, self) => {
+        addLineAttr(tokens, idx);
+        return self.renderToken(tokens, idx, options);
+    };
+
+    // thead（必要なら）
+    md.renderer.rules.thead_open = (tokens, idx, options, env, self) => {
+        addLineAttr(tokens, idx);
+        return self.renderToken(tokens, idx, options);
+    };
+
+    // tbody（必要なら）
+    md.renderer.rules.tbody_open = (tokens, idx, options, env, self) => {
+        addLineAttr(tokens, idx);
+        return self.renderToken(tokens, idx, options);
+    };
+
+    const defaultFence = md.renderer.rules.fence;
+    md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+        const token = tokens[idx];
+
+        if (token.map) {
+            token.attrSet("data-line", String(token.map[0]));
+            token.attrJoin("class", "vjs-line");
+        }
+
+        // 元のレンダラーを呼ぶ
+        if (defaultFence) {
+            return defaultFence(tokens, idx, options, env, self);
+        } else {
+            // デフォルトのレンダリング fallback
+            return self.renderToken(tokens, idx, options);
+        }
+    };
+
+    // html_block の行番号付与
+    const defaultHtmlBlock = md.renderer.rules.html_block;
+    md.renderer.rules.html_block = (tokens, idx, options, env, self) => {
+        const token = tokens[idx];
+
+        let html = token.content;
+
+        if (token.map && html.trimStart().startsWith('<table')) {
+            const line = token.map[0];
+            // table に data-line を追加
+            html = html.replace(
+                /^<table/,
+                `<table data-line="${line}" class="vjs-line"`
+            );
+            return html; // ← ここで置き換えた HTML を直接返す
+        }
+
+        if (defaultHtmlBlock) {
+            return defaultHtmlBlock(tokens, idx, options, env, self);
+        }
+        return html;
+    };
+
+    return md;
+}
+
 function updatePreview() {
     if (!currentPanel) {
         return;
@@ -360,36 +505,10 @@ function updatePreview() {
 
     try {
         const text = currentDocument?.getText() || "";
-        const tokens = marked.lexer(text);
         const baseUri = currentDocument?.uri;
+        const md = createMarkdownIt(webview, baseUri);
 
-        const renderer = new marked.Renderer();
-        renderer.image = (href, title, text) => {
-            if (!href || !baseUri) { return ""; }
-
-            try {
-                const imageUri = vscode.Uri.joinPath(baseUri, "..", href);
-                const webviewUri = webview.asWebviewUri(imageUri);
-
-                return `<img src="${webviewUri}" alt="${text || ""}">`;
-            } catch {
-                return "";
-            }
-        };
-
-        marked.setOptions({ renderer });
-
-        let line = 0;
-
-        const htmlContent = tokens.map((token) => {
-            const startLine = line;
-            const html = marked.parser([token]);
-            const raw = token.raw || "";
-            const lineCount = raw.split("\n").length - 1;
-            line += lineCount;
-
-            return `<div class="vjs-line" data-line="${startLine}">${html}</div>`;
-        }).join("\n");
+        const htmlContent = md.render(text);
         const cssPath = vscode.Uri.file(path.join(extensionContext.extensionPath, 'resources/webview.css'));
         const cssUri = currentPanel.webview.asWebviewUri(cssPath);
         const hintText = vscode.l10n.t("Click or press Enter to edit");
@@ -405,34 +524,40 @@ function updatePreview() {
                 <div class="edit-hint">${hintText}</div>
                 ${htmlContent}
                 <script>
+                (function(){
                     const vscode = acquireVsCodeApi();
-                    document.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter' || e.key === 'Escape')
-                            vscode.postMessage({ command: 'edit' });
-                    });
 
-                    // Edit on click
+                    // 外部リンクはクリック無効（http / https のみ）
                     document.body.addEventListener('click', (e) => {
-                        const target = e.target.closest('a');
-                        if (target) {
-                            const href = target.getAttribute('href');
+                        const link = e.target.closest('a');
+                        if (link) {
+                            const href = link.getAttribute('href');
                             if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
                                 e.preventDefault();
                             }
-                            return; // Links do not trigger edit
+                            return; // リンクは編集/ジャンプ対象外
                         }
 
-                        // Click detection for div.vjs-line
-                        const lineDivs = document.querySelectorAll('div.vjs-line');
-                        for (const div of lineDivs) {
-                            const rect = div.getBoundingClientRect();
-                            if (e.clientY >= rect.top && e.clientY <= rect.bottom) {
-                                const line = div.getAttribute('data-line');
-                                vscode.postMessage({ command: 'edit', line: line ? parseInt(line, 10) : null });
-                                break;
-                            }
+                        // vjs-line クラスの親を取得
+                        const targetLineDiv = e.target.closest('.vjs-line');
+                        if (!targetLineDiv) return;
+
+                        const lineStr = targetLineDiv.getAttribute('data-line');
+                        if (!lineStr) return;
+
+                        vscode.postMessage({
+                            type: 'jumpToLine',
+                            line: parseInt(lineStr, 10)
+                        });
+                    });
+
+                    // Enter / Escape キーで編集モード呼び出し（既存）
+                    document.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === 'Escape') {
+                            vscode.postMessage({ type: 'edit' });
                         }
                     });
+                })();
                 </script>
             </body>
             </html>

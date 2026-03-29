@@ -260,3 +260,7 @@ body > *:first-child {
   border-bottom: 1px solid var(--vscode-editorWidget-border);
   padding-bottom: 6px;
 }
+
+.vjs-line {
+  position: relative;
+}
