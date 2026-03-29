@@ -1,5 +1,15 @@
 # Change Log
 
+## [0.1.3] - 2026-03-28
+
+### Fixed
+- Fixed an issue where external CSS could not be loaded in the webview
+
+### Improved
+- Improved heading spacing and visual hierarchy
+- Fixed list wrapping for long content
+- Adjusted table layout to better fit content width
+
 ## [0.1.2] - 2026-03-25
 
 ### Changed
