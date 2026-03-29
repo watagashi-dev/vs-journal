@@ -342,6 +342,17 @@ export async function activate(context: vscode.ExtensionContext) {
         })
     );
 
+    context.subscriptions.push(
+        vscode.window.onDidChangeActiveColorTheme((theme) => {
+            if (!currentPanel) { return; }
+
+            currentPanel.webview.postMessage({
+                type: 'themeChanged',
+                themeUrl: getHljsThemeUrl(vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark)
+            });
+        })
+    );
+
     // --- Initial Scan ---
     const performScan = async () => {
         const spinnerNode: TagHierarchyNode = { name: '', children: new Map(), files: [], contextValue: undefined };
@@ -462,6 +473,12 @@ function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | undefin
             token.attrJoin("class", "vjs-line");
         }
 
+        // highlight.js 用の言語クラスを code に追加
+        if (token.info) {
+            const lang = token.info.trim().split(/\s+/g)[0]; // 最初の単語だけ
+            token.attrJoin("class", `language-${lang}`);
+        }
+
         // 元のレンダラーを呼ぶ
         if (defaultFence) {
             return defaultFence(tokens, idx, options, env, self);
@@ -497,6 +514,12 @@ function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | undefin
     return md;
 }
 
+function getHljsThemeUrl(isDark: boolean) {
+    // ここだけ変えれば全体に反映
+    const theme = isDark ? 'vs2015' : 'vs';
+    return `https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/${theme}.min.css`;
+}
+
 function updatePreview() {
     if (!currentPanel) {
         return;
@@ -512,6 +535,8 @@ function updatePreview() {
         const cssPath = vscode.Uri.file(path.join(extensionContext.extensionPath, 'resources/webview.css'));
         const cssUri = currentPanel.webview.asWebviewUri(cssPath);
         const hintText = vscode.l10n.t("Click or press Enter to edit");
+        const isDark = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark;
+        const themeUrl = getHljsThemeUrl(isDark);
 
         currentPanel.webview.html = `
             <!DOCTYPE html>
@@ -519,11 +544,14 @@ function updatePreview() {
             <head>
                 <meta charset="UTF-8">
                 <link rel="stylesheet" type="text/css" href="${cssUri}">
+                <link id="hljs-theme" rel="stylesheet" href="${themeUrl}">
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
             </head>
             <body>
                 <div class="edit-hint">${hintText}</div>
                 ${htmlContent}
                 <script>
+                hljs.highlightAll();
                 (function(){
                     const vscode = acquireVsCodeApi();
 
@@ -558,6 +586,20 @@ function updatePreview() {
                         }
                     });
                 })();
+
+                window.addEventListener('message', event => {
+                    const msg = event.data;
+                    if (msg.type !== 'themeChanged') return;
+
+                    const link = document.getElementById('hljs-theme');
+                    if (!link) return;
+
+                    // VSCode側で計算したURLをそのまま送っても良い
+                    link.href = msg.themeUrl;
+
+                    hljs.highlightAll();
+                });
+
                 </script>
             </body>
             </html>
