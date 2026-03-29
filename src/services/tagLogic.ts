@@ -1,6 +1,7 @@
 // ============================
 // Tag Logic Utilities
 // ============================
+import { FileMeta } from '../models/FileMeta';
 
 // Regex for tag token (unchanged to preserve current behavior)
 const TAG_REGEX = /#([\p{L}\p{N}_\-/ー]+)$/u;

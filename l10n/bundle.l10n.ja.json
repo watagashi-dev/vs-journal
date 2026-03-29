@@ -3,5 +3,6 @@
   "Untagged": "タグ無",
   "{month}/{day}/{year}": "{year}年{month}月{day}日",
   "{hour}:{minute}": "{hour}:{minute}",
-  "Click or press Enter to edit": "クリックまたはEnterで編集"
+  "Click or press Enter to edit": "クリックまたはEnterで編集",
+  "There are no files for this tag": "このタグに対応するファイルはありません"
 }

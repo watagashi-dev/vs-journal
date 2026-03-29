@@ -13,18 +13,14 @@ import { TagTreeProvider } from './sidebar/TagTreeProvider';
 import { formatFileNameDate, formatDateString, formatTimeString } from './utils/date';
 import { getWorkspaceRoot } from './utils/workspace';
 import { shouldShowCompletionMultiLine } from './services/tagLogic';
+import { ensurePreviewPanel, updatePreviewPanel, setExtensionContext, setCurrentDocument, notifyThemeChanged } from './preview/previewPanel';
 
-let currentPanel: vscode.WebviewPanel | undefined;
-let currentDocument: vscode.TextDocument | undefined;
 let tagProvider: TagTreeProvider;
-let extensionContext: vscode.ExtensionContext;
-
-let needsRefresh = false;
 
 // State management
 const fileMetaMap = new Map<string, FileMeta>();
-const tagIndexForProvider = new Map<string, any[]>(); 
-let untaggedFiles: { filePath: string; title: string }[] = [];
+const tagIndexForProvider = new Map<string, FileMeta[]>(); 
+let untaggedFiles: FileMeta[] = [];
 
 function getJournalDir(): string {
     const config = vscode.workspace.getConfiguration('vsJournal');
@@ -66,13 +62,13 @@ async function refreshAllData() {
         fileMetaMap.set(filePath, meta);
 
         if (meta.tags.length === 0) {
-            addToUntagged({ filePath: meta.filePath, title: meta.title });
-        }
-        else {
-            meta.tags.forEach(tag => addToTagIndex(tag, { filePath: meta.filePath, title: meta.title }));
+            addToUntagged(meta);
+        } else {
+            meta.tags.forEach(tag => addToTagIndex(tag, meta));
         }
     }
 
+    tagProvider.refreshFromTagMap(tagIndexForProvider);
     notifyProvider();
 }
 
@@ -87,16 +83,16 @@ function updateSingleFile(filePath: string) {
             }
         });
     }
+
     untaggedFiles = untaggedFiles.filter(f => f.filePath !== filePath);
 
     const newMeta = createFileMeta(filePath);
     fileMetaMap.set(filePath, newMeta);
 
     if (newMeta.tags.length === 0) {
-        addToUntagged({ filePath: newMeta.filePath, title: newMeta.title });
-    }
-    else {
-        newMeta.tags.forEach(tag => addToTagIndex(tag, { filePath: newMeta.filePath, title: newMeta.title }));
+        addToUntagged(newMeta);
+    } else {
+        newMeta.tags.forEach(tag => addToTagIndex(tag, newMeta));
     }
 
     notifyProvider();
@@ -109,7 +105,7 @@ function notifyProvider(scanning?: boolean) {
 }
 
 export async function activate(context: vscode.ExtensionContext) {
-    extensionContext = context;
+    setExtensionContext(context);
 
     // --- Status Bar ---
     const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
@@ -204,72 +200,22 @@ export async function activate(context: vscode.ExtensionContext) {
                 document = vscode.window.activeTextEditor.document;
             } else {return;}
 
-            currentDocument = document;
+            setCurrentDocument(document);
             const column = vscode.ViewColumn.Active;
 
-            if (!currentPanel) {
-                currentPanel = vscode.window.createWebviewPanel(
-                    'vsJournalPreview',
-                    'VS Journal Preview',
-                    column,
-                    {
-                        enableScripts: true,
-                        retainContextWhenHidden: true,
-                        localResourceRoots: [
-                            vscode.Uri.file(path.dirname(currentDocument.uri.fsPath)),
-                            vscode.Uri.file(path.join(context.extensionPath, 'resources'))
-                        ]
-                    }
-                );
-                currentPanel.onDidDispose(() => {
-                    currentPanel = undefined;
-                    currentDocument = undefined;
-                });
-                currentPanel.onDidChangeViewState(e => {
-                    if (e.webviewPanel.visible && needsRefresh) {
-                        updatePreview();
-                        needsRefresh = false;
-                    }
-                });
+            ensurePreviewPanel(column);
 
-                currentPanel.webview.onDidReceiveMessage(async message => {
-                    if (!currentDocument) { return; }
-
-                    // フェーズ3：クリックでMarkdown行ジャンプ
-                    if (message.type === 'jumpToLine') {
-                        const line = message.line ?? 0; // line が未定義なら0行目
-                        const editor = vscode.window.activeTextEditor;
-                        const uri = currentDocument.uri;
-
-                        // 現在開いているタブに対象ファイルがあるか確認
-                        const isOpenedInTab = vscode.window.tabGroups.all.some(group =>
-                            group.tabs.some(tab => {
-                                const input = tab.input as vscode.TabInputText;
-                                return input?.uri?.fsPath === uri.fsPath;
-                            })
-                        );
-
-                        // 選択範囲を作成
-                        const doc = await vscode.workspace.openTextDocument(uri);
-                        const safeLine = Math.min(line, doc.lineCount - 1);
-                        const pos = new vscode.Position(safeLine, 0);
-                        const selection = new vscode.Selection(pos, pos);
-
-                        await vscode.window.showTextDocument(doc, { selection });
-                    }
-
-                    // 既存の Enter / Escape 編集モード
-                    if (message.type === 'edit') {
-                        const uri = currentDocument.uri;
-                        const doc = await vscode.workspace.openTextDocument(uri);
-                        await vscode.window.showTextDocument(doc);
-                    }
-                });
-            } else {
-                currentPanel.reveal(column, true);
-            }
-
-            await measure("preview generation", async () => updatePreview());
+            await measure("preview generation", async () => {
+                if (filePath) {
+                    const meta = createFileMeta(filePath);
+                    await updatePreviewPanel([meta]);
+                } else if (vscode.window.activeTextEditor && isJournalFile(vscode.window.activeTextEditor.document)) {
+                    const docMeta = createFileMeta(vscode.window.activeTextEditor.document.uri.fsPath);
+                    await updatePreviewPanel([docMeta]);
+                } else {
+                    return;
+                }
+            });
         }),
 
         vscode.commands.registerCommand('vs-journal.selectJournalDir', async () => {
@@ -282,6 +228,19 @@ export async function activate(context: vscode.ExtensionContext) {
                 await vscode.workspace.getConfiguration('vsJournal')
                     .update('journalDir', folderUri[0].fsPath, vscode.ConfigurationTarget.Global);
             }
+        }),
+
+        vscode.commands.registerCommand('vs-journal.onTagClick', async (node: TagHierarchyNode) => {
+            const filesToPreview = node.files; // 子タグは無視
+
+            if (filesToPreview.length === 0) {
+                vscode.window.showInformationMessage(vscode.l10n.t('There are no files for this tag'));
+                return;
+            }
+
+            ensurePreviewPanel(vscode.ViewColumn.Active);
+
+            await updatePreviewPanel(filesToPreview);
         }),
 
         vscode.languages.registerCompletionItemProvider(
@@ -329,12 +288,9 @@ export async function activate(context: vscode.ExtensionContext) {
                 return;
             }
             updateSingleFile(document.uri.fsPath);
-            needsRefresh = true;
 
-            if (currentPanel && currentDocument?.uri.toString() === document.uri.toString()) {
-                updatePreview();
-                needsRefresh = false;
-            }
+            const meta = createFileMeta(document.uri.fsPath);
+            updatePreviewPanel([meta]); // 配列にして渡す
         }),
         vscode.workspace.onDidChangeTextDocument(event => {
             if (!isJournalFile(event.document)) {return;}
@@ -344,12 +300,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.window.onDidChangeActiveColorTheme((theme) => {
-            if (!currentPanel) { return; }
-
-            currentPanel.webview.postMessage({
-                type: 'themeChanged',
-                themeUrl: getHljsThemeUrl(vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark)
-            });
+            notifyThemeChanged();
         })
     );
 
@@ -370,245 +321,6 @@ export async function activate(context: vscode.ExtensionContext) {
     updateStatusBar();
 }
 
-
-// --- Utilities below ---
-function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | undefined) {
-    const md = new MarkdownIt({
-        html: true,
-        linkify: true,
-        typographer: true
-    });
-
-    // ===== 行番号付与 =====
-    const defaultRender = md.renderer.renderToken.bind(md.renderer);
-
-    md.renderer.renderToken = (tokens, idx, options) => {
-        const token = tokens[idx];
-
-        // table系は除外（専用ルールに任せる）
-        if (
-            token.type === "table_open" ||
-            token.type === "thead_open" ||
-            token.type === "tbody_open"
-        ) {
-            return defaultRender(tokens, idx, options);
-        }
-
-        // block要素の開始タグだけ対象
-        if (token.map && token.nesting === 1) {
-            const startLine = token.map[0];
-
-            token.attrSet("data-line", String(startLine));
-            token.attrJoin("class", "vjs-line");
-        }
-
-        return defaultRender(tokens, idx, options);
-    };
-
-    const defaultImageRule = md.renderer.rules.image;
-
-    md.renderer.rules.image = (tokens, idx, options, env, self) => {
-        const token = tokens[idx];
-
-        const src = token.attrGet("src");
-        if (!src || !baseUri) {
-            return defaultImageRule
-                ? defaultImageRule(tokens, idx, options, env, self)
-                : "";
-        }
-
-        try {
-            const imageUri = vscode.Uri.joinPath(baseUri, "..", src);
-            const webviewUri = webview.asWebviewUri(imageUri);
-
-            token.attrSet("src", webviewUri.toString());
-        } catch {
-            return "";
-        }
-
-        // altはそのまま使う
-        return defaultImageRule
-            ? defaultImageRule(tokens, idx, options, env, self)
-            : self.renderToken(tokens, idx, options);
-    };
-
-    // ===== table対応 =====
-
-    const addLineAttr = (tokens: any[], idx: number) => {
-        const token = tokens[idx];
-
-        if (!token.map) { return; }
-        const line = token.map[0];
-
-        if (!token.attrGet("data-line")) {
-            token.attrSet("data-line", String(line));
-        }
-        token.attrJoin("class", "vjs-line");
-    };
-
-    // table
-    md.renderer.rules.table_open = (tokens, idx, options, env, self) => {
-        addLineAttr(tokens, idx);
-        return self.renderToken(tokens, idx, options);
-    };
-
-    // thead（必要なら）
-    md.renderer.rules.thead_open = (tokens, idx, options, env, self) => {
-        addLineAttr(tokens, idx);
-        return self.renderToken(tokens, idx, options);
-    };
-
-    // tbody（必要なら）
-    md.renderer.rules.tbody_open = (tokens, idx, options, env, self) => {
-        addLineAttr(tokens, idx);
-        return self.renderToken(tokens, idx, options);
-    };
-
-    const defaultFence = md.renderer.rules.fence;
-    md.renderer.rules.fence = (tokens, idx, options, env, self) => {
-        const token = tokens[idx];
-
-        if (token.map) {
-            token.attrSet("data-line", String(token.map[0]));
-            token.attrJoin("class", "vjs-line");
-        }
-
-        // highlight.js 用の言語クラスを code に追加
-        if (token.info) {
-            const lang = token.info.trim().split(/\s+/g)[0]; // 最初の単語だけ
-            token.attrJoin("class", `language-${lang}`);
-        }
-
-        // 元のレンダラーを呼ぶ
-        if (defaultFence) {
-            return defaultFence(tokens, idx, options, env, self);
-        } else {
-            // デフォルトのレンダリング fallback
-            return self.renderToken(tokens, idx, options);
-        }
-    };
-
-    // html_block の行番号付与
-    const defaultHtmlBlock = md.renderer.rules.html_block;
-    md.renderer.rules.html_block = (tokens, idx, options, env, self) => {
-        const token = tokens[idx];
-
-        let html = token.content;
-
-        if (token.map && html.trimStart().startsWith('<table')) {
-            const line = token.map[0];
-            // table に data-line を追加
-            html = html.replace(
-                /^<table/,
-                `<table data-line="${line}" class="vjs-line"`
-            );
-            return html; // ← ここで置き換えた HTML を直接返す
-        }
-
-        if (defaultHtmlBlock) {
-            return defaultHtmlBlock(tokens, idx, options, env, self);
-        }
-        return html;
-    };
-
-    return md;
-}
-
-function getHljsThemeUrl(isDark: boolean) {
-    // ここだけ変えれば全体に反映
-    const theme = isDark ? 'vs2015' : 'vs';
-    return `https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/${theme}.min.css`;
-}
-
-function updatePreview() {
-    if (!currentPanel) {
-        return;
-    }
-    const webview = currentPanel.webview;
-
-    try {
-        const text = currentDocument?.getText() || "";
-        const baseUri = currentDocument?.uri;
-        const md = createMarkdownIt(webview, baseUri);
-
-        const htmlContent = md.render(text);
-        const cssPath = vscode.Uri.file(path.join(extensionContext.extensionPath, 'resources/webview.css'));
-        const cssUri = currentPanel.webview.asWebviewUri(cssPath);
-        const hintText = vscode.l10n.t("Click or press Enter to edit");
-        const isDark = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark;
-        const themeUrl = getHljsThemeUrl(isDark);
-
-        currentPanel.webview.html = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <link rel="stylesheet" type="text/css" href="${cssUri}">
-                <link id="hljs-theme" rel="stylesheet" href="${themeUrl}">
-                <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-            </head>
-            <body>
-                <div class="edit-hint">${hintText}</div>
-                ${htmlContent}
-                <script>
-                hljs.highlightAll();
-                (function(){
-                    const vscode = acquireVsCodeApi();
-
-                    // 外部リンクはクリック無効（http / https のみ）
-                    document.body.addEventListener('click', (e) => {
-                        const link = e.target.closest('a');
-                        if (link) {
-                            const href = link.getAttribute('href');
-                            if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
-                                e.preventDefault();
-                            }
-                            return; // リンクは編集/ジャンプ対象外
-                        }
-
-                        // vjs-line クラスの親を取得
-                        const targetLineDiv = e.target.closest('.vjs-line');
-                        if (!targetLineDiv) return;
-
-                        const lineStr = targetLineDiv.getAttribute('data-line');
-                        if (!lineStr) return;
-
-                        vscode.postMessage({
-                            type: 'jumpToLine',
-                            line: parseInt(lineStr, 10)
-                        });
-                    });
-
-                    // Enter / Escape キーで編集モード呼び出し（既存）
-                    document.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter' || e.key === 'Escape') {
-                            vscode.postMessage({ type: 'edit' });
-                        }
-                    });
-                })();
-
-                window.addEventListener('message', event => {
-                    const msg = event.data;
-                    if (msg.type !== 'themeChanged') return;
-
-                    const link = document.getElementById('hljs-theme');
-                    if (!link) return;
-
-                    // VSCode側で計算したURLをそのまま送っても良い
-                    link.href = msg.themeUrl;
-
-                    hljs.highlightAll();
-                });
-
-                </script>
-            </body>
-            </html>
-        `;
-    } catch (e) {
-        // console.log("Preview update skipped (panel might be busy)");
-    }
-}
-
 export function isJournalFile(document: vscode.TextDocument, absJournalDir?: string): boolean {
     const journalDir = absJournalDir ?? getAbsoluteJournalDir(getJournalDir());
     if (!journalDir) {
@@ -625,7 +337,7 @@ export function addToUntagged(file: { filePath: string; title: string }, arr?: {
     }
 }
 
-export function addToTagIndex(tag: string, file: { filePath: string; title: string }, map?: Map<string, any[]>) {
+export function addToTagIndex(tag: string, file: FileMeta, map?: Map<string, FileMeta[]>) {
     const targetMap = map ?? tagIndexForProvider;
     const list = targetMap.get(tag) || [];
     if (!list.some(f => f.filePath === file.filePath)) {

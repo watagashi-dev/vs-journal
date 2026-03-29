@@ -7,48 +7,56 @@ export function createFileMeta(
     filePath: string,
     readFile?: () => string
 ): FileMeta {
-    const content = readFile
-        ? readFile()
-        : fs.readFileSync(filePath, 'utf-8');
+    let ctime = 0, mtime = 0, size = 0;
+    if (!readFile) {
+        const stats = fs.statSync(filePath);
+        ctime = stats.ctimeMs;
+        mtime = stats.mtimeMs;
+        size = stats.size;
+    }
+    // --- 1. ファイル統計を一度取得 ---
+    const fileName = path.basename(filePath);
+
+    // --- 2. ファイル内容を取得 ---
+    const content = readFile ? readFile() : fs.readFileSync(filePath, 'utf-8');
     const lines = content.split(/\r?\n/);
 
-    let title = path.basename(filePath);
-    let tags: string[] = [];
-
-    // Get title
+    // --- 3. タイトル取得（先頭の # ） ---
+    let title = fileName;
     for (const line of lines) {
         const trimmed = line.trim();
-        if (trimmed.length === 0) {
-            continue;
-        }
-
+        if (trimmed.length === 0) { continue; }
         if (trimmed.startsWith('# ')) {
             title = trimmed.substring(2).trim();
         }
-        break;
+        break; // 先頭の見出しだけ見れば十分
     }
 
-    // Extract tags safely with code block awareness
+    // --- 4. タグ抽出（コードブロック内を除外） ---
+    const tags: string[] = [];
     let inCodeBlock = false;
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-
-        if (line.startsWith('```')) {
-            inCodeBlock = !inCodeBlock; // toggle code block state
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('```')) {
+            inCodeBlock = !inCodeBlock;
             continue;
         }
+        if (inCodeBlock) { continue; }
 
-        if (inCodeBlock) { continue; } // skip lines inside code blocks
-
-        const extracted = extractTags(line); // use existing multi-line aware function
+        const extracted = extractTags(trimmed); // 既存の多行対応関数
         if (extracted.length > 0) {
             tags.push(...extracted);
         }
     }
 
+    // --- 5. FileMeta を返す ---
     return {
         filePath,
+        fileName,
         title,
-        tags
+        tags,
+        ctime,
+        mtime,
+        size
     };
 }
