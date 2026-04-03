@@ -7,7 +7,6 @@
   "config.enableDateTime.description": "新規ファイルに日付と時刻を挿入します。",
   "config.enableDateTime.markdownDescription": "新しいジャーナル作成時、見出しの下に現在の日付と時刻を自動で挿入します。",
   "view.vsJournal.tags.empty": "エントリーがありません",
-  "tagsViewName": "タグビュー",
   "command.newEntry": "VS Journal: 新規メモ作成",
   "command.previewEntry": "VS Journal: メモプレビュー",
   "command.selectJournalDir": "VS Journal: ジャーナルフォルダ選択"

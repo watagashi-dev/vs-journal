@@ -125,6 +125,20 @@ Markdown プレビューでメモを表示できます。
 表示され、プレビュー画面でマウスクリックまたは Enter を入力することで、
 編集画面に移行します。
 
+または、コマンドパレット (`Ctrl+Shift+P` / `Cmd+Shift+P`) から以下のコマンドを実行します。
+
+```plaintext
+VS Journal: Preview Entry
+```
+
+ショートカット
+
+```
+Ctrl+Alt+P (Windows, Linux)
+Cmd+Option+P (Mac)
+```
+
+
 ---
 
 ## コマンド
@@ -142,6 +156,7 @@ Markdown プレビューでメモを表示できます。
 | 操作 | Windows / Linux | macOS |
 |------|-----------------|-------|
 | 新しいメモ | Ctrl+Alt+N | Cmd+Option+N |
+| メモのプレビュー | Ctrl+Alt+P | Cmd+Option+P |
 | タグビューにフォーカス | Ctrl+Alt+J | Cmd+Option+J |
 
 ---

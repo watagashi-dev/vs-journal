@@ -137,6 +137,17 @@ Click on a file in the tag tree to open a preview.
 - Click anywhere in the preview or press `Enter` to switch to edit mode.
 - Click an external link to open it in your browser.
 
+Also run the following command from the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
+
+```plaintext
+VS Journal: Preview Entry
+```
+
+**Shortcut:**
+- Windows / Linux: `Ctrl+Alt+P`
+- macOS: `Cmd+Option+P`
+
+
 ---
 
 ## Commands

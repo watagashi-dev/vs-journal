@@ -37,7 +37,8 @@
       },
       {
         "command": "vs-journal.previewEntry",
-        "title": "%command.previewEntry%"
+        "title": "%command.previewEntry%",
+        "icon": "$(open-preview)"
       },
       {
         "command": "vs-journal.selectJournalDir",
@@ -81,7 +82,7 @@
       "vsJournal": [
         {
           "id": "vsJournalTags",
-          "name": "%tagsViewName%"
+          "name": ""
         }
       ]
     },
@@ -97,6 +98,11 @@
           "command": "vs-journal.newEntry",
           "when": "view == vsJournalTags",
           "group": "navigation@1"
+        },
+        {
+          "command": "vs-journal.previewEntry",
+          "when": "view == vsJournalTags",
+          "group": "navigation@2"
         },
         {
           "command": "vs-journal.selectJournalDir",
@@ -122,6 +128,12 @@
         "command": "vs-journal.newEntry",
         "key": "ctrl+alt+n",
         "mac": "cmd+option+n"
+      },
+      {
+        "command": "vs-journal.previewEntry",
+        "when": "view.vsJournalTags.visible",
+        "key": "ctrl+alt+p",
+        "mac": "cmd+option+p"
       },
       {
         "command": "vsJournalTags.focus",
