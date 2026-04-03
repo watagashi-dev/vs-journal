@@ -61,6 +61,9 @@ export function ensurePreviewPanel(column: vscode.ViewColumn) {
     currentPanel.webview.onDidReceiveMessage(async message => {
         if (!message) { return; }
 
+        if (message.type === 'openExternal') {
+            await vscode.env.openExternal(vscode.Uri.parse(message.url));
+        }
         if (message.type === 'jumpToLine' && message.filePath) {
             const uri = vscode.Uri.file(message.filePath);
             const doc = await vscode.workspace.openTextDocument(uri);
@@ -137,9 +140,10 @@ export async function updatePreviewPanel(filesToPreview: FileMeta[] = []) {
                     document.body.addEventListener('click', (e) => {
                         const link = e.target.closest('a');
                         if (link) {
-                            const href = link.getAttribute('href');
+                            const href = link.getAttribute('data-href');
                             if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
                                 e.preventDefault();
+                                vscode.postMessage({ type: 'openExternal', url: href });
                             }
                             return;
                         }
@@ -147,46 +151,46 @@ export async function updatePreviewPanel(filesToPreview: FileMeta[] = []) {
                         if (targetLineDiv) {
                             const lineStr = targetLineDiv.getAttribute('data-line');
                             const fileContainer = targetLineDiv.closest('[data-file]');
-                            const filePath = fileContainer?.getAttribute('data-file');
-                            if (lineStr && filePath) {
-                                vscode.postMessage({
-                                    type: 'jumpToLine',
-                                    filePath,
-                                    line: parseInt(lineStr, 10)
-                                });
-                                return;
-                            }
-                        }
+            const filePath = fileContainer?.getAttribute('data-file');
+            if (lineStr && filePath) {
+                vscode.postMessage({
+                    type: 'jumpToLine',
+                    filePath,
+                    line: parseInt(lineStr, 10)
+                });
+                return;
+            }
+        }
                         const fileRoot = e.target.closest('[data-file]');
-                        if (fileRoot) {
-                            const filePath = fileRoot.getAttribute('data-file');
-                            if (filePath) {
+        if (fileRoot) {
+            const filePath = fileRoot.getAttribute('data-file');
+            if (filePath) {
                                 vscode.postMessage({
                                     type: 'jumpToFile',
                                     filePath
                                 });
-                                return;
-                            }
-                        }
-                    });
+                return;
+            }
+        }
+    });
 
-                    document.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter' || e.key === 'Escape') {
-                            vscode.postMessage({ type: 'edit' });
-                        }
-                    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === 'Escape') {
+            vscode.postMessage({ type: 'edit' });
+        }
+    });
                 })();
 
-                window.addEventListener('message', event => {
-                    const msg = event.data;
+window.addEventListener('message', event => {
+    const msg = event.data;
                     if (msg.type !== 'themeChanged') return;
-                    const link = document.getElementById('hljs-theme');
+        const link = document.getElementById('hljs-theme');
                     if (!link) return;
-                    link.href = msg.themeUrl;
+            link.href = msg.themeUrl;
                     hljs.highlightAll();
-                });
+});
 
-                </script>
+</script>
             </body>
             </html>
         `;

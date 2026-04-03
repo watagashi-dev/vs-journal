@@ -150,14 +150,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // --- Command Registration ---
     context.subscriptions.push(
-        vscode.commands.registerCommand('vs-journal.openExternal', async (url: string) => {
-            try {
-                await vscode.env.openExternal(vscode.Uri.parse(url));
-            } catch (err) {
-                console.error('Failed to open external URL:', url, err);
-            }
-        }),
-
         vscode.commands.registerCommand('vs-journal.newEntry', async () => {
             let doc: vscode.TextDocument;
             let position: vscode.Position;

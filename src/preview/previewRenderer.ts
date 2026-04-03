@@ -102,6 +102,31 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
         return defaultHtmlBlock ? defaultHtmlBlock(tokens, idx, options, env, self) : html;
     };
 
+    const defaultLinkOpen = md.renderer.rules.link_open || ((tokens, idx, options, env, self) => {
+        return self.renderToken(tokens, idx, options);
+    });
+
+    md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
+        const token = tokens[idx];
+
+        if (token.attrs) {
+            const hrefIndex = token.attrIndex("href");
+            if (hrefIndex >= 0) {
+                const href = token.attrs[hrefIndex][1];
+
+                if (/^https?:\/\//.test(href)) {
+                    // href 削除
+                    token.attrs.splice(hrefIndex, 1);
+
+                    // data-href に置き換え
+                    token.attrPush(["data-href", href]);
+                }
+            }
+        }
+
+        return defaultLinkOpen(tokens, idx, options, env, self);
+    };
+
     return md;
 }
 
