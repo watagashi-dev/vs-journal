@@ -1,35 +1,32 @@
-// TagHierarchyBuilder.ts
 import * as vscode from 'vscode';
-import { FileInfo } from "../sidebar/TagTreeProvider";
+import { FileMeta } from "../models/FileMeta";
+import { sortFiles } from './fileSort';
 
 export interface TagHierarchyNode {
     name: string;
     children: Map<string, TagHierarchyNode>;
-    files: FileInfo[];
+    files: FileMeta[];
     contextValue?: string;
 }
 
 export class TagHierarchyBuilder {
     build(
-        tagIndex: Map<string, FileInfo[]>,
-        untagged: FileInfo[]
+        tagIndex: Map<string, FileMeta[]>,
+        untagged: FileMeta[]
     ): TagHierarchyNode[] {
         const nodesMap: Map<string, TagHierarchyNode> = new Map();
 
-        // Add hierarchically for each tag
+        // --- タグ階層構築 ---
         for (const [tagPath, files] of tagIndex.entries()) {
             let currentMap = nodesMap;
             let currentNode: TagHierarchyNode | undefined;
-            let parts = tagPath.split('/'); // Split hierarchy by '/'
+            let parts = tagPath.split('/');
 
             if (parts.length > 4) {
                 parts = parts.slice(0, 3).concat([parts.slice(3).join('/')]);
             }
 
-            for (let i = 0; i < parts.length; i++) {
-                const part = parts[i];
-                const isLast = i === parts.length - 1;
-
+            for (const part of parts) {
                 if (!currentMap.has(part)) {
                     const newNode: TagHierarchyNode = {
                         name: part,
@@ -39,26 +36,57 @@ export class TagHierarchyBuilder {
                     };
                     currentMap.set(part, newNode);
                 }
-                currentNode = currentMap.get(part)!;
 
-                // Move to next level
+                currentNode = currentMap.get(part)!;
                 currentMap = currentNode.children;
             }
+
             currentNode!.files.push(...files);
         }
 
-        // Add untagged files to Untagged node
-        if (untagged.length > 0) {
-            const untaggedNode: TagHierarchyNode = {
-                name: vscode.l10n.t("Untagged"),
-                children: new Map(),
-                files: untagged,
-                contextValue: 'untagged'
-            };
-            nodesMap.set('Untagged', untaggedNode);
+        // --- 各ノードのソート（再帰） ---
+        const sortNode = (node: TagHierarchyNode) => {
+            // 子タグを名前順でソート
+            node.children = new Map(
+                [...node.children.entries()]
+                    .sort(([a], [b]) => a.localeCompare(b))
+            );
+
+            // ファイルをソート（ここが今回のポイント）
+            node.files = sortFiles(node.files, 'title', 'asc');
+
+            // 再帰
+            for (const child of node.children.values()) {
+                sortNode(child);
+            }
+        };
+
+        for (const node of nodesMap.values()) {
+            sortNode(node);
         }
 
-        // Convert to array and return
-        return Array.from(nodesMap.values());
+        // --- Untagged ---
+        let untaggedNode: TagHierarchyNode | undefined;
+        if (untagged.length > 0) {
+            untaggedNode = {
+                name: vscode.l10n.t("Untagged"),
+                children: new Map(),
+                files: sortFiles(untagged, 'title', 'asc'),
+                contextValue: 'untagged'
+            };
+        }
+
+        // --- ルートノードを配列化しソート ---
+        const rootNodes = [...nodesMap.entries()]
+            .filter(([key]) => key !== 'Untagged') // Untaggedは除外
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([, node]) => node);
+
+        // Untaggedを最後に追加
+        if (untaggedNode) {
+            rootNodes.push(untaggedNode);
+        }
+
+        return rootNodes;
     }
 }

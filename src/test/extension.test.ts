@@ -1,6 +1,8 @@
 import * as assert from 'assert';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import * as workspaceUtils from '../utils/workspace';
+import { FileMeta } from '../models/FileMeta';
 import {
 	getAbsoluteJournalDir,
 	addToTagIndex,
@@ -16,24 +18,32 @@ suite('VS Journal Logic Tests', () => {
 	});
 
 	test('getAbsoluteJournalDir converts relative path with workspace root', () => {
-		// ワークスペースルートをモック
 		const workspaceRoot = '/workspace/root';
 		const rel = 'journal';
 
-		// inject可能な形で getWorkspaceRoot をモック
-		const originalGetWorkspaceRoot = require('../utils/workspace').getWorkspaceRoot;
-		require('../utils/workspace').getWorkspaceRoot = () => workspaceRoot;
+		// workspace.getWorkspaceRoot を一時的に置き換え
+		const originalGetWorkspaceRoot = workspaceUtils.getWorkspaceRoot;
+		(workspaceUtils as any).getWorkspaceRoot = () => workspaceRoot;
 
 		const result = getAbsoluteJournalDir(rel);
 		assert.strictEqual(result, path.join(workspaceRoot, rel));
 
 		// 復元
-		require('../utils/workspace').getWorkspaceRoot = originalGetWorkspaceRoot;
+		(workspaceUtils as any).getWorkspaceRoot = originalGetWorkspaceRoot;
 	});
 
 	test('addToTagIndex adds file only once', () => {
 		const map = new Map<string, any[]>();
-		const file = { filePath: '/a.md', title: 'A' };
+		const file: FileMeta = {
+			filePath: '/a.md',
+			fileName: 'a.md',   // 追加
+			title: 'A',
+			tags: [],
+			ctime: Date.now(),
+			mtime: Date.now(),
+			size: 123
+		};
+
 		addToTagIndex('tag1', file, map);
 		addToTagIndex('tag1', file, map);
 
@@ -42,8 +52,17 @@ suite('VS Journal Logic Tests', () => {
 	});
 
 	test('addToUntagged adds file only once', () => {
-		const list: { filePath: string; title: string }[] = [];
-		const file = { filePath: '/b.md', title: 'B' };
+		const list: FileMeta[] = [];
+		const file: FileMeta = {
+			filePath: '/b.md',
+			fileName: 'b.md',   // 追加
+			title: 'B',
+			tags: [],
+			ctime: Date.now(),
+			mtime: Date.now(),
+			size: 456
+		};
+
 		addToUntagged(file, list);
 		addToUntagged(file, list);
 
@@ -54,7 +73,7 @@ suite('VS Journal Logic Tests', () => {
 	test('isJournalFile returns true for file inside journal', () => {
 		const document = {
 			uri: { fsPath: '/workspace/root/journal/note.md' }
-		} as unknown as vscode.TextDocument;
+		} as vscode.TextDocument;
 
 		assert.strictEqual(
 			isJournalFile(document, '/workspace/root/journal'),
@@ -65,7 +84,7 @@ suite('VS Journal Logic Tests', () => {
 	test('isJournalFile returns false for file outside journal', () => {
 		const document = {
 			uri: { fsPath: '/workspace/root/other/note.md' }
-		} as unknown as vscode.TextDocument;
+		} as vscode.TextDocument;
 
 		assert.strictEqual(
 			isJournalFile(document, '/workspace/root/journal'),

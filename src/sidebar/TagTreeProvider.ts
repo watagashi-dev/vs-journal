@@ -1,11 +1,7 @@
 // src/sidebar/TagTreeProvider.ts
 import * as vscode from 'vscode';
 import { TagHierarchyNode } from '../services/TagHierarchyBuilder';
-
-export interface FileInfo {
-    filePath: string;
-    title: string;
-}
+import { FileMeta } from '../models/FileMeta';
 
 export class TagTreeProvider implements vscode.TreeDataProvider<TreeItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<TreeItem | undefined | void> =
@@ -27,27 +23,29 @@ export class TagTreeProvider implements vscode.TreeDataProvider<TreeItem> {
                 ? vscode.TreeItemCollapsibleState.Collapsed
                 : vscode.TreeItemCollapsibleState.None,
             node.contextValue,
-            node // node情報を保持
+            node
         );
 
-        // ファイルがある場合、最初のファイルだけコマンドに設定
-        // if (node.files.length > 0) {
-        //     item.command = {
-        //         command: 'vs-journal.previewEntry',
-        //         title: 'Preview Entry',
-        //         arguments: [node.files[0].filePath]
-        //     };
-        //     item.tooltip = node.files.map(f => f.title).join('\n');
-        // }
+        // タグノードクリック時のコマンド
+        if (node.children.size > 0 || node.files.length > 0) {
+            item.command = {
+                command: 'vs-journal.onTagClick',
+                title: 'Tag Click',
+                arguments: [node]
+            };
+        }
+
+        // ツールチップは Builder の順序のまま
         item.tooltip = node.files.map(f => f.title).join('\n');
 
         return item;
     }
 
     /**
-     * データ更新
+     * Provider 内ノード更新
      */
     refresh(nodes: TagHierarchyNode[], scanning?: boolean) {
+        // Builder の出力をそのまま使用
         this.nodes = nodes;
         if (scanning !== undefined) {
             this.isScanning = scanning;
@@ -55,21 +53,36 @@ export class TagTreeProvider implements vscode.TreeDataProvider<TreeItem> {
         this._onDidChangeTreeData.fire();
     }
 
+    /**
+     * Map 形式のタグ→FileMeta[] から TreeView 用ノードに変換
+     */
+    refreshFromTagMap(tagMap: Map<string, FileMeta[]>) {
+        const nodes: TagHierarchyNode[] = [];
+        for (const [tag, files] of tagMap.entries()) {
+            nodes.push({
+                name: tag,
+                children: new Map(),
+                files: files, // Builder がソート済みを想定
+                contextValue: 'tag'
+            });
+        }
+        this.refresh(nodes);
+    }
+
     getTreeItem(element: TreeItem): vscode.TreeItem {
         return element;
     }
 
     getChildren(element?: TreeItem): Thenable<TreeItem[]> {
-        // スキャン中はスピナー表示
         if (this.isScanning) {
             const spinner = new TreeItem(
                 vscode.l10n.t("Scanning tags..."),
-                vscode.TreeItemCollapsibleState.None);
+                vscode.TreeItemCollapsibleState.None
+            );
             spinner.iconPath = new vscode.ThemeIcon('sync~spin');
             return Promise.resolve([spinner]);
         }
 
-        // ルートレベル
         if (!element) {
             if (this.nodes.length === 0) {
                 const emptyNode = new TreeItem('No entries', vscode.TreeItemCollapsibleState.None);
@@ -83,12 +96,12 @@ export class TagTreeProvider implements vscode.TreeDataProvider<TreeItem> {
         const node = element.node!;
         const children: TreeItem[] = [];
 
-        // タグの子ノードを TreeItem に変換
+        // タグの子ノード
         for (const child of node.children.values()) {
             children.push(this.nodeToTreeItem(child));
         }
 
-        // ファイルノード
+        // ファイルノード（Builder 順序そのまま）
         for (const file of node.files) {
             const item = new TreeItem(file.title, vscode.TreeItemCollapsibleState.None, 'file');
             item.command = {
@@ -115,7 +128,7 @@ export class TreeItem extends vscode.TreeItem {
         public readonly label: string,
         public readonly collapsibleState: vscode.TreeItemCollapsibleState,
         public readonly contextValue?: string,
-        public readonly node?: TagHierarchyNode // ←ここに node を保持
+        public readonly node?: TagHierarchyNode
     ) {
         super(label, collapsibleState);
     }
