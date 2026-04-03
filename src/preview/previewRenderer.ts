@@ -1,12 +1,17 @@
 import * as vscode from 'vscode';
 import MarkdownIt from 'markdown-it';
+import taskLists from 'markdown-it-task-lists';
 
 export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | undefined) {
     const md = new MarkdownIt({
         html: true,
         linkify: true,
         typographer: true
-    });
+    }).use(taskLists, {
+        enabled: true,
+        label: true,
+        labelAfter: true
+    });;
 
     const defaultRender = md.renderer.renderToken.bind(md.renderer);
 
