@@ -1,135 +1,155 @@
-// src/sidebar/TagTreeProvider.ts
 import * as vscode from 'vscode';
 import { TagHierarchyNode } from '../services/TagHierarchyBuilder';
 import { FileMeta } from '../models/FileMeta';
 
-export class TagTreeProvider implements vscode.TreeDataProvider<TreeItem> {
-    private _onDidChangeTreeData: vscode.EventEmitter<TreeItem | undefined | void> =
-        new vscode.EventEmitter<TreeItem | undefined | void>();
-    readonly onDidChangeTreeData: vscode.Event<TreeItem | undefined | void> =
-        this._onDidChangeTreeData.event;
-
-    private isScanning: boolean = false;
-    private nodes: TagHierarchyNode[] = [];
-
-    constructor(initialNodes: TagHierarchyNode[] = []) {
-        this.nodes = initialNodes;
+class VSTagItem extends vscode.TreeItem {
+    constructor(
+        public readonly node: TagHierarchyNode | null,
+        label: string,
+        collapsibleState: vscode.TreeItemCollapsibleState,
+        contextValue?: string
+    ) {
+        super(label, collapsibleState);
+        this.contextValue = contextValue;
     }
+}
 
-    private nodeToTreeItem(node: TagHierarchyNode): TreeItem {
-        const item = new TreeItem(
-            node.name,
-            node.children.size > 0 || node.files.length > 0
-                ? vscode.TreeItemCollapsibleState.Collapsed
-                : vscode.TreeItemCollapsibleState.None,
-            node.contextValue,
-            node
+function createSpacerItem(): VSTagItem {
+    const spacer = new VSTagItem(
+        null,
+        '---------------', // 空白ラベル
+        vscode.TreeItemCollapsibleState.None,
+        'spacer'
+    );
+    spacer.command = undefined; // クリック不可
+    spacer.iconPath = undefined; // アイコンなし
+    spacer.tooltip = '';
+    return spacer;
+}
+
+export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
+
+    private _onDidChangeTreeData = new vscode.EventEmitter<void>();
+    readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
+
+    private systemNodes: TagHierarchyNode[] = [];
+    private userNodes: TagHierarchyNode[] = [];
+    private virtualNodes: TagHierarchyNode[] = [];
+    private isScanning = false;
+
+    public createSpinnerItem(): VSTagItem {
+        const spinner = new VSTagItem(
+            null,
+            vscode.l10n.t('Scanning tags...'),
+            vscode.TreeItemCollapsibleState.None,
+            'spinner'
         );
-
-        // タグノードクリック時のコマンド
-        if (node.children.size > 0 || node.files.length > 0) {
-            item.command = {
-                command: 'vs-journal.onTagClick',
-                title: 'Tag Click',
-                arguments: [node]
-            };
-        }
-
-        // ツールチップは Builder の順序のまま
-        item.tooltip = node.files.map(f => f.title).join('\n');
-
-        return item;
+        spinner.iconPath = new vscode.ThemeIcon('sync~spin'); // 回転アイコン
+        spinner.command = undefined; // クリック不可
+        spinner.tooltip = '';
+        return spinner;
     }
 
-    /**
-     * Provider 内ノード更新
-     */
-    refresh(nodes: TagHierarchyNode[], scanning?: boolean) {
-        // Builder の出力をそのまま使用
-        this.nodes = nodes;
-        if (scanning !== undefined) {
-            this.isScanning = scanning;
-        }
+    setScanning(scanning: boolean) {
+        this.isScanning = scanning;
         this._onDidChangeTreeData.fire();
     }
 
-    /**
-     * Map 形式のタグ→FileMeta[] から TreeView 用ノードに変換
-     */
-    refreshFromTagMap(tagMap: Map<string, FileMeta[]>) {
-        const nodes: TagHierarchyNode[] = [];
-        for (const [tag, files] of tagMap.entries()) {
-            nodes.push({
-                name: tag,
-                children: new Map(),
-                files: files, // Builder がソート済みを想定
-                contextValue: 'tag'
-            });
-        }
-        this.refresh(nodes);
+    refresh(
+        systemNodes: TagHierarchyNode[],
+        userNodes: TagHierarchyNode[],
+        virtualNodes: TagHierarchyNode[]
+    ) {
+        this.systemNodes = systemNodes;
+        this.userNodes = userNodes;
+        this.virtualNodes = virtualNodes;
+        this._onDidChangeTreeData.fire();
     }
 
-    getTreeItem(element: TreeItem): vscode.TreeItem {
+    getTreeItem(element: VSTagItem): vscode.TreeItem {
         return element;
     }
 
-    getChildren(element?: TreeItem): Thenable<TreeItem[]> {
+    getChildren(element?: VSTagItem): Thenable<VSTagItem[]> {
         if (this.isScanning) {
-            const spinner = new TreeItem(
-                vscode.l10n.t("Scanning tags..."),
-                vscode.TreeItemCollapsibleState.None
-            );
-            spinner.iconPath = new vscode.ThemeIcon('sync~spin');
-            return Promise.resolve([spinner]);
+            return Promise.resolve([this.createSpinnerItem()]);
         }
-
+        // ===== ROOT =====
         if (!element) {
-            if (this.nodes.length === 0) {
-                const emptyNode = new TreeItem('No entries', vscode.TreeItemCollapsibleState.None);
-                emptyNode.iconPath = new vscode.ThemeIcon('info');
-                return Promise.resolve([emptyNode]);
-            }
-            return Promise.resolve(this.nodes.map(n => this.nodeToTreeItem(n)));
+            const result: VSTagItem[] = [];
+
+            const pushSection = (label: string, nodes: TagHierarchyNode[]) => {
+
+                // 見出し（クリック不可・三角なし）
+                const item = new VSTagItem(
+                    null,
+                    label,
+                    vscode.TreeItemCollapsibleState.None,
+                    'section'
+                );
+
+                // アイコンで目立たせる
+                item.iconPath = new vscode.ThemeIcon('folder-opened', new vscode.ThemeColor('charts.blue'));
+                result.push(item);
+
+                // その下にタグを並べる（兄弟構造）
+                for (const node of nodes) {
+                    result.push(this.createTagItem(node));
+                }
+            };
+
+            pushSection(vscode.l10n.t('System Tags'), this.systemNodes);
+            // result.push(createSpacerItem());
+            pushSection(vscode.l10n.t('User Tags'), this.userNodes);
+            // result.push(createSpacerItem());
+            pushSection(vscode.l10n.t('Virtual Tags'), this.virtualNodes);
+
+            return Promise.resolve(result);
         }
 
-        // 子ノード
-        const node = element.node!;
-        const children: TreeItem[] = [];
+        // ===== SECTION（子を持たない）=====
+        if (!element.node) {
+            return Promise.resolve([]);
+        }
 
-        // タグの子ノード
+        // ===== TAG NODE =====
+        const node = element.node;
+        const children: VSTagItem[] = [];
+
+        // 子タグ
         for (const child of node.children.values()) {
-            children.push(this.nodeToTreeItem(child));
+            children.push(this.createTagItem(child));
         }
 
-        // ファイルノード（Builder 順序そのまま）
+        // ファイル
         for (const file of node.files) {
-            const item = new TreeItem(file.title, vscode.TreeItemCollapsibleState.None, 'file');
+            const item = new VSTagItem(
+                null,
+                file.title,
+                vscode.TreeItemCollapsibleState.None,
+                'file'
+            );
+
             item.command = {
                 command: 'vs-journal.previewEntry',
                 title: 'Preview Entry',
                 arguments: [file.filePath]
             };
-            item.tooltip = file.filePath;
-            children.push(item);
-        }
 
-        if (children.length === 0) {
-            const emptyChild = new TreeItem('No files', vscode.TreeItemCollapsibleState.None);
-            emptyChild.iconPath = new vscode.ThemeIcon('info');
-            children.push(emptyChild);
+            item.tooltip = file.filePath;
+
+            children.push(item);
         }
 
         return Promise.resolve(children);
     }
-}
 
-export class TreeItem extends vscode.TreeItem {
-    constructor(
-        public readonly label: string,
-        public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-        public readonly contextValue?: string,
-        public readonly node?: TagHierarchyNode
-    ) {
-        super(label, collapsibleState);
+    private createTagItem(node: TagHierarchyNode): VSTagItem {
+        return new VSTagItem(
+            node,
+            vscode.l10n.t(node.name),
+            vscode.TreeItemCollapsibleState.Collapsed,
+            'tag'
+        );
     }
 }

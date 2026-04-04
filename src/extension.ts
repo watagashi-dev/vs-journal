@@ -19,8 +19,9 @@ let tagProvider: TagTreeProvider;
 
 // State management
 const fileMetaMap = new Map<string, FileMeta>();
-const tagIndexForProvider = new Map<string, FileMeta[]>(); 
-let untaggedFiles: FileMeta[] = [];
+const systemTagIndexMap = new Map<string, FileMeta[]>(); 
+const userTagIndexMap = new Map<string, FileMeta[]>(); 
+const virtualTagIndexMap = new Map<string, FileMeta[]>(); 
 
 function getJournalDir(): string {
     const config = vscode.workspace.getConfiguration('vsJournal');
@@ -42,13 +43,81 @@ export function getAbsoluteJournalDir(
     return root ? path.join(root, journalDir) : undefined;
 }
 
+type SystemTagDefinition = {
+    id: string;
+    build: (meta: FileMeta) => boolean;
+};
+
+const systemTagDefinitions: SystemTagDefinition[] = [
+    {
+        id: 'Today',
+        build: (_meta) => {
+            const now = new Date();
+            const mtime = new Date(_meta.mtime);
+
+            return (
+                now.getMonth() === mtime.getMonth() &&
+                now.getDate() === mtime.getDate()
+            );
+        }
+    },
+    {
+        id: 'Untagged',
+        build: (meta) => meta.tags.length === 0
+    }
+];
+
+function rebuildSystemTags() {
+    systemTagIndexMap.clear();
+
+    // 初期化（全タグ分の空配列を作る）
+    for (const def of systemTagDefinitions) {
+        systemTagIndexMap.set(def.id, []);
+    }
+
+    // 全ファイルを1回だけループ
+    for (const meta of fileMetaMap.values()) {
+        for (const def of systemTagDefinitions) {
+            if (def.build(meta)) {
+                systemTagIndexMap.get(def.id)!.push(meta);
+            }
+        }
+    }
+}
+
+function rebuildTree() {
+    const config = vscode.workspace.getConfiguration('vsJournal');
+    const visibility = config.get<Record<string, boolean>>(
+        'systemTags.visibility',
+        {}
+//        { untagged: true }
+    );
+    const filteredSystemMap = new Map<string, FileMeta[]>();
+
+    for (const [key, value] of systemTagIndexMap.entries()) {
+        if (visibility[key] !== false) {
+            filteredSystemMap.set(key, value);
+        }
+    }
+
+    const hierarchyBuilder = new TagHierarchyBuilder();
+    const result = hierarchyBuilder.build(
+        filteredSystemMap,
+        userTagIndexMap,
+        virtualTagIndexMap
+    );
+    tagProvider.refresh(result.system, result.user, result.virtual);
+}
+
 async function refreshAllData() {
     const journalDir = getJournalDir();
     const fullDir = getAbsoluteJournalDir(journalDir);
 
+    // 既存データクリア
     fileMetaMap.clear();
-    tagIndexForProvider.clear();
-    untaggedFiles = [];
+    userTagIndexMap.clear();
+    systemTagIndexMap.clear();  // System タグは表示用 Map
+    virtualTagIndexMap.clear(); // 今は空
 
     if (!fullDir || !fs.existsSync(fullDir)) {
         return;
@@ -56,53 +125,59 @@ async function refreshAllData() {
 
     const files = fs.readdirSync(fullDir).filter(f => f.endsWith('.md'));
 
+    // --- ファイルを解析して User タグに登録 ---
     for (const file of files) {
         const filePath = path.join(fullDir, file);
         const meta = createFileMeta(filePath);
         fileMetaMap.set(filePath, meta);
 
-        if (meta.tags.length === 0) {
-            addToUntagged(meta);
-        } else {
-            meta.tags.forEach(tag => addToTagIndex(tag, meta));
-        }
+        // User タグ追加
+        meta.tags.forEach(tag => {
+            const arr = userTagIndexMap.get(tag) ?? [];
+            userTagIndexMap.set(tag, [...arr, meta]);
+        });
     }
-
-    tagProvider.refreshFromTagMap(tagIndexForProvider);
-    notifyProvider();
+    rebuildSystemTags();
 }
 
 function updateSingleFile(filePath: string) {
     const oldMeta = fileMetaMap.get(filePath);
+
+    // --- 古い User タグから削除 ---
     if (oldMeta) {
         oldMeta.tags.forEach(tag => {
-            const files = tagIndexForProvider.get(tag);
+            const files = userTagIndexMap.get(tag);
             if (files) {
                 const filtered = files.filter(f => f.filePath !== filePath);
-                filtered.length === 0 ? tagIndexForProvider.delete(tag) : tagIndexForProvider.set(tag, filtered);
+                if (filtered.length === 0) {
+                    userTagIndexMap.delete(tag);
+                } else {
+                    userTagIndexMap.set(tag, filtered);
+                }
             }
         });
     }
 
-    untaggedFiles = untaggedFiles.filter(f => f.filePath !== filePath);
-
+    // --- 新しい FileMeta を作成 ---
     const newMeta = createFileMeta(filePath);
     fileMetaMap.set(filePath, newMeta);
 
-    if (newMeta.tags.length === 0) {
-        addToUntagged(newMeta);
-    } else {
-        newMeta.tags.forEach(tag => addToTagIndex(tag, newMeta));
-    }
+    // --- User タグに追加 ---
+    newMeta.tags.forEach(tag => {
+        const arr = userTagIndexMap.get(tag) ?? [];
+        userTagIndexMap.set(tag, [...arr, newMeta]);
+    });
 
-    notifyProvider();
+    rebuildSystemTags();
 }
 
+/*
 function notifyProvider(scanning?: boolean) {
     const hierarchyBuilder = new TagHierarchyBuilder();
-    const nodes: TagHierarchyNode[] = hierarchyBuilder.build(tagIndexForProvider, untaggedFiles);
-    tagProvider.refresh(nodes, scanning);
+    const result = hierarchyBuilder.build(systemTagIndexMap, userTagIndexMap, virtualTagIndexMap);
+    tagProvider.refresh(result.system, result.user, result.virtual, scanning);
 }
+*/
 
 export async function activate(context: vscode.ExtensionContext) {
     setExtensionContext(context);
@@ -134,15 +209,21 @@ export async function activate(context: vscode.ExtensionContext) {
         const pattern = new vscode.RelativePattern(absDir, '**/*.md');
         fileWatcher = vscode.workspace.createFileSystemWatcher(pattern);
 
-        fileWatcher.onDidCreate(uri => updateSingleFile(uri.fsPath));
-        fileWatcher.onDidChange(uri => updateSingleFile(uri.fsPath));
+        fileWatcher.onDidCreate(uri => {
+            updateSingleFile(uri.fsPath);
+            rebuildTree();
+        });
+        fileWatcher.onDidChange(uri => {
+            updateSingleFile(uri.fsPath);
+            rebuildTree();
+        });
         fileWatcher.onDidDelete(() => refreshAllData());
 
         context.subscriptions.push(fileWatcher);
     };
 
     // --- Tag Tree ---
-    tagProvider = new TagTreeProvider([]);
+    tagProvider = new TagTreeProvider();
     vscode.window.createTreeView('vsJournalTags', {
         treeDataProvider: tagProvider,
         showCollapseAll: true,
@@ -258,7 +339,7 @@ export async function activate(context: vscode.ExtensionContext) {
                         return undefined;
                     }
 
-                    const items = Array.from(tagIndexForProvider.keys()).map(tag => {
+                    const items = Array.from(userTagIndexMap.keys()).map(tag => {
                         const item = new vscode.CompletionItem(tag, vscode.CompletionItemKind.Keyword);
                         return item;
                     });
@@ -281,6 +362,9 @@ export async function activate(context: vscode.ExtensionContext) {
                 autoSaveTimers.forEach(timer => clearTimeout(timer));
                 autoSaveTimers.clear();
             }
+            if (event.affectsConfiguration('vsJournal.systemTags.visibility')) {
+                rebuildTree(); // ← 再スキャンしない
+            }
         }),
 
         vscode.workspace.onDidSaveTextDocument(document => {
@@ -288,6 +372,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 return;
             }
             updateSingleFile(document.uri.fsPath);
+            rebuildTree();
 
             const meta = createFileMeta(document.uri.fsPath);
             updatePreviewPanel([meta]); // 配列にして渡す
@@ -306,19 +391,20 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // --- Initial Scan ---
     const performScan = async () => {
-        const spinnerNode: TagHierarchyNode = { name: '', children: new Map(), files: [], contextValue: undefined };
-        tagProvider.refresh([spinnerNode], true);
-        await refreshAllData();
+        tagProvider.setScanning(true);
+        await new Promise(resolve => setTimeout(resolve, 0)); // ←これ重要
+        updateStatusBar();
 
-        const hierarchyBuilder = new TagHierarchyBuilder();
-        const nodes = hierarchyBuilder.build(tagIndexForProvider, untaggedFiles);
-        tagProvider.refresh(nodes, false);
+        await refreshAllData();
+        await new Promise(r => setTimeout(r, 10000)); // 3秒待つ
+
+        rebuildTree();
+        tagProvider.setScanning(false);
         updateStatusBar();
     };
 
     await performScan();
     setupWatcher();
-    updateStatusBar();
 }
 
 export function isJournalFile(document: vscode.TextDocument, absJournalDir?: string): boolean {
@@ -330,15 +416,8 @@ export function isJournalFile(document: vscode.TextDocument, absJournalDir?: str
     return !rel.startsWith('..') && !path.isAbsolute(rel) && document.uri.fsPath.toLowerCase().endsWith('.md');
 }
 
-export function addToUntagged(file: { filePath: string; title: string }, arr?: { filePath: string; title: string }[]) {
-    const targetArr = arr ?? untaggedFiles;
-    if (!targetArr.some(f => f.filePath === file.filePath)) {
-        targetArr.push(file);
-    }
-}
-
 export function addToTagIndex(tag: string, file: FileMeta, map?: Map<string, FileMeta[]>) {
-    const targetMap = map ?? tagIndexForProvider;
+    const targetMap = map ?? userTagIndexMap;
     const list = targetMap.get(tag) || [];
     if (!list.some(f => f.filePath === file.filePath)) {
         list.push(file);

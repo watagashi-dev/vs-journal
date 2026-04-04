@@ -1,6 +1,10 @@
 {
   "Scanning tags...": "タグをスキャン中...",
+  "System Tags": "システムタグ",
+  "User Tags": "ユーザータグ",
+  "Virtual Tags": "仮想タグ",
   "Untagged": "タグ無",
+  "Today": "今日",
   "{month}/{day}/{year}": "{year}年{month}月{day}日",
   "{hour}:{minute}": "{hour}:{minute}",
   "Click or press Enter to edit": "クリックまたはEnterで編集",

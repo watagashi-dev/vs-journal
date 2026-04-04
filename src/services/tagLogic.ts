@@ -27,6 +27,21 @@ export function getLineType(line: string): 'tag' | 'heading' | 'other' | 'partia
     return 'other';
 }
 
+export class CodeBlockTracker {
+  private inCodeBlock = false;
+
+  processLine(line: string): boolean {
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith('```')) {
+      this.inCodeBlock = !this.inCodeBlock;
+      return false; // この行自体はタグ対象外にするなら
+    }
+
+    return !this.inCodeBlock;
+  }
+}
+
 // Check tag line validity
 function isTagLineValid(line: string, allowSingleHash = false): boolean {
     const tokens = line.trim().split(/\s+/);
