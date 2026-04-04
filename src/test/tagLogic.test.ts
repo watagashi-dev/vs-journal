@@ -2,12 +2,11 @@ import * as assert from 'assert';
 import { shouldShowCompletionMultiLine, extractTags, isTagToken } from '../services/tagLogic';
 
 function runCompletionTest(input: string, expected: boolean) {
-    const cursor = input.indexOf('|');
     const line = input.replace('|', '');
     const lines = [line];       // single line as array
     const lineIndex = 0;        // 0番目の行を対象
 
-    const result = shouldShowCompletionMultiLine(lines, lineIndex, cursor);
+    const result = shouldShowCompletionMultiLine(lines, lineIndex);
     assert.strictEqual(result, expected, input);
 }
 
@@ -20,7 +19,6 @@ function runMultiLineCompletionTest(linesWithCursor: string[], expected: boolean
         const pos = line.indexOf('|');
         if (pos !== -1) {
             lineIndex = i;
-            cursor = pos;
             return line.replace('|', '');
         }
         return line;
@@ -30,8 +28,8 @@ function runMultiLineCompletionTest(linesWithCursor: string[], expected: boolean
         throw new Error("Cursor '|' not found in any line");
     }
 
-    const result = shouldShowCompletionMultiLine(lines, lineIndex, cursor);
-    assert.strictEqual(result, expected, `Line ${lineIndex}, cursor ${cursor}`);
+    const result = shouldShowCompletionMultiLine(lines, lineIndex);
+    assert.strictEqual(result, expected, `Line ${lineIndex}`);
 }
 
 function runExtractTest(line: string, expected: string[]) {

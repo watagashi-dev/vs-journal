@@ -104,11 +104,18 @@ export function getTagRanges(line: string): { start: number; end: number }[] {
     return ranges;
 }
 
+export function getCurrentTagAtCursor(textBefore: string): string | null {
+    const ranges = getTagRanges(textBefore);
+    if (ranges.length === 0) { return null; }
+
+    const r = ranges[ranges.length - 1];
+    return r.end === textBefore.length ? textBefore.slice(r.start + 1, r.end) : null;
+}
+
 // Determine completion
 export function shouldShowCompletionMultiLine(
     lines: string[],
-    lineIndex: number,
-    cursor: number
+    lineIndex: number
 ): boolean {
     if (isInCodeBlock(lines, lineIndex)) { return false; } // code block check first
 
