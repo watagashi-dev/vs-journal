@@ -126,6 +126,9 @@ export async function updatePreviewPanel(filesToPreview: FileMeta[] = []) {
             <html>
             <head>
                 <meta charset="UTF-8">
+
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'unsafe-inline' https://cdnjs.cloudflare.com;">
+
                 <link rel="stylesheet" type="text/css" href="${cssUri}">
                 <link id="hljs-theme" rel="stylesheet" href="${themeUrl}">
                 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
