@@ -208,27 +208,6 @@ a:hover {
 }
 
 /* =========================================================
-   TABLES
-   ========================================================= */
-
-table {
-  border-collapse: collapse;
-  margin: 1em 0;
-  width: auto;
-  max-width: 100%;
-}
-
-th, td {
-  border: 1px solid var(--vscode-editorWidget-border);
-  padding: 3px 10px;
-}
-
-th {
-  font-weight: 600;
-  background-color: var(--vscode-editor-background);
-}
-
-/* =========================================================
    HORIZONTAL RULE
    ========================================================= */
 
@@ -238,6 +217,84 @@ hr {
   margin: 0.6em 0;
   opacity: 0.6;
 }
+
+/* =========================================================
+   TABLES
+
+   ========================================================= */
+
+table {
+  border-collapse: collapse;
+  margin: 1em 0;
+  width: auto;
+  max-width: 100%;
+}
+
+/* =========================================================
+   TABLES
+   ========================================================= */
+table.vjs-md-table {
+  border-collapse: collapse;
+}
+
+table.vjs-md-table th,
+table.vjs-md-table td {
+  padding: 4px 14px;
+
+  border-top: 1px solid color-mix(
+    in srgb,
+    var(--vscode-editor-foreground) 80%,
+    transparent
+  );
+
+  border-bottom: 1px solid color-mix(
+    in srgb,
+    var(--vscode-editor-foreground) 80%,
+    transparent
+  );
+
+  border-left: 1px solid color-mix(
+    in srgb,
+    var(--vscode-editor-foreground) 15%,
+    transparent
+  );
+  border-right: 1px solid color-mix(
+    in srgb,
+    var(--vscode-editor-foreground) 15%,
+    transparent
+  );
+}
+
+/* ヘッダー行だけ下線を強調 */
+table.vjs-md-table th {
+  border-bottom: 2px solid color-mix(
+    in srgb,
+    var(--vscode-editor-foreground) 80%,
+    transparent
+  );
+}
+
+table:not([border]):not(.vjs-md-table) th,
+table:not([border]):not(.vjs-md-table) td {
+  padding: 4px 14px;
+
+  border: 1px solid color-mix(
+    in srgb,
+    var(--vscode-editor-foreground) 25%,
+    transparent
+  );
+}
+
+table[border] th,
+table[border] td {
+  border: 1px solid color-mix(
+    in srgb,
+    var(--vscode-editor-foreground) 80%,
+    transparent
+  );
+  padding: 4px 14px;
+}
+
 
 /* =========================================================
    IMAGES

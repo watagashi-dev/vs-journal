@@ -73,9 +73,22 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
     };
 
     md.renderer.rules.table_open = (tokens, idx, options, env, self) => {
+        const token = tokens[idx];
+
+        // 既存処理（行番号などを追加）
         addLineAttr(tokens, idx, env);
+
+        // Markdown テーブルは borderless とする
+        const existingClass = tokens[idx].attrGet('class');
+        if (existingClass) {
+            tokens[idx].attrSet('class', existingClass + ' vjs-md-table');
+        } else {
+            tokens[idx].attrSet('class', 'vjs-md-table');
+        }
+
         return self.renderToken(tokens, idx, options);
     };
+
     md.renderer.rules.thead_open = (tokens, idx, options, env, self) => {
         addLineAttr(tokens, idx, env);
         return self.renderToken(tokens, idx, options);
