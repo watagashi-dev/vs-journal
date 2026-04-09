@@ -13,7 +13,7 @@ import { TagTreeProvider } from './sidebar/TagTreeProvider';
 import { formatFileNameDate, formatDateString, formatTimeString } from './utils/date';
 import { getWorkspaceRoot } from './utils/workspace';
 import { shouldShowCompletionMultiLine } from './services/tagLogic';
-import { ensurePreviewPanel, updatePreviewPanel, setExtensionContext, setCurrentDocument, notifyThemeChanged } from './preview/previewPanel';
+import { ensurePreviewPanel, updatePreviewPanel, setExtensionContext, setCurrentDocument, notifyThemeChanged, disposePreviewPanel } from './preview/previewPanel';
 
 let tagProvider: TagTreeProvider;
 
@@ -203,15 +203,15 @@ export async function activate(context: vscode.ExtensionContext) {
             setCurrentDocument(document);
             const column = vscode.ViewColumn.Active;
 
-            ensurePreviewPanel(column);
+            const panel = ensurePreviewPanel(column);
 
             await measure("preview generation", async () => {
                 if (filePath) {
                     const meta = createFileMeta(filePath);
-                    await updatePreviewPanel([meta]);
+                    await updatePreviewPanel(panel, [meta]);
                 } else if (vscode.window.activeTextEditor && isJournalFile(vscode.window.activeTextEditor.document)) {
                     const docMeta = createFileMeta(vscode.window.activeTextEditor.document.uri.fsPath);
-                    await updatePreviewPanel([docMeta]);
+                    await updatePreviewPanel(panel, [docMeta]);
                 } else {
                     return;
                 }
@@ -238,19 +238,17 @@ export async function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-            ensurePreviewPanel(vscode.ViewColumn.Active);
-
-            await updatePreviewPanel(filesToPreview);
+            const panel = ensurePreviewPanel(vscode.ViewColumn.Active);
+            await updatePreviewPanel(panel, filesToPreview);
         }),
 
         vscode.languages.registerCompletionItemProvider(
             { scheme: 'file', language: 'markdown' },
             {
                 provideCompletionItems(document, position) {
-                    // Check if it is a target file (if necessary)
                     if (!isJournalFile(document)) { return; }
 
-                    const lines = document.getText().split(/\r?\n/); // Convert entire document to an array
+                    const lines = document.getText().split(/\r?\n/);
                     const lineIndex = position.line;
                     const cursor = position.character;
 
@@ -276,6 +274,7 @@ export async function activate(context: vscode.ExtensionContext) {
             if (event.affectsConfiguration('vsJournal.journalDir')) {
                 await performScan();
                 setupWatcher();
+                disposePreviewPanel();
             }
             if (event.affectsConfiguration('vsJournal.autoSave')) {
                 autoSaveTimers.forEach(timer => clearTimeout(timer));
@@ -283,14 +282,16 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         }),
 
-        vscode.workspace.onDidSaveTextDocument(document => {
+        vscode.workspace.onDidSaveTextDocument(async document => {
             if (!isJournalFile(document)) {
                 return;
             }
             updateSingleFile(document.uri.fsPath);
 
             const meta = createFileMeta(document.uri.fsPath);
-            updatePreviewPanel([meta]); // 配列にして渡す
+            const panel = ensurePreviewPanel(vscode.ViewColumn.Active);
+
+            await updatePreviewPanel(panel, [meta]); // 配列にして渡す
         }),
         vscode.workspace.onDidChangeTextDocument(event => {
             if (!isJournalFile(event.document)) {return;}

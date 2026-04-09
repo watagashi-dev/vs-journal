@@ -38,15 +38,20 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
         if (!src || !baseUri) {
             return defaultImageRule ? defaultImageRule(tokens, idx, options, env, self) : "";
         }
-
-        try {
-            const imageUri = vscode.Uri.joinPath(baseUri, "..", src);
-            const webviewUri = webview.asWebviewUri(imageUri);
-            token.attrSet("src", webviewUri.toString());
-        } catch {
-            return "";
+        let imageUriStr = src;
+        // 外部URLならそのまま
+        if (src.startsWith("http://") || src.startsWith("https://")) {
+            return defaultImageRule ? defaultImageRule(tokens, idx, options, env, self) : self.renderToken(tokens, idx, options);
         }
-
+        if (baseUri) {
+            try {
+                const imageUri = vscode.Uri.joinPath(baseUri, "..", src);
+                const webviewUri = webview.asWebviewUri(imageUri);
+                token.attrSet("src", webviewUri.toString());
+            } catch {
+                return "";
+            }
+        }
         return defaultImageRule ? defaultImageRule(tokens, idx, options, env, self) : self.renderToken(tokens, idx, options);
     };
 
