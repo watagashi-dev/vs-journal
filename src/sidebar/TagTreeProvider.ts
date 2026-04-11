@@ -103,7 +103,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             // result.push(createSpacerItem());
             pushSection(vscode.l10n.t('User Tags'), this.userNodes);
             // result.push(createSpacerItem());
-            pushSection(vscode.l10n.t('Virtual Tags'), this.virtualNodes);
+            // pushSection(vscode.l10n.t('Virtual Tags'), this.virtualNodes);
 
             return Promise.resolve(result);
         }
