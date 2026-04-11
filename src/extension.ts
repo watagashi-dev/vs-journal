@@ -3,7 +3,6 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import MarkdownIt from 'markdown-it';
 
 import { FileMeta } from './models/FileMeta';
 import { measure } from './perf';
@@ -12,7 +11,6 @@ import { createFileMeta } from './services/fileMetaService';
 import { TagTreeProvider } from './sidebar/TagTreeProvider';
 import { formatFileNameDate, formatDateString, formatTimeString } from './utils/date';
 import { getWorkspaceRoot } from './utils/workspace';
-import { shouldShowCompletionMultiLine } from './services/tagLogic';
 import {
     setPreviewState, getPreviewState,
     ensurePreviewPanel, updatePreviewPanel,
@@ -20,6 +18,7 @@ import {
     getCurrentPanel,
     notifyThemeChanged, disposePreviewPanel
 } from './preview/previewPanel';
+import { shouldShowCompletionMultiLine, getCurrentTagAtCursor } from './services/tagLogic';
 
 let tagProvider: TagTreeProvider;
 
@@ -28,6 +27,7 @@ const fileMetaMap = new Map<string, FileMeta>();
 const systemTagIndexMap = new Map<string, FileMeta[]>(); 
 const userTagIndexMap = new Map<string, FileMeta[]>(); 
 const virtualTagIndexMap = new Map<string, FileMeta[]>(); 
+const sessionTagUsage = new Map<string, number>();
 
 function getJournalDir(): string {
     const config = vscode.workspace.getConfiguration('vsJournal');
@@ -379,6 +379,11 @@ export async function activate(context: vscode.ExtensionContext) {
             });
         }),
 
+        // タグ使用回数を増やすためのコマンド
+        vscode.commands.registerCommand('vsJournal.incrementTagUsage', (tag: string) => {
+            sessionTagUsage.set(tag, (sessionTagUsage.get(tag) ?? 0) + 1);
+        }),
+
         vscode.languages.registerCompletionItemProvider(
             { scheme: 'file', language: 'markdown' },
             {
@@ -387,14 +392,30 @@ export async function activate(context: vscode.ExtensionContext) {
 
                     const lines = document.getText().split(/\r?\n/);
                     const lineIndex = position.line;
-                    const cursor = position.character;
 
-                    if (!shouldShowCompletionMultiLine(lines, lineIndex, cursor)) {
+                    if (!shouldShowCompletionMultiLine(lines, lineIndex)) {
                         return undefined;
                     }
 
+                    const line = lines[lineIndex];
+                    const textBefore = line.substring(0, position.character);
+                    const current = getCurrentTagAtCursor(textBefore)?.toLowerCase() || "";
+
                     const items = Array.from(userTagIndexMap.keys()).map(tag => {
                         const item = new vscode.CompletionItem(tag, vscode.CompletionItemKind.Keyword);
+                        const lowerTag = tag.toLowerCase();
+                        const usage = sessionTagUsage.get(tag) ?? 0;
+                        const isPrefix = current && lowerTag.startsWith(current);
+
+                        item.sortText = (isPrefix ? "0" : "1") + String(9999 - usage).padStart(4, "0") + tag.toLowerCase();
+
+                        // 選択時にコマンドを呼ぶ
+                        item.command = {
+                            command: 'vsJournal.incrementTagUsage',  // 先ほど登録したコマンド名
+                            title: 'Increment Tag Usage',           // 任意の説明
+                            arguments: [tag]                        // コマンドに渡す引数
+                        };
+
                         return item;
                     });
 
