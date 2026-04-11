@@ -6,6 +6,8 @@
   "config.journalDir.markdownDescription": "Directory where journal files are stored. [Click here to select a folder](command:vs-journal.selectJournalDir)",
   "config.enableDateTime.description": "Insert date and time into new files.",
   "config.enableDateTime.markdownDescription": "Automatically insert the current date and time below the heading when creating a new journal entry.",
+  "config.systemTags.today.description": "Enable or disable the Today system tag in the tag tree.",
+  "config.systemTags.today.markdownDescription": "Use this setting to control the visibility of the Today system tag in the tag tree.\n\nSet to true to display Today, false to hide it.",
   "view.vsJournal.tags.empty": "No entries",
   "command.newEntry": "VS Journal: New Entry",
   "command.previewEntry": "VS Journal: Preview Entry",

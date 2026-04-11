@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { FileMeta } from '../models/FileMeta';
-import { extractTags } from './tagLogic';
+import { CodeBlockTracker, extractTags } from './tagLogic';
 
 export function createFileMeta(
     filePath: string,
@@ -34,16 +34,12 @@ export function createFileMeta(
 
     // --- 4. タグ抽出（コードブロック内を除外） ---
     const tags: string[] = [];
-    let inCodeBlock = false;
-    for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed.startsWith('```')) {
-            inCodeBlock = !inCodeBlock;
-            continue;
-        }
-        if (inCodeBlock) { continue; }
+    const tracker = new CodeBlockTracker();
 
-        const extracted = extractTags(trimmed); // 既存の多行対応関数
+    for (const line of lines) {
+        if (!tracker.processLine(line)) { continue; }
+
+        const extracted = extractTags(line.trim()); // 既存の多行対応関数
         if (extracted.length > 0) {
             tags.push(...extracted);
         }

@@ -66,6 +66,21 @@
           "default": true,
           "description": "%config.enableDateTime.description%",
           "markdownDescription": "%config.enableDateTime.markdownDescription%"
+        },
+        "vsJournal.systemTags.visibility": {
+          "type": "object",
+          "default": {
+            "today": true
+          },
+          "properties": {
+            "today": {
+              "type": "boolean",
+              "default": true,
+              "description": "%config.systemTags.today.description%"
+            }
+          },
+          "additionalProperties": false,
+          "markdownDescription": "%config.systemTags.today.markdownDescription%"
         }
       }
     },

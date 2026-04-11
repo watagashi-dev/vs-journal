@@ -73,6 +73,15 @@ VS Journal は高速に動作することを最優先に設計されています
 デフォルトでは以下の場所に保存されますが、設定で任意のフォルダに変更可能です。
 - デフォルト: `$HOME/vsJournal`
 
+### 6. システムタグ
+VS Journal には、ユーザーが明示的に付与しなくても自動的に付与される「システムタグ」が存在します。
+
+- `Today` : ファイルの更新日（mtime）が当日と一致するメモ
+- `Untagged` : ユーザータグが1つも付与されていないメモ
+
+これらのタグは通常のタグとは異なり、ファイル内容に依存せず自動的に分類されます。
+`Untagged`は設定で表示の有無を変更することはできません。
+
 ---
 
 ## 使い方
@@ -170,6 +179,7 @@ VS Code の設定で次の項目を変更できます。
 | vsJournal.journalDir       | メモ保存フォルダ    | $HOME/VSJournal |
 | vsJournal.autoSave         | 自動保存の時間(ms)  | 800 |
 | vsJournal.enableDateTime   | 新規ファイル作成時に現在の日付と時刻を自動挿入するか | True |
+| vsJournal.systemTags.visibility | システムタグの表示/非表示を制御 | { "today": true } |
 
 例
 
@@ -177,9 +187,29 @@ VS Code の設定で次の項目を変更できます。
 {
   "vsJournal.journalDir": "/path/to/journal",
   "vsJournal.autoSave": 30000,
-  "vsJournal.enableDateTime": false
+  "vsJournal.enableDateTime": false,
+  "vsJournal.systemTags.visibility": {
+    "today": true
+  }
 }
 ```
+
+### システムタグ設定
+
+`vsJournal.systemTags.visibility` により、システムタグごとの表示/非表示を制御できます。
+
+例:
+
+```json
+{
+  "vsJournal.systemTags.visibility": {
+    "today": true
+  }
+}
+```
+
+- `true` : タグを表示
+- `false` : タグを非表示
 
 ---
 

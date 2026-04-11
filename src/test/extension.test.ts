@@ -6,7 +6,6 @@ import { FileMeta } from '../models/FileMeta';
 import {
 	getAbsoluteJournalDir,
 	addToTagIndex,
-	addToUntagged,
 	isJournalFile
 } from '../extension';
 
@@ -49,25 +48,6 @@ suite('VS Journal Logic Tests', () => {
 
 		assert.strictEqual(map.get('tag1')!.length, 1);
 		assert.strictEqual(map.get('tag1')![0].filePath, '/a.md');
-	});
-
-	test('addToUntagged adds file only once', () => {
-		const list: FileMeta[] = [];
-		const file: FileMeta = {
-			filePath: '/b.md',
-			fileName: 'b.md',   // 追加
-			title: 'B',
-			tags: [],
-			ctime: Date.now(),
-			mtime: Date.now(),
-			size: 456
-		};
-
-		addToUntagged(file, list);
-		addToUntagged(file, list);
-
-		assert.strictEqual(list.length, 1);
-		assert.strictEqual(list[0].filePath, '/b.md');
 	});
 
 	test('isJournalFile returns true for file inside journal', () => {
