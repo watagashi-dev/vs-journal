@@ -1,24 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="16px" height="16px" viewBox="0 0 28 28" version="1.1" xmlns="http://www.w3.org/2000/svg">
-  <title>VSNotesIcon-ShiftedLeft2</title>
-  <desc>Note left edge shifted 2px right in total, rings unchanged</desc>
-  <g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
-    <g stroke="#979797">
-      <!-- ノート本体（左端をさらに1px右に寄せて横幅狭く） -->
-      <rect x="3" y="2" width="24" height="24" rx="2" stroke-width="2"></rect>
+  <g fill="none" fill-rule="evenodd">
+    
+    <path 
+      id="extra-depth"
+      d="M25,5 V23 Q25,27 21,27 H7" 
+      stroke="#777777" 
+      stroke-width="1.5" 
+      stroke-linecap="round" 
+      stroke-linejoin="round" />
 
-      <!-- タグ部分 -->
-      <rect x="15" y="2" width="7" height="3" fill="#979797"></rect>
-      <path d="M15,2 L18.5,-0.5 L22,2 Z" fill="#979797"></path>
+    <g id="notebook-main" stroke="#777777" stroke-width="1.5">
+      
+      <rect id="body-outline" x="3" y="1" width="20" height="24" rx="2" />
 
-      <!-- 左側リング風横線 3本（そのまま） -->
-      <path d="M0,8 L6,8" stroke-width="2" stroke-linecap="square"></path>
-      <path d="M0,14 L6,14" stroke-width="2" stroke-linecap="square"></path>
-      <path d="M0,20 L6,20" stroke-width="2" stroke-linecap="square"></path>
+      <path id="ring-top"    d="M0,7  L6,7" />
+      <path id="ring-middle" d="M0,13 L6,13" />
+      <path id="ring-bottom" d="M0,19 L6,19" />
 
-      <!-- ノート内文章線 2本（そのまま） -->
-      <path d="M9,10 L22,10" stroke-width="2" stroke-linecap="square"></path>
-      <path d="M9,17 L20,17" stroke-width="2" stroke-linecap="square"></path>
+      <path id="line-1" d="M8,9  L20,9" />
+      <path id="line-2" d="M8,16 L18,16" />
+
+      <rect id="tab-top"    x="23" y="7"  width="5" height="3" fill="#777777" stroke="none" />
+      <rect id="tab-bottom" x="20" y="12" width="8" height="3" fill="#777777" stroke="none" />
+      
     </g>
   </g>
 </svg>
