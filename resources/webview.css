@@ -103,7 +103,7 @@ input[type="checkbox"] {
   height: 14px;
   margin-right: 6px;
 
-  /* 枠線強調 */
+  /* Border emphasis */
   border: 2.3px solid var(--vscode-editorWidget-border); 
   border-radius: 3px;
   background: var(--vscode-editor-background);
@@ -112,9 +112,9 @@ input[type="checkbox"] {
   display: inline-block;
   position: relative;
 
-  /* 日本語ベースライン補正 */
+  /* Baseline correction for Japanese text */
   vertical-align: text-bottom; 
-  margin-top: 0px; /* 微調整 */
+  margin-top: 0px; /* Fine adjustment */
 }
 
 input[type="checkbox"]:checked {
@@ -169,7 +169,7 @@ code {
 pre, code {
   font-family: var(--vscode-editor-font-family);
   font-size: 0.9em;
-  color: var(--vscode-editor-foreground); /* テーマに合わせる */
+  color: var(--vscode-editor-foreground); /* Match editor theme */
 }
 
 code {
@@ -265,7 +265,7 @@ table.vjs-md-table td {
   );
 }
 
-/* ヘッダー行だけ下線を強調 */
+/* Emphasize header row underline */
 table.vjs-md-table th {
   border-bottom: 2px solid color-mix(
     in srgb,
@@ -305,7 +305,7 @@ img {
   height: auto;
 }
 
-/* インライン画像の暴れ防止 */
+/* Prevent inline image overflow */
 p img {
   max-width: 80%;
 }
@@ -360,10 +360,10 @@ body > *:first-child {
   60% {
     opacity: 1;
     transform: translateY(0);
-    background: rgba(255, 200, 0, 0.18); /* 一瞬強調 */
+    background: rgba(255, 200, 0, 0.18); /* Brief highlight */
   }
 
   100% {
-    background: rgba(255, 200, 0, 0.08); /* 通常状態に戻る */
+    background: rgba(255, 200, 0, 0.08); /* Return to normal state */
   }
 }

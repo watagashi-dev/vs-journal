@@ -14,14 +14,14 @@ export function createFileMeta(
         mtime = stats.mtimeMs;
         size = stats.size;
     }
-    // --- 1. ファイル統計を一度取得 ---
+    // --- 1. Get file metadata ---
     const fileName = path.basename(filePath);
 
-    // --- 2. ファイル内容を取得 ---
+    // --- 2. Read file content ---
     const content = readFile ? readFile() : fs.readFileSync(filePath, 'utf-8');
     const lines = content.split(/\r?\n/);
 
-    // --- 3. タイトル取得（先頭の # ） ---
+    // --- 3. Extract title (from the first # heading) ---
     let title = fileName;
     for (const line of lines) {
         const trimmed = line.trim();
@@ -29,23 +29,23 @@ export function createFileMeta(
         if (trimmed.startsWith('# ')) {
             title = trimmed.substring(2).trim();
         }
-        break; // 先頭の見出しだけ見れば十分
+        break; // Only check the first non-empty line
     }
 
-    // --- 4. タグ抽出（コードブロック内を除外） ---
+    // --- 4. Extract tags (excluding code blocks) ---
     const tags: string[] = [];
     const tracker = new CodeBlockTracker();
 
     for (const line of lines) {
         if (!tracker.processLine(line)) { continue; }
 
-        const extracted = extractTags(line.trim()); // 既存の多行対応関数
+        const extracted = extractTags(line.trim()); // Reuse multi-line aware extraction logic
         if (extracted.length > 0) {
             tags.push(...extracted);
         }
     }
 
-    // --- 5. FileMeta を返す ---
+    // --- 5. Return FileMeta object ---
     return {
         filePath,
         fileName,

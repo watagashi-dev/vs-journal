@@ -50,19 +50,19 @@ export class TagHierarchyBuilder {
                 currentNode!.files.push(...files);
             }
 
-            // --- 再帰ソート ---
+            // --- Recursive sorting ---
             const sortNode = (node: TagHierarchyNode) => {
 
-                // children は Map のまま再構築（順序保証）
+                // Reconstruct children as a Map to maintain sorted order
                 const sortedChildren = [...node.children.entries()]
                     .sort(([a], [b]) => a.localeCompare(b));
 
                 node.children = new Map(sortedChildren);
 
-                // ファイル
+                // Files
                 node.files = sortFiles(node.files, 'title', 'asc');
 
-                // 再帰
+                // Recursion
                 for (const [, child] of sortedChildren) {
                     sortNode(child);
                 }

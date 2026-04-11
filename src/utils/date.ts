@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 
 /**
- * ファイル名用の日付文字列
- * 例: 2026-03-08-21-30
+ * Date string used for filenames.
+ * Example: 2026-03-08-21-30
  */
 export function formatFileNameDate(date: Date): string {
     const pad = (n: number) => n.toString().padStart(2, '0');
@@ -10,21 +10,21 @@ export function formatFileNameDate(date: Date): string {
 }
 
 /**
- * 新規ファイル本文に挿入する日付文字列
- * 言語に応じて「年・月・日」や「MM/DD/YYYY」に変換
+ * Date string to be inserted into the body of a new file.
+ * Converts to localized formats like "MM/DD/YYYY" depending on the language.
  */
 export function formatDateString(date: Date): string {
     const year = date.getFullYear();
     const month = date.getMonth() + 1;
     const day = date.getDate();
 
-    // フォールバックは英語形
+    // Fallback uses the English format
     return vscode.l10n.t('{month}/{day}/{year}', {year: year, month: month, day: day});
 }
 
 /**
- * 新規ファイル本文に挿入する時刻文字列
- * 例: "21:30"
+ * Time string to be inserted into the body of a new file.
+ * Example: "21:30"
  */
 export function formatTimeString(date: Date): string {
     const pad = (n: number) => n.toString().padStart(2, '0');

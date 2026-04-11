@@ -5,7 +5,6 @@ import * as workspaceUtils from '../utils/workspace';
 import { FileMeta } from '../models/FileMeta';
 import {
 	getAbsoluteJournalDir,
-	addToTagIndex,
 	isJournalFile
 } from '../extension';
 
@@ -29,25 +28,6 @@ suite('VS Journal Logic Tests', () => {
 
 		// 復元
 		(workspaceUtils as any).getWorkspaceRoot = originalGetWorkspaceRoot;
-	});
-
-	test('addToTagIndex adds file only once', () => {
-		const map = new Map<string, any[]>();
-		const file: FileMeta = {
-			filePath: '/a.md',
-			fileName: 'a.md',   // 追加
-			title: 'A',
-			tags: [],
-			ctime: Date.now(),
-			mtime: Date.now(),
-			size: 123
-		};
-
-		addToTagIndex('tag1', file, map);
-		addToTagIndex('tag1', file, map);
-
-		assert.strictEqual(map.get('tag1')!.length, 1);
-		assert.strictEqual(map.get('tag1')![0].filePath, '/a.md');
 	});
 
 	test('isJournalFile returns true for file inside journal', () => {

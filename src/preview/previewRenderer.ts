@@ -43,7 +43,7 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
         if (!src) {
             return defaultImageRule ? defaultImageRule(tokens, idx, options, env, self) : "";
         }
-        // 外部URLならそのまま
+        // Keep as is if it's an external URL
         if (src.startsWith("http://") || src.startsWith("https://")) {
             return defaultImageRule ? defaultImageRule(tokens, idx, options, env, self) : self.renderToken(tokens, idx, options);
         }
@@ -74,10 +74,10 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
     md.renderer.rules.table_open = (tokens, idx, options, env, self) => {
         const token = tokens[idx];
 
-        // 既存処理（行番号などを追加）
+        // Existing processing (adding line numbers, etc.)
         addLineAttr(tokens, idx, env);
 
-        // Markdown テーブルは borderless とする
+        // Treat Markdown tables as borderless
         const existingClass = tokens[idx].attrGet('class');
         if (existingClass) {
             tokens[idx].attrSet('class', existingClass + ' vjs-md-table');
@@ -137,10 +137,10 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
                 const href = token.attrs[hrefIndex][1];
 
                 if (/^https?:\/\//.test(href)) {
-                    // href 削除
+                    // Remove href
                     token.attrs.splice(hrefIndex, 1);
 
-                    // data-href に置き換え
+                    // Replace with data-href
                     token.attrPush(["data-href", href]);
                 }
             }

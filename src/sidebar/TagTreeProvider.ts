@@ -18,12 +18,12 @@ class VSTagItem extends vscode.TreeItem {
 function createSpacerItem(): VSTagItem {
     const spacer = new VSTagItem(
         null,
-        '---------------', // 空白ラベル
+        '---------------', // Spacer label
         vscode.TreeItemCollapsibleState.None,
         'spacer'
     );
-    spacer.command = undefined; // クリック不可
-    spacer.iconPath = undefined; // アイコンなし
+    spacer.command = undefined; // Not clickable
+    spacer.iconPath = undefined; // No icon
     spacer.tooltip = '';
     return spacer;
 }
@@ -45,8 +45,8 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             vscode.TreeItemCollapsibleState.None,
             'spinner'
         );
-        spinner.iconPath = new vscode.ThemeIcon('sync~spin'); // 回転アイコン
-        spinner.command = undefined; // クリック不可
+        spinner.iconPath = new vscode.ThemeIcon('sync~spin'); // Spinning icon
+        spinner.command = undefined; // Not clickable
         spinner.tooltip = '';
         return spinner;
     }
@@ -81,7 +81,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
 
             const pushSection = (label: string, nodes: TagHierarchyNode[]) => {
 
-                // 見出し（クリック不可・三角なし）
+                // Section header (not clickable, no collapse chevron)
                 const item = new VSTagItem(
                     null,
                     label,
@@ -89,11 +89,11 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
                     'section'
                 );
 
-                // アイコンで目立たせる
+                // Use icon for visual emphasis
                 item.iconPath = new vscode.ThemeIcon('folder-opened', new vscode.ThemeColor('charts.blue'));
                 result.push(item);
 
-                // その下にタグを並べる（兄弟構造）
+                // List tags beneath as siblings
                 for (const node of nodes) {
                     result.push(this.createTagItem(node));
                 }
@@ -108,7 +108,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             return Promise.resolve(result);
         }
 
-        // ===== SECTION（子を持たない）=====
+        // ===== SECTION (No children) =====
         if (!element.node) {
             return Promise.resolve([]);
         }
@@ -117,12 +117,12 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         const node = element.node;
         const children: VSTagItem[] = [];
 
-        // 子タグ
+        // Child tags
         for (const child of node.children.values()) {
             children.push(this.createTagItem(child));
         }
 
-        // ファイル
+        // Files
         for (const file of node.files) {
             const item = new VSTagItem(
                 null,

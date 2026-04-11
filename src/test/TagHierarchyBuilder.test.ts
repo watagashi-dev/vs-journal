@@ -64,7 +64,7 @@ suite('TagHierarchyBuilder Tests', () => {
     test('build includes system tags even if empty', () => {
         const builder = new TagHierarchyBuilder();
         const systemTagIndex = new Map<string, FileMeta[]>();
-        systemTagIndex.set('today', []); // 空でも存在させる
+        systemTagIndex.set('today', []); // Ensure it exists even if empty
 
         const result = builder.build(systemTagIndex, new Map(), new Map());
         const systemNodes = result.system;

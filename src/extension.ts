@@ -84,12 +84,12 @@ const systemTagDefinitions: SystemTagDefinition[] = [
 function rebuildSystemTags() {
     systemTagIndexMap.clear();
 
-    // 初期化（全タグ分の空配列を作る）
+    // Initialize: create empty arrays for all system tags
     for (const def of systemTagDefinitions) {
         systemTagIndexMap.set(def.id, []);
     }
 
-    // 全ファイルを1回だけループ
+    // Iterate through all files once
     for (const meta of fileMetaMap.values()) {
         for (const def of systemTagDefinitions) {
             if (def.build(meta)) {
@@ -104,7 +104,6 @@ function rebuildTree() {
     const visibility = config.get<Record<string, boolean>>(
         'systemTags.visibility',
         {}
-//        { untagged: true }
     );
     const filteredSystemMap = new Map<string, FileMeta[]>();
 
@@ -127,11 +126,11 @@ async function refreshAllData() {
     const journalDir = getJournalDir();
     const fullDir = getAbsoluteJournalDir(journalDir);
 
-    // 既存データクリア
+    // Clear existing data
     fileMetaMap.clear();
     userTagIndexMap.clear();
-    systemTagIndexMap.clear();  // System タグは表示用 Map
-    virtualTagIndexMap.clear(); // 今は空
+    systemTagIndexMap.clear();  // Map used for system tags display
+    virtualTagIndexMap.clear(); // Currently empty
 
     if (!fullDir || !fs.existsSync(fullDir)) {
         return;
@@ -139,13 +138,13 @@ async function refreshAllData() {
 
     const files = fs.readdirSync(fullDir).filter(f => f.endsWith('.md'));
 
-    // --- ファイルを解析して User タグに登録 ---
+    // --- Analyze files and register user tags ---
     for (const file of files) {
         const filePath = path.join(fullDir, file);
         const meta = createFileMeta(filePath);
         fileMetaMap.set(filePath, meta);
 
-        // User タグ追加
+        // Add user tags
         meta.tags.forEach(tag => {
             const arr = userTagIndexMap.get(tag) ?? [];
             userTagIndexMap.set(tag, [...arr, meta]);
@@ -157,7 +156,7 @@ async function refreshAllData() {
 function updateSingleFile(filePath: string) {
     const oldMeta = fileMetaMap.get(filePath);
 
-    // --- 古い User タグから削除 ---
+    // --- Remove from old user tags ---
     if (oldMeta) {
         oldMeta.tags.forEach(tag => {
             const files = userTagIndexMap.get(tag);
@@ -172,11 +171,11 @@ function updateSingleFile(filePath: string) {
         });
     }
 
-    // --- 新しい FileMeta を作成 ---
+    // --- Create new FileMeta ---
     const newMeta = createFileMeta(filePath);
     fileMetaMap.set(filePath, newMeta);
 
-    // --- User タグに追加 ---
+    // --- Add to user tags ---
     newMeta.tags.forEach(tag => {
         const arr = userTagIndexMap.get(tag) ?? [];
         userTagIndexMap.set(tag, [...arr, newMeta]);
@@ -184,14 +183,6 @@ function updateSingleFile(filePath: string) {
 
     rebuildSystemTags();
 }
-
-/*
-function notifyProvider(scanning?: boolean) {
-    const hierarchyBuilder = new TagHierarchyBuilder();
-    const result = hierarchyBuilder.build(systemTagIndexMap, userTagIndexMap, virtualTagIndexMap);
-    tagProvider.refresh(result.system, result.user, result.virtual, scanning);
-}
-*/
 
 function checkPreviewLimits(files: FileMeta[]): {
     limitedFiles: FileMeta[];
@@ -363,7 +354,7 @@ export async function activate(context: vscode.ExtensionContext) {
         }),
 
         vscode.commands.registerCommand('vs-journal.onTagClick', async (node: TagHierarchyNode) => {
-            const filesToPreview = node.files; // 子タグは無視
+            const filesToPreview = node.files; // Ignore child tags
 
             if (filesToPreview.length === 0) {
                 vscode.window.showInformationMessage(vscode.l10n.t('There are no files for this tag'));
@@ -379,7 +370,7 @@ export async function activate(context: vscode.ExtensionContext) {
             });
         }),
 
-        // タグ使用回数を増やすためのコマンド
+        // Command to increment tag usage count
         vscode.commands.registerCommand('vsJournal.incrementTagUsage', (tag: string) => {
             sessionTagUsage.set(tag, (sessionTagUsage.get(tag) ?? 0) + 1);
         }),
@@ -409,11 +400,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
                         item.sortText = (isPrefix ? "0" : "1") + String(9999 - usage).padStart(4, "0") + tag.toLowerCase();
 
-                        // 選択時にコマンドを呼ぶ
+                        // Trigger command on selection
                         item.command = {
-                            command: 'vsJournal.incrementTagUsage',  // 先ほど登録したコマンド名
-                            title: 'Increment Tag Usage',           // 任意の説明
-                            arguments: [tag]                        // コマンドに渡す引数
+                            command: 'vsJournal.incrementTagUsage',  // The command name registered above
+                            title: 'Increment Tag Usage',           // Optional description
+                            arguments: [tag]                        // Arguments passed to the command
                         };
 
                         return item;
@@ -439,7 +430,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 autoSaveTimers.clear();
             }
             if (event.affectsConfiguration('vsJournal.systemTags.visibility')) {
-                rebuildTree(); // ← 再スキャンしない
+                rebuildTree(); // No rescan required
             }
         }),
 
@@ -486,11 +477,11 @@ export async function activate(context: vscode.ExtensionContext) {
     // --- Initial Scan ---
     const performScan = async () => {
         tagProvider.setScanning(true);
-        await new Promise(resolve => setTimeout(resolve, 0)); // ←これ重要
+        await new Promise(resolve => setTimeout(resolve, 0)); // Crucial to allow UI to update
         updateStatusBar();
 
         await refreshAllData();
-        await new Promise(r => setTimeout(r, 10000)); // 3秒待つ
+        await new Promise(r => setTimeout(r, 10000)); // Intentional delay
 
         rebuildTree();
         tagProvider.setScanning(false);
@@ -510,21 +501,12 @@ export function isJournalFile(document: vscode.TextDocument, absJournalDir?: str
     return !rel.startsWith('..') && !path.isAbsolute(rel) && document.uri.fsPath.toLowerCase().endsWith('.md');
 }
 
-export function addToTagIndex(tag: string, file: FileMeta, map?: Map<string, FileMeta[]>) {
-    const targetMap = map ?? userTagIndexMap;
-    const list = targetMap.get(tag) || [];
-    if (!list.some(f => f.filePath === file.filePath)) {
-        list.push(file);
-        targetMap.set(tag, list);
-    }
-}
-
 const autoSaveTimers = new Map<string, NodeJS.Timeout>();
 
 function scheduleAutoSave(document: vscode.TextDocument) {
     const delay = vscode.workspace.getConfiguration('vsJournal').get<number>('autoSave') ?? 800;
     if (delay === 0) {
-        return; // Do nothing if OFF
+        return; // Auto-save is disabled
     }
 
     const filePath = document.uri.fsPath;
@@ -535,7 +517,7 @@ function scheduleAutoSave(document: vscode.TextDocument) {
     const timer = setTimeout(async () => {
         autoSaveTimers.delete(filePath);
         await saveDocument(document);
-    }, delay); // Save after 800ms delay
+    }, delay);
 
     autoSaveTimers.set(filePath, timer);
 }

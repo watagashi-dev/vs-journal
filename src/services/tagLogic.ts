@@ -6,12 +6,12 @@ import { FileMeta } from '../models/FileMeta';
 // Regex for tag token (unchanged to preserve current behavior)
 const TAG_REGEX = /#([\p{L}\p{N}_\-/ー]+)$/u;
 
-// Determine if it is a tag token
+// Checks if a string is a valid tag token
 export function isTagToken(token: string): boolean {
     return TAG_REGEX.test(token);
 }
 
-// Determine line type
+// Identifies the type of the given line
 export function getLineType(line: string): 'tag' | 'heading' | 'other' | 'partial' {
     const trimmed = line.trim();
 
@@ -21,7 +21,7 @@ export function getLineType(line: string): 'tag' | 'heading' | 'other' | 'partia
     // Heading (# + space required)
     if (/^#+\s/.test(trimmed)) {return 'heading';}
 
-    // Tag (# + non-space) *Excluding ##...
+    // Tag (# + non-space). Excludes lines starting with multiple '#' (e.g., headings)
     if (/^#\S/.test(trimmed) && !/^#{2,}\S/.test(trimmed)) {return 'tag';}
 
     return 'other';
@@ -35,14 +35,14 @@ export class CodeBlockTracker {
 
     if (trimmed.startsWith('```')) {
       this.inCodeBlock = !this.inCodeBlock;
-      return false; // この行自体はタグ対象外にするなら
+      return false; // Exclude the code block delimiter itself from tag detection
     }
 
     return !this.inCodeBlock;
   }
 }
 
-// Check tag line validity
+// Validates if a line contains only valid tags
 function isTagLineValid(line: string, allowSingleHash = false): boolean {
     const tokens = line.trim().split(/\s+/);
 
@@ -68,14 +68,14 @@ function isInCodeBlock(lines: string[], currentLineIndex: number): boolean {
         const line = lines[i].trim();
 
         if (line.startsWith('```')) {
-            inCodeBlock = !inCodeBlock;  // toggle state
+            inCodeBlock = !inCodeBlock;  // Toggle state
         }
     }
 
     return inCodeBlock;
 }
 
-// Check heading line validity (ignore title part)
+// Validates tags within a heading line, ignoring the heading text
 function isHeadingTagPartValid(line: string, allowSingleHash = false): boolean {
     const match = line.match(/^(#+)\s+(.*)$/);
     if (!match) {return false;}
@@ -88,12 +88,12 @@ function isHeadingTagPartValid(line: string, allowSingleHash = false): boolean {
 
     const tagPart = rest.slice(tagStart).trim();
 
-    // Delegate to tag line validation here
+    // Reuse tag line validation logic
     return isTagLineValid(tagPart, allowSingleHash);
 }
 
 
-// Extract tags
+// Extracts all valid tags from a line
 export function extractTags(line: string): string[] {
     const type = getLineType(line);
     if (type === 'other') {return [];}
@@ -105,7 +105,7 @@ export function extractTags(line: string): string[] {
     return ranges.map(r => line.slice(r.start + 1, r.end)); // Remove "#"
 }
 
-// Get tag ranges
+// Calculates the character ranges for tags in a line
 export function getTagRanges(line: string): { start: number; end: number }[] {
     const ranges: { start: number; end: number }[] = [];
     const regex = /(^|\s)#([^\s#]+)/g;
@@ -113,7 +113,7 @@ export function getTagRanges(line: string): { start: number; end: number }[] {
     let match;
     while ((match = regex.exec(line)) !== null) {
         const start = match.index + match[1].length;
-        const end = start + match[2].length + 1; // Include "#"
+        const end = start + match[2].length + 1; // Includes the '#' prefix
         ranges.push({ start, end });
     }
     return ranges;
@@ -127,12 +127,12 @@ export function getCurrentTagAtCursor(textBefore: string): string | null {
     return r.end === textBefore.length ? textBefore.slice(r.start + 1, r.end) : null;
 }
 
-// Determine completion
+// Determines if tag completion should be shown based on the context of multiple lines
 export function shouldShowCompletionMultiLine(
     lines: string[],
     lineIndex: number
 ): boolean {
-    if (isInCodeBlock(lines, lineIndex)) { return false; } // code block check first
+    if (isInCodeBlock(lines, lineIndex)) { return false; } // Check for code blocks first
 
     const line = lines[lineIndex];
     const type = getLineType(line);

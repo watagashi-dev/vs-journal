@@ -4,7 +4,7 @@ import { shouldShowCompletionMultiLine, extractTags, isTagToken } from '../servi
 function runCompletionTest(input: string, expected: boolean) {
     const line = input.replace('|', '');
     const lines = [line];       // single line as array
-    const lineIndex = 0;        // 0番目の行を対象
+    const lineIndex = 0;        // Test the first line (index 0)
 
     const result = shouldShowCompletionMultiLine(lines, lineIndex);
     assert.strictEqual(result, expected, input);
@@ -79,7 +79,7 @@ suite('Tag Logic Tests', () => {
         runCompletionTest('text #|', false);
         runCompletionTest('# title # foo #|', false);
 
-        // 純粋性NG
+        // Invalid tag format (mixed content)
         runCompletionTest('#tag1 foo #|', false);
         runCompletionTest('test foo #|', false);
         runCompletionTest('# test #tag1 hoge #|', false);
@@ -101,7 +101,7 @@ suite('Tag Logic Tests', () => {
             "#endif",
             "```",
             "#タグ1 #|"
-        ], true); // 最後の行のタグで補完が出るはず
+        ], true); // Completion should be triggered for the tag on the last line
 
         runMultiLineCompletionTest([
             "# Heading",
@@ -111,7 +111,7 @@ suite('Tag Logic Tests', () => {
             "#else",
             "#endif",
             "```"
-        ], false); // コードブロック内なので補完は出ない
+        ], false); // No completion inside code blocks
    });
 
     test('extract', () => {
@@ -119,12 +119,12 @@ suite('Tag Logic Tests', () => {
         runExtractTest('# title #tag1 #tag2', ['tag1', 'tag2']);
         runExtractTest('# title foo #tag', ['tag']);
 
-        // 純粋性NG
+        // Invalid tag format (mixed content)
         runExtractTest('#tag1 foo #tag2', []);
         runExtractTest('#tag1 # #tag2', []);
         runExtractTest('# title # foo #tag', []);
 
-        // 文中
+        // Mid-sentence
         runExtractTest('text #tag', []);
 
         // Unicode

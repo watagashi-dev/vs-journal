@@ -59,7 +59,7 @@ function getLocalResourceRoots(): vscode.Uri[] {
         roots.push(vscode.Uri.file(journalDir));
     }
 
-    // Webview用リソース（常に必要）
+    // Webview resources (always required)
     roots.push(
         vscode.Uri.file(
             path.join(extensionContext.extensionPath, 'resources')
