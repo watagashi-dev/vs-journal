@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { TagHierarchyNode } from '../services/TagHierarchyBuilder';
+import { getJournalRelativePath } from '../extension';
 import { FileMeta } from '../models/FileMeta';
 
 class VSTagItem extends vscode.TreeItem {
@@ -136,7 +137,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
                 arguments: [file.filePath]
             };
 
-            item.tooltip = file.filePath;
+            item.tooltip = getJournalRelativePath(file.filePath);
 
             children.push(item);
         }

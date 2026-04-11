@@ -43,6 +43,14 @@ export function getAbsoluteJournalDir(
     return root ? path.join(root, journalDir) : undefined;
 }
 
+export function getJournalRelativePath(filePath: string): string {
+    const journalDir = getAbsoluteJournalDir(getJournalDir());
+    if (!journalDir) {
+        return filePath;
+    }
+    return path.relative(journalDir, filePath).replace(/\\/g, '/');
+}
+
 type SystemTagDefinition = {
     id: string;
     build: (meta: FileMeta) => boolean;
