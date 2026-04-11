@@ -239,10 +239,26 @@ export async function updatePreviewPanel(
                             vscode.postMessage({ type: 'edit' });
                         }
                     });
-                    window.addEventListener('load', () => {
+                    window.addEventListener('DOMContentLoaded', () => {
+                        const warning = document.querySelector('.vjs-limit-warning');
                         if (window.hljs) {
                             hljs.highlightAll();
                         }
+                        if (!warning) {
+                            return;
+                        }
+                        const observer = new IntersectionObserver((entries) => {
+                            entries.forEach(entry => {
+                                if (entry.isIntersecting) {
+                                    warning.classList.add('show');
+                                    observer.disconnect(); // 一回だけでOK
+                                }
+                            });
+                        }, {
+                            threshold: 0.3 // 少しでも見えたら
+                        });
+
+                        observer.observe(warning);
                     });
                 })();
                 window.addEventListener('message', event => {
