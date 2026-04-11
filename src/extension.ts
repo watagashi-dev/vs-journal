@@ -13,7 +13,13 @@ import { TagTreeProvider } from './sidebar/TagTreeProvider';
 import { formatFileNameDate, formatDateString, formatTimeString } from './utils/date';
 import { getWorkspaceRoot } from './utils/workspace';
 import { shouldShowCompletionMultiLine } from './services/tagLogic';
-import { ensurePreviewPanel, updatePreviewPanel, setExtensionContext, setCurrentDocument, notifyThemeChanged, disposePreviewPanel } from './preview/previewPanel';
+import {
+    setPreviewState, getPreviewState,
+    ensurePreviewPanel, updatePreviewPanel,
+    setExtensionContext, setCurrentDocument,
+    getCurrentPanel,
+    notifyThemeChanged, disposePreviewPanel
+} from './preview/previewPanel';
 
 let tagProvider: TagTreeProvider;
 
@@ -102,6 +108,46 @@ function notifyProvider(scanning?: boolean) {
     const hierarchyBuilder = new TagHierarchyBuilder();
     const nodes: TagHierarchyNode[] = hierarchyBuilder.build(tagIndexForProvider, untaggedFiles);
     tagProvider.refresh(nodes, scanning);
+}
+
+function checkPreviewLimits(files: FileMeta[]): {
+    limitedFiles: FileMeta[];
+    limitExceeded: boolean;
+    message?: string;
+} {
+    const MAX_TOTAL_SIZE = 2 * 1024 * 1024; // 2MB
+    const MAX_FILES = 80;
+//    const MAX_TOTAL_SIZE = 3 * 1024;
+//    const MAX_FILES = 4;
+
+    let totalSize = 0;
+    const result: FileMeta[] = [];
+
+    for (const file of files) {
+        if (result.length >= MAX_FILES) {
+            return {
+                limitedFiles: result,
+                limitExceeded: true,
+                message: vscode.l10n.t('Preview truncated: too many files')
+            };
+        }
+
+        if (totalSize + file.size > MAX_TOTAL_SIZE) {
+            return {
+                limitedFiles: result,
+                limitExceeded: true,
+                message: vscode.l10n.t('Preview truncated: size limit exceeded')
+            };
+        }
+
+        totalSize += file.size;
+        result.push(file);
+    }
+
+    return {
+        limitedFiles: result,
+        limitExceeded: false
+    };
 }
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -208,7 +254,12 @@ export async function activate(context: vscode.ExtensionContext) {
             await measure("preview generation", async () => {
                 if (filePath) {
                     const meta = createFileMeta(filePath);
-                    await updatePreviewPanel(panel, [meta]);
+                    const check = checkPreviewLimits([meta]);
+                    setPreviewState(panel, check.limitedFiles);
+                    await updatePreviewPanel(panel, check.limitedFiles, {
+                        limitExceeded: check.limitExceeded,
+                        message: check.message
+                    });
                 } else if (vscode.window.activeTextEditor && isJournalFile(vscode.window.activeTextEditor.document)) {
                     const docMeta = createFileMeta(vscode.window.activeTextEditor.document.uri.fsPath);
                     await updatePreviewPanel(panel, [docMeta]);
@@ -239,7 +290,12 @@ export async function activate(context: vscode.ExtensionContext) {
             }
 
             const panel = ensurePreviewPanel(vscode.ViewColumn.Active);
-            await updatePreviewPanel(panel, filesToPreview);
+            const check = checkPreviewLimits(filesToPreview);
+            setPreviewState(panel, check.limitedFiles);
+            await updatePreviewPanel(panel, check.limitedFiles, {
+                limitExceeded: check.limitExceeded,
+                message: check.message
+            });
         }),
 
         vscode.languages.registerCompletionItemProvider(
@@ -288,11 +344,27 @@ export async function activate(context: vscode.ExtensionContext) {
             }
             updateSingleFile(document.uri.fsPath);
 
-            const meta = createFileMeta(document.uri.fsPath);
-            const panel = ensurePreviewPanel(vscode.ViewColumn.Active);
+            const panel = getCurrentPanel();
+            if (!panel) { return; }
 
-            await updatePreviewPanel(panel, [meta]); // 配列にして渡す
+            const currentFiles = getPreviewState(panel);
+            if (!currentFiles) { return; }
+
+            const meta = createFileMeta(document.uri.fsPath);
+            const updatedFiles = currentFiles.map(f =>
+                f.filePath === meta.filePath ? meta : f
+            );
+
+            const check = checkPreviewLimits(updatedFiles);
+
+            setPreviewState(panel, check.limitedFiles);
+
+            await updatePreviewPanel(panel, check.limitedFiles, {
+                limitExceeded: check.limitExceeded,
+                message: check.message
+            });
         }),
+
         vscode.workspace.onDidChangeTextDocument(event => {
             if (!isJournalFile(event.document)) {return;}
             scheduleAutoSave(event.document);

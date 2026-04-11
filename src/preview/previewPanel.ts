@@ -8,6 +8,21 @@ let currentDocument: vscode.TextDocument | undefined;
 let extensionContext: vscode.ExtensionContext;
 let needsRefresh = false;
 
+// ===== Preview State =====
+const previewStateMap = new Map<vscode.WebviewPanel, FileMeta[]>();
+
+export function setPreviewState(panel: vscode.WebviewPanel, files: FileMeta[]) {
+    previewStateMap.set(panel, files);
+}
+
+export function getPreviewState(panel: vscode.WebviewPanel): FileMeta[] | undefined {
+    return previewStateMap.get(panel);
+}
+
+export function getCurrentPanel(): vscode.WebviewPanel | undefined {
+    return currentPanel;
+}
+
 export function setExtensionContext(ctx: vscode.ExtensionContext) {
     extensionContext = ctx;
 }
@@ -54,9 +69,12 @@ function getLocalResourceRoots(): vscode.Uri[] {
     return roots;
 }
 
-export function ensurePreviewPanel(column: vscode.ViewColumn): vscode.WebviewPanel {
+export function ensurePreviewPanel(
+    column: vscode.ViewColumn,
+    preserveFocus: boolean = false
+): vscode.WebviewPanel {
     if (currentPanel) {
-        currentPanel.reveal(column, true);
+        currentPanel.reveal(column, preserveFocus);
         return currentPanel;
     }
 
@@ -74,6 +92,7 @@ export function ensurePreviewPanel(column: vscode.ViewColumn): vscode.WebviewPan
     );
 
     currentPanel.onDidDispose(() => {
+        previewStateMap.delete(currentPanel!);
         currentPanel = undefined;
         currentDocument = undefined;
     });
@@ -116,11 +135,20 @@ export function ensurePreviewPanel(column: vscode.ViewColumn): vscode.WebviewPan
 
 export async function updatePreviewPanel(
     panel: vscode.WebviewPanel,
-    filesToPreview: FileMeta[] = []
+    filesToPreview: FileMeta[] = [],
+    options?: {
+        limitExceeded?: boolean;
+        message?: string;
+    }
 ) {
     const webview = panel.webview;
     try {
         let htmlContent = '';
+        let warningHtml = '';
+
+        if (options?.limitExceeded && options.message) {
+            warningHtml = `<div class="vjs-limit-warning">${options.message}</div>`;
+        }
         let index = 0;
         for (const fileMeta of filesToPreview) {
             const baseUri = vscode.Uri.file(fileMeta.filePath);
@@ -162,6 +190,7 @@ export async function updatePreviewPanel(
             <body>
                 <div class="edit-hint">${hintText}</div>
                 ${htmlContent}
+                ${warningHtml}
                 <script>
                 hljs.highlightAll();
                 (function(){
