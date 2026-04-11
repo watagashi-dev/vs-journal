@@ -8,6 +8,21 @@ let currentDocument: vscode.TextDocument | undefined;
 let extensionContext: vscode.ExtensionContext;
 let needsRefresh = false;
 
+// ===== Preview State =====
+const previewStateMap = new Map<vscode.WebviewPanel, FileMeta[]>();
+
+export function setPreviewState(panel: vscode.WebviewPanel, files: FileMeta[]) {
+    previewStateMap.set(panel, files);
+}
+
+export function getPreviewState(panel: vscode.WebviewPanel): FileMeta[] | undefined {
+    return previewStateMap.get(panel);
+}
+
+export function getCurrentPanel(): vscode.WebviewPanel | undefined {
+    return currentPanel;
+}
+
 export function setExtensionContext(ctx: vscode.ExtensionContext) {
     extensionContext = ctx;
 }
@@ -27,11 +42,43 @@ export function notifyThemeChanged() {
     });
 }
 
-export function ensurePreviewPanel(column: vscode.ViewColumn) {
+export function disposePreviewPanel() {
     if (currentPanel) {
-        currentPanel.reveal(column, true);
-        return;
+        currentPanel.dispose();
+        currentPanel = undefined;
     }
+}
+
+function getLocalResourceRoots(): vscode.Uri[] {
+    const config = vscode.workspace.getConfiguration('vsJournal');
+    const journalDir = config.get<string>('journalDir');
+
+    const roots: vscode.Uri[] = [];
+
+    if (journalDir) {
+        roots.push(vscode.Uri.file(journalDir));
+    }
+
+    // Webview用リソース（常に必要）
+    roots.push(
+        vscode.Uri.file(
+            path.join(extensionContext.extensionPath, 'resources')
+        )
+    );
+
+    return roots;
+}
+
+export function ensurePreviewPanel(
+    column: vscode.ViewColumn,
+    preserveFocus: boolean = false
+): vscode.WebviewPanel {
+    if (currentPanel) {
+        currentPanel.reveal(column, preserveFocus);
+        return currentPanel;
+    }
+
+    const roots = getLocalResourceRoots();
 
     currentPanel = vscode.window.createWebviewPanel(
         'vsJournalPreview',
@@ -40,14 +87,12 @@ export function ensurePreviewPanel(column: vscode.ViewColumn) {
         {
             enableScripts: true,
             retainContextWhenHidden: true,
-            localResourceRoots: [
-                vscode.Uri.file(path.dirname(currentDocument?.uri.fsPath || '')),
-                vscode.Uri.file(path.join(extensionContext.extensionPath, 'resources'))
-            ]
+            localResourceRoots: roots
         }
     );
 
     currentPanel.onDidDispose(() => {
+        previewStateMap.delete(currentPanel!);
         currentPanel = undefined;
         currentDocument = undefined;
     });
@@ -87,21 +132,30 @@ export function ensurePreviewPanel(column: vscode.ViewColumn) {
             await vscode.window.showTextDocument(doc);
         }
     });
+
+    return currentPanel;
 }
 
-export async function updatePreviewPanel(filesToPreview: FileMeta[] = []) {
-    if (!currentPanel) {
-        return;
+export async function updatePreviewPanel(
+    panel: vscode.WebviewPanel,
+    filesToPreview: FileMeta[] = [],
+    options?: {
+        limitExceeded?: boolean;
+        message?: string;
     }
-    const webview = currentPanel.webview;
-
+) {
+    const webview = panel.webview;
     try {
-        const baseUri = currentDocument?.uri;
-        const md = createMarkdownIt(webview, baseUri);
-
         let htmlContent = '';
+        let warningHtml = '';
+
+        if (options?.limitExceeded && options.message) {
+            warningHtml = `<div class="vjs-limit-warning">${options.message}</div>`;
+        }
         let index = 0;
         for (const fileMeta of filesToPreview) {
+            const baseUri = vscode.Uri.file(fileMeta.filePath);
+            const md = createMarkdownIt(webview, baseUri);
             if (index > 0) {
                 htmlContent += `<div class="file-separator"></div>\n`;
             }
@@ -116,19 +170,22 @@ export async function updatePreviewPanel(filesToPreview: FileMeta[] = []) {
         }
 
         const cssPath = vscode.Uri.file(path.join(extensionContext.extensionPath, 'resources/webview.css'));
-        const cssUri = currentPanel.webview.asWebviewUri(cssPath);
+        const cssUri = panel.webview.asWebviewUri(cssPath);
         const hintText = vscode.l10n.t("Click or press Enter to edit");
         const isDark = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark;
         const themeUrl = getHljsThemeUrl(isDark);
 
-        currentPanel.webview.html = `
+        panel.webview.html = `
             <!DOCTYPE html>
             <html>
             <head>
                 <meta charset="UTF-8">
-
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} https: data:; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'unsafe-inline' https://cdnjs.cloudflare.com;">
-
+                <meta http-equiv="Content-Security-Policy" content="
+                    default-src 'none';
+                    img-src ${webview.cspSource} https: data:;
+                    style-src ${webview.cspSource} 'unsafe-inline' https://cdnjs.cloudflare.com;
+                    script-src ${webview.cspSource} 'unsafe-inline' https://cdnjs.cloudflare.com;
+                ">
                 <link rel="stylesheet" type="text/css" href="${cssUri}">
                 <link id="hljs-theme" rel="stylesheet" href="${themeUrl}">
                 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
@@ -136,8 +193,8 @@ export async function updatePreviewPanel(filesToPreview: FileMeta[] = []) {
             <body>
                 <div class="edit-hint">${hintText}</div>
                 ${htmlContent}
+                ${warningHtml}
                 <script>
-                hljs.highlightAll();
                 (function(){
                     const vscode = acquireVsCodeApi();
                     document.body.addEventListener('click', (e) => {
@@ -154,46 +211,49 @@ export async function updatePreviewPanel(filesToPreview: FileMeta[] = []) {
                         if (targetLineDiv) {
                             const lineStr = targetLineDiv.getAttribute('data-line');
                             const fileContainer = targetLineDiv.closest('[data-file]');
-            const filePath = fileContainer?.getAttribute('data-file');
-            if (lineStr && filePath) {
-                vscode.postMessage({
-                    type: 'jumpToLine',
-                    filePath,
-                    line: parseInt(lineStr, 10)
-                });
-                return;
-            }
-        }
+                            const filePath = fileContainer?.getAttribute('data-file');
+                            if (lineStr && filePath) {
+                                vscode.postMessage({
+                                    type: 'jumpToLine',
+                                    filePath,
+                                    line: parseInt(lineStr, 10)
+                                });
+                                return;
+                            }
+                        }
                         const fileRoot = e.target.closest('[data-file]');
-        if (fileRoot) {
-            const filePath = fileRoot.getAttribute('data-file');
-            if (filePath) {
+                        if (fileRoot) {
+                            const filePath = fileRoot.getAttribute('data-file');
+                            if (filePath) {
                                 vscode.postMessage({
                                     type: 'jumpToFile',
                                     filePath
                                 });
-                return;
-            }
-        }
-    });
+                                return;
+                            }
+                        }
+                    });
 
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === 'Escape') {
-            vscode.postMessage({ type: 'edit' });
-        }
-    });
+                    document.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === 'Escape') {
+                            vscode.postMessage({ type: 'edit' });
+                        }
+                    });
+                    window.addEventListener('load', () => {
+                        if (window.hljs) {
+                            hljs.highlightAll();
+                        }
+                    });
                 })();
-
-window.addEventListener('message', event => {
-    const msg = event.data;
+                window.addEventListener('message', event => {
+                    const msg = event.data;
                     if (msg.type !== 'themeChanged') return;
-        const link = document.getElementById('hljs-theme');
+                    const link = document.getElementById('hljs-theme');
                     if (!link) return;
-            link.href = msg.themeUrl;
+                    link.href = msg.themeUrl;
                     hljs.highlightAll();
-});
-
-</script>
+                });
+                </script>
             </body>
             </html>
         `;

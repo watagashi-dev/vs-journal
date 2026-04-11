@@ -56,7 +56,6 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
                 return "";
             }
         }
-
         return defaultImageRule ? defaultImageRule(tokens, idx, options, env, self) : self.renderToken(tokens, idx, options);
     };
 

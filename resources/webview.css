@@ -339,3 +339,31 @@ body > *:first-child {
     margin: 24px 0;
     padding-top: 16px;
 }
+
+.vjs-limit-warning {
+  margin: 8px 0 16px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--vscode-editorWarning-foreground);
+  background: rgba(255, 200, 0, 0.08);
+  font-size: 12px;
+
+  animation: vjs-appear-highlight 0.8s ease-out;
+}
+
+@keyframes vjs-appear-highlight {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px);
+    background: rgba(255, 200, 0, 0.00);
+  }
+
+  60% {
+    opacity: 1;
+    transform: translateY(0);
+    background: rgba(255, 200, 0, 0.18); /* 一瞬強調 */
+  }
+
+  100% {
+    background: rgba(255, 200, 0, 0.08); /* 通常状態に戻る */
+  }
+}
