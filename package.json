@@ -70,10 +70,10 @@
         "vsJournal.systemTags.visibility": {
           "type": "object",
           "default": {
-            "today": true
+            "Today": true
           },
           "properties": {
-            "today": {
+            "Today": {
               "type": "boolean",
               "default": true,
               "description": "%config.systemTags.today.description%"
