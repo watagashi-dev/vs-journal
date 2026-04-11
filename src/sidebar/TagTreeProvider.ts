@@ -146,11 +146,19 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
     }
 
     private createTagItem(node: TagHierarchyNode): VSTagItem {
-        return new VSTagItem(
+        const item = new VSTagItem(
             node,
             vscode.l10n.t(node.name),
             vscode.TreeItemCollapsibleState.Collapsed,
             'tag'
         );
+
+        item.command = {
+            command: 'vs-journal.onTagClick',
+            title: 'Open Tag',
+            arguments: [node]
+        };
+
+        return item;
     }
 }
