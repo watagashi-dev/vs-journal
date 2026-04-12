@@ -1,6 +1,6 @@
 import { performance } from "perf_hooks";
 
-const enablePerf = true;
+const enablePerf = false;
 
 export async function measure<T>(
   name: string,

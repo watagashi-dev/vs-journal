@@ -492,7 +492,7 @@ export async function activate(context: vscode.ExtensionContext) {
         updateStatusBar();
 
         await refreshAllData();
-        await new Promise(r => setTimeout(r, 10000)); // Intentional delay
+        // await new Promise(r => setTimeout(r, 10000)); // Intentional delay
 
         rebuildTree();
         tagProvider.setScanning(false);
