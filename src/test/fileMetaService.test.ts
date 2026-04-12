@@ -1,6 +1,20 @@
 import * as assert from 'assert';
 import { createFileMeta } from '../services/fileMetaService';
 
+function assertTags(actual: string[], expected: string[], label = '') {
+    const fmt = (arr: string[]) =>
+        arr.map((t: string) => `[${t}]`).join(' ');
+
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+        throw new Error(`
+            ${label}
+            ACTUAL:   ${fmt(actual)}
+            EXPECTED: ${fmt(expected)}
+        `);
+    }
+}
+
+
 suite('fileMetaService tests', () => {
 
     test('extracts title from first heading', () => {
@@ -45,6 +59,32 @@ suite('fileMetaService tests', () => {
         assert.strictEqual(meta.title, 'Heading');
         assert.deepStrictEqual(meta.tags, ['tag4', 'tag5', 'tag6']);
     });
+
+    test('headings tag with inline code block', () => {
+        const mockContent = `# Heading
+## Another heading \` #tag4 #tag5 \`
+
+#tag6
+`;
+        const meta = createFileMeta('test.md', () => mockContent);
+
+        assert.strictEqual(meta.title, 'Heading');
+        assert.deepStrictEqual(meta.tags, ['tag6']);
+    });
+
+    test('headings tag with inline code block-2', function () {
+        const label = (this.test && this.test.title) || '';
+        const mockContent = `# Heading
+## Another heading \` #tag4\` #tag5
+
+#tag6
+`;
+        const meta = createFileMeta('test.md', () => mockContent);
+
+        assert.strictEqual(meta.title, 'Heading');
+        assertTags(meta.tags, ['tag5', 'tag6'], label);
+    });
+
 
     test('hierarchy tags', () => {
         const mockContent = `# Heading

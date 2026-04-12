@@ -27,104 +27,178 @@ export function getLineType(line: string): 'tag' | 'heading' | 'other' | 'partia
     return 'other';
 }
 
+// ----------------------------
+// Code block detection (rule layer)
+// ----------------------------
+
+/**
+ * Core rule: detect fence line
+ * (shared by all implementations)
+ */
+function isFenceLine(line: string): boolean {
+    return line.trim().startsWith('```');
+}
+
+// ----------------------------
+// Code block detection (stream version)
+// ----------------------------
+
 export class CodeBlockTracker {
-  private inCodeBlock = false;
+    private inCodeBlock = false;
 
-  processLine(line: string): boolean {
-    const trimmed = line.trim();
-
-    if (trimmed.startsWith('```')) {
-      this.inCodeBlock = !this.inCodeBlock;
-      return false; // Exclude the code block delimiter itself from tag detection
-    }
-
-    return !this.inCodeBlock;
-  }
-}
-
-// Validates if a line contains only valid tags
-function isTagLineValid(line: string, allowSingleHash = false): boolean {
-    const tokens = line.trim().split(/\s+/);
-
-    for (const token of tokens) {
-        if (token.length === 1) {
-            if (token !== '#' || !allowSingleHash) {return false;}
-        } else {
-            if (!isTagToken(token)) {return false;}
+    processLine(line: string): boolean {
+        if (isFenceLine(line)) {
+            this.inCodeBlock = !this.inCodeBlock;
+            return false;
         }
-    }
 
-    return true;
+        return !this.inCodeBlock;
+    }
 }
 
-// --------------------------------
-// Code block detection
-// --------------------------------
-/** Determine if a line is inside a Markdown code block */
+// ----------------------------
+// Code block detection (realtime version)
+// ----------------------------
+
 function isInCodeBlock(lines: string[], currentLineIndex: number): boolean {
     let inCodeBlock = false;
 
     for (let i = 0; i <= currentLineIndex; i++) {
-        const line = lines[i].trim();
-
-        if (line.startsWith('```')) {
-            inCodeBlock = !inCodeBlock;  // Toggle state
+        if (isFenceLine(lines[i])) {
+            inCodeBlock = !inCodeBlock;
         }
     }
 
     return inCodeBlock;
 }
 
-// Validates tags within a heading line, ignoring the heading text
+// ----------------------------
+// Inline code normalization (centralized)
+// ----------------------------
+
+/**
+ * IMPORTANT:
+ * All inline code removal is centralized here.
+ * Previously scattered across multiple functions.
+ */
+function normalizeInlineCode(line: string): string {
+    return line.replace(/`[^`]*`/g, (match) => {
+        return '@'.repeat(match.length);
+    });
+}
+
+// ----------------------------
+// Tag validation
+// ----------------------------
+
+function isTagLineValid(line: string, allowSingleHash = false): boolean {
+    const safeLine = normalizeInlineCode(line);
+
+    const tokens = safeLine.trim().split(/\s+/);
+
+    for (const token of tokens) {
+        if (token.length === 1) {
+            if (token !== '#' || !allowSingleHash) {
+                return false;
+            }
+        } else {
+            if (!isTagToken(token)) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+// ----------------------------
+// Heading tag validation
+// ----------------------------
+
 function isHeadingTagPartValid(line: string, allowSingleHash = false): boolean {
-    const match = line.match(/^(#+)\s+(.*)$/);
-    if (!match) {return false;}
+    const safeLine = normalizeInlineCode(line);
+
+    const match = safeLine.match(/^(#+)\s+(.*)$/);
+    if (!match) { return false; }
 
     const rest = match[2];
 
     // Find tag start position (# + something)
     const tagStart = rest.search(/(^|[\s　])#/);
-    if (tagStart === -1) {return true;} // OK if no tag exists
+
+    if (tagStart === -1) {
+        return true;
+    }
 
     const tagPart = rest.slice(tagStart).trim();
 
-    // Reuse tag line validation logic
     return isTagLineValid(tagPart, allowSingleHash);
 }
 
+// ----------------------------
+// Tag extraction
+// ----------------------------
 
-// Extracts all valid tags from a line
-export function extractTags(line: string): string[] {
-    const type = getLineType(line);
-    if (type === 'other') {return [];}
-    if (type === 'tag' && !isTagLineValid(line, false)) {return [];}
-    if (type === 'heading' && !isHeadingTagPartValid(line, false)) {return [];}
-
-    // Extract only tag parts
-    const ranges = getTagRanges(line);
-    return ranges.map(r => line.slice(r.start + 1, r.end)); // Remove "#"
-}
-
-// Calculates the character ranges for tags in a line
 export function getTagRanges(line: string): { start: number; end: number }[] {
+    const safeLine = normalizeInlineCode(line);
+
     const ranges: { start: number; end: number }[] = [];
     const regex = /(^|\s)#([^\s#]+)/g;
 
     let match;
-    while ((match = regex.exec(line)) !== null) {
+
+    while ((match = regex.exec(safeLine)) !== null) {
         const start = match.index + match[1].length;
-        const end = start + match[2].length + 1; // Includes the '#' prefix
+        const end = start + match[2].length + 1; // includes '#'
         ranges.push({ start, end });
     }
+
     return ranges;
 }
 
+// ----------------------------
+// Tag extraction (main API)
+// ----------------------------
+
+export function extractTags(line: string): string[] {
+    const type = getLineType(line);
+
+    // fast path
+    if (type === 'other') {
+        return [];
+    }
+
+    // tag validation
+    if (type === 'tag' && !isTagLineValid(line, false)) {
+        return [];
+    }
+
+    // heading validation
+    if (type === 'heading' && !isHeadingTagPartValid(line, false)) {
+        return [];
+    }
+
+    const ranges = getTagRanges(line);
+
+    return ranges.map(r => line.slice(r.start + 1, r.end));
+}
+
+// ----------------------------
+// Cursor helper
+// ----------------------------
+
 export function getCurrentTagAtCursor(textBefore: string): string | null {
     const ranges = getTagRanges(textBefore);
-    if (ranges.length === 0) { return null; }
+
+    if (ranges.length === 0) {
+        return null;
+    }
 
     const r = ranges[ranges.length - 1];
-    return r.end === textBefore.length ? textBefore.slice(r.start + 1, r.end) : null;
+
+    return r.end === textBefore.length
+        ? textBefore.slice(r.start + 1, r.end)
+        : null;
 }
 
 // Determines if tag completion should be shown based on the context of multiple lines
@@ -132,17 +206,30 @@ export function shouldShowCompletionMultiLine(
     lines: string[],
     lineIndex: number
 ): boolean {
-    if (isInCodeBlock(lines, lineIndex)) { return false; } // Check for code blocks first
+
+    // Code block guard (realtime check)
+    if (isInCodeBlock(lines, lineIndex)) {
+        return false;
+    }
 
     const line = lines[lineIndex];
     const type = getLineType(line);
 
-    // Immediately after "#" input
-    if (type === 'other') {return false;}
+    if (type === 'other') {
+        return false;
+    }
 
-    if (type === 'partial') {return true;}
-    if (type === 'tag') {return isTagLineValid(line, true);}
-    if (type === 'heading') {return isHeadingTagPartValid(line, true);}
+    if (type === 'partial') {
+        return true;
+    }
+
+    if (type === 'tag') {
+        return isTagLineValid(line, true);
+    }
+
+    if (type === 'heading') {
+        return isHeadingTagPartValid(line, true);
+    }
 
     return false;
 }

@@ -1,6 +1,18 @@
 import * as assert from 'assert';
 import { shouldShowCompletionMultiLine, extractTags, isTagToken } from '../services/tagLogic';
 
+function assertEqual(actual: any, expected: any, input: string) {
+    const pass = JSON.stringify(actual) === JSON.stringify(expected);
+
+    if (!pass) {
+        throw new Error(`
+            INPUT: ${input}
+            ACTUAL:   ${actual.map((t: string) => `[${t}]`).join(' ')}
+            EXPECTED: ${expected.map((t: string) => `[${t}]`).join(' ')}
+        `);
+    }
+}
+
 function runCompletionTest(input: string, expected: boolean) {
     const line = input.replace('|', '');
     const lines = [line];       // single line as array
@@ -33,10 +45,8 @@ function runMultiLineCompletionTest(linesWithCursor: string[], expected: boolean
 }
 
 function runExtractTest(line: string, expected: string[]) {
-    const lineIndex = 0;
-
     const result = extractTags(line);
-    assert.deepStrictEqual(result, expected, line);
+    assertEqual(result, expected, line);
 }
 
 function runValidationTest(line: string, expected: boolean) {
@@ -118,6 +128,10 @@ suite('Tag Logic Tests', () => {
         runExtractTest('#tag1 #tag2', ['tag1', 'tag2']);
         runExtractTest('# title #tag1 #tag2', ['tag1', 'tag2']);
         runExtractTest('# title foo #tag', ['tag']);
+        runExtractTest('# title foo \` #tag1\` #tag2', ['tag2']);
+        runExtractTest('# title foo #tag1 `\ #tag2 \`', []);
+        runExtractTest('\` #tag1\` #tag2', []);
+        runExtractTest('#tag1 \` #tag2 \`', []);
 
         // Invalid tag format (mixed content)
         runExtractTest('#tag1 foo #tag2', []);
