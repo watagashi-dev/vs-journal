@@ -311,12 +311,23 @@ export async function activate(context: vscode.ExtensionContext) {
             editor.selection = new vscode.Selection(position, position);
         }),
 
-        vscode.commands.registerCommand('vs-journal.previewEntry', async (filePath?: string) => {
+        vscode.commands.registerCommand('vs-journal.previewEntry', async (arg?: unknown) => {
+            let filePath: string | undefined;
+            if (typeof arg === 'string') {
+                filePath = arg;
+            } else if (arg && typeof arg === 'object' && 'fsPath' in arg) {
+                filePath = (arg as any).fsPath;
+            }
+
             let document: vscode.TextDocument | undefined;
-            if (filePath) {document = await vscode.workspace.openTextDocument(filePath);}
+            if (filePath) {
+                document = await vscode.workspace.openTextDocument(filePath);
+            }
             else if (vscode.window.activeTextEditor && isJournalFile(vscode.window.activeTextEditor.document)) {
                 document = vscode.window.activeTextEditor.document;
-            } else {return;}
+            } else {
+                return;
+            }
 
             setCurrentDocument(document);
             const column = vscode.ViewColumn.Active;
