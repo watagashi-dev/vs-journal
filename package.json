@@ -33,12 +33,12 @@
       {
         "command": "vs-journal.newEntry",
         "title": "%command.newEntry%",
-        "icon": "$(add)"
+        "icon": "$(new-file)"
       },
       {
         "command": "vs-journal.previewEntry",
         "title": "%command.previewEntry%",
-        "icon": "$(open-preview)"
+        "icon": "$(preview)"
       },
       {
         "command": "vs-journal.selectJournalDir",
