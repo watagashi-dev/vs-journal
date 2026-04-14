@@ -323,11 +323,23 @@ body > *:first-child {
    ========================================================= */
 
 .edit-hint {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+
   color: var(--vscode-descriptionForeground);
   font-size: 0.9em;
   margin-bottom: 12px;
   border-bottom: 1px solid var(--vscode-editorWidget-border);
   padding-bottom: 6px;
+  background: var(--vscode-editor-background);
+  transition: opacity 0.4s ease;
+  opacity: 1;
+}
+
+.edit-hint.hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .vjs-line {

@@ -197,6 +197,35 @@ export async function updatePreviewPanel(
                 <script>
                 (function(){
                     const vscode = acquireVsCodeApi();
+
+
+// ===== header auto hide =====
+const header = document.querySelector('.edit-hint');
+let hideTimer = null;
+const HIDE_DELAY = 1500;
+
+function showHeader() {
+    if (!header) return;
+    header.classList.remove('hidden');
+}
+
+function hideHeader() {
+    if (!header) return;
+    header.classList.add('hidden');
+}
+
+function resetHeaderTimer() {
+    showHeader();
+
+    if (hideTimer) clearTimeout(hideTimer);
+
+    hideTimer = setTimeout(() => {
+        hideHeader();
+    }, HIDE_DELAY);
+}
+
+
+
                     document.body.addEventListener('click', (e) => {
                         const link = e.target.closest('a');
                         if (link) {
@@ -260,6 +289,35 @@ export async function updatePreviewPanel(
 
                         observer.observe(warning);
                     });
+
+
+// ===== interaction detection =====
+window.addEventListener('scroll', resetHeaderTimer, { passive: true });
+window.addEventListener('wheel', resetHeaderTimer, { passive: true });
+
+window.addEventListener('keydown', (e) => {
+    const keys = [
+        'ArrowUp','ArrowDown',
+        'PageUp','PageDown',
+        'Home','End',' '
+    ];
+    if (keys.includes(e.key)) {
+        resetHeaderTimer();
+    }
+});
+
+// マウスは軽く間引く
+let lastMove = 0;
+window.addEventListener('mousemove', () => {
+    const now = Date.now();
+    if (now - lastMove > 200) {
+        resetHeaderTimer();
+        lastMove = now;
+    }
+});
+
+
+
                 })();
                 window.addEventListener('message', event => {
                     const msg = event.data;
