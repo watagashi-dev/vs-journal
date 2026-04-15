@@ -19,6 +19,7 @@ import {
     notifyThemeChanged, disposePreviewPanel
 } from './preview/previewPanel';
 import { shouldShowCompletionMultiLine, getCurrentTagAtCursor } from './services/tagLogic';
+import { cursorLineMap } from './state';
 
 let tagProvider: TagTreeProvider;
 
@@ -313,6 +314,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
         vscode.commands.registerCommand('vs-journal.previewEntry', async (arg?: unknown) => {
             let filePath: string | undefined;
+
             if (typeof arg === 'string') {
                 filePath = arg;
             } else if (arg && typeof arg === 'object' && 'fsPath' in arg) {
@@ -320,14 +322,23 @@ export async function activate(context: vscode.ExtensionContext) {
             }
 
             let document: vscode.TextDocument | undefined;
-            if (filePath) {
-                document = await vscode.workspace.openTextDocument(filePath);
+        
+            if (!filePath) {
+                const editor = vscode.window.activeTextEditor;
+                if (editor && isJournalFile(editor.document)) {
+                    filePath = editor.document.uri.fsPath;
+                }
             }
-            else if (vscode.window.activeTextEditor && isJournalFile(vscode.window.activeTextEditor.document)) {
-                document = vscode.window.activeTextEditor.document;
-            } else {
+        
+            if (!filePath) {
                 return;
             }
+        
+            document = await vscode.workspace.openTextDocument(filePath);
+
+            // cursor初期化（安全）
+            const lineCount = document.lineCount;
+            cursorLineMap.set(filePath, lineCount > 0 ? 0 : 0);
 
             setCurrentDocument(document);
             const column = vscode.ViewColumn.Active;
@@ -335,20 +346,19 @@ export async function activate(context: vscode.ExtensionContext) {
             const panel = ensurePreviewPanel(column);
 
             await measure("preview generation", async () => {
-                if (filePath) {
-                    const meta = createFileMeta(filePath);
-                    const check = checkPreviewLimits([meta]);
-                    setPreviewState(panel, check.limitedFiles);
-                    await updatePreviewPanel(panel, check.limitedFiles, {
-                        limitExceeded: check.limitExceeded,
-                        message: check.message
-                    });
-                } else if (vscode.window.activeTextEditor && isJournalFile(vscode.window.activeTextEditor.document)) {
-                    const docMeta = createFileMeta(vscode.window.activeTextEditor.document.uri.fsPath);
-                    await updatePreviewPanel(panel, [docMeta]);
-                } else {
-                    return;
-                }
+                const meta = createFileMeta(filePath);
+                const check = checkPreviewLimits([meta]);
+        
+                setPreviewState(panel, check.limitedFiles);
+        
+                await updatePreviewPanel(panel, check.limitedFiles, {
+                    limitExceeded: check.limitExceeded,
+                    message: check.message
+                });
+        
+                panel.webview.postMessage({
+                    type: 'scrollToTop'
+                });
             });
         }),
 
@@ -482,6 +492,17 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.window.onDidChangeActiveColorTheme((theme) => {
             notifyThemeChanged();
+        }),
+
+        vscode.window.onDidChangeTextEditorSelection((e) => {
+            const filePath = e.textEditor.document.uri.fsPath;
+            const line = e.selections?.[0]?.active.line ?? 0;
+
+            if (!isJournalFile(e.textEditor.document)) {
+                return;
+            }
+
+            cursorLineMap.set(filePath, line);
         })
     );
 

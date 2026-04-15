@@ -1,0 +1,1 @@
+export const cursorLineMap = new Map<string, number>();
