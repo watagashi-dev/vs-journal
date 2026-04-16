@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { FileMeta } from '../models/FileMeta';
 import { createMarkdownIt, getHljsThemeUrl } from './previewRenderer';
-import { cursorLineMap } from '../state';
+import { getCursorLine } from '../state';
 
 let currentPanel: vscode.WebviewPanel | undefined;
 let currentDocument: vscode.TextDocument | undefined;
@@ -83,7 +83,7 @@ function syncScrollToCursor(panel: vscode.WebviewPanel) {
     }
 
     const filePath = previewFiles[0].filePath;
-    const line = cursorLineMap.get(filePath);
+    const line = getCursorLine(filePath);
 
     console.log('[sync] filePath:', filePath, 'line:', line);
 

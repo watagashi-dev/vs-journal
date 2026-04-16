@@ -19,7 +19,7 @@ import {
     notifyThemeChanged, disposePreviewPanel
 } from './preview/previewPanel';
 import { shouldShowCompletionMultiLine, getCurrentTagAtCursor } from './services/tagLogic';
-import { cursorLineMap } from './state';
+import { clearCursorLine, setCursorLine } from './state';
 
 let tagProvider: TagTreeProvider;
 
@@ -338,7 +338,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
             // cursor初期化（安全）
             const lineCount = document.lineCount;
-            cursorLineMap.set(filePath, lineCount > 0 ? 0 : 0);
+            setCursorLine(filePath, lineCount > 0 ? 0 : 0);
 
             setCurrentDocument(document);
             const column = vscode.ViewColumn.Active;
@@ -486,6 +486,10 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.workspace.onDidChangeTextDocument(event => {
             if (!isJournalFile(event.document)) {return;}
             scheduleAutoSave(event.document);
+        }),
+    
+        vscode.workspace.onDidCloseTextDocument(document => {
+            clearCursorLine(document.uri.fsPath);
         })
     );
 
@@ -502,7 +506,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-            cursorLineMap.set(filePath, line);
+            setCursorLine(filePath, line);
         })
     );
 
