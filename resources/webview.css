@@ -104,9 +104,9 @@ input[type="checkbox"] {
   margin-right: 6px;
 
   /* Border emphasis */
-  border: 2.3px solid var(--vscode-editorWidget-border); 
+  border: 2.3px solid var(--vscode-checkbox-border); 
   border-radius: 3px;
-  background: var(--vscode-editor-background);
+  background: var(--vscode-checkbox-background);
 
   cursor: pointer;
   display: inline-block;
@@ -118,8 +118,8 @@ input[type="checkbox"] {
 }
 
 input[type="checkbox"]:checked {
-  background: var(--vscode-editorWidget-background);
-  border-color: var(--vscode-editorWidget-border);
+  background: var(--vscode-checkbox-background);
+  border-color: var(--vscode-checkbox-border);
 }
 
 input[type="checkbox"]:checked::after {
@@ -129,7 +129,7 @@ input[type="checkbox"]:checked::after {
   left: 50%;
   width: 4px;
   height: 8px;
-  border: solid var(--vscode-button-foreground);
+  border: solid var(--vscode-checkbox-foreground);
   border-width: 0 2px 2px 0;
   transform: translate(-50%, -50%) rotate(45deg);
 }
