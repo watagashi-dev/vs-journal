@@ -34,7 +34,7 @@ declare function acquireVsCodeApi(): any;
     // =========================================================
     // DOM
     // =========================================================
-    const header = document.querySelector('.edit-hint');
+    const header = document.querySelector('.edit-hint') as HTMLElement | null;
 
     // =========================================================
     // DOM helpers
@@ -43,13 +43,13 @@ declare function acquireVsCodeApi(): any;
         return header;
     }
 
-    function getFileBlock(filePath: string): Element | undefined {
-        return Array.from(document.querySelectorAll('.file-block'))
+    function getFileBlock(filePath: string): HTMLElement | undefined {
+        return Array.from(document.querySelectorAll<HTMLElement>('.file-block'))
             .find((el) => el.getAttribute('data-file') === filePath);
     }
 
-    function getLineElement(fileBlock: Element, line: number): Element | null {
-        return fileBlock.querySelector(
+    function getLineElement(fileBlock: Element, line: number): HTMLElement | null {
+        return fileBlock.querySelector<HTMLElement>(
             '.vjs-line[data-line="' + line + '"]'
         );
     }
@@ -201,9 +201,13 @@ declare function acquireVsCodeApi(): any;
     // =========================================================
     function setupMessageHandler(): void {
         window.addEventListener('message', (event) => {
-            const msg = event.data;
+            type IncomingMessage =
+                | { type: 'scrollToTop' }
+                | { type: 'scrollToLine'; filePath: string; line: number };
 
-            if (!msg) {
+            const msg = event.data as IncomingMessage | null;
+
+            if (!msg || typeof msg !== 'object') {
                 return;
             }
 
