@@ -6,7 +6,13 @@ declare function acquireVsCodeApi(): any;
     // =========================================================
     const vscode = acquireVsCodeApi();
 
-    function postMessage(msg: any): void {
+    type VsCodeMessage =
+    | { type: 'openExternal'; url: string }
+    | { type: 'jumpToLine'; filePath: string; line: number }
+    | { type: 'jumpToFile'; filePath: string }
+    | { type: 'edit' };
+
+    function postMessage(msg: VsCodeMessage): void {
         vscode.postMessage(msg);
     }
 
