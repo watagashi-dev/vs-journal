@@ -12,15 +12,10 @@ let extensionContext: vscode.ExtensionContext;
 const previewStateMap = new Map<vscode.WebviewPanel, FileMeta[]>();
 
 export function setPreviewState(panel: vscode.WebviewPanel, files: FileMeta[]) {
-    console.log('[state] setPreviewState called', panel);
     previewStateMap.set(panel, files);
 }
 
 export function getPreviewState(panel: vscode.WebviewPanel): FileMeta[] | undefined {
-    console.log('[state] map keys:');
-    for (const k of previewStateMap.keys()) {
-        console.log(k);
-    }
     return previewStateMap.get(panel);
 }
 
@@ -78,17 +73,13 @@ function syncScrollToCursor(panel: vscode.WebviewPanel) {
     const previewFiles = getPreviewState(panel);
 
     if (!previewFiles || previewFiles.length !== 1) {
-        console.log('[sync] abort: previewFiles invalid');
         return;
     }
 
     const filePath = previewFiles[0].filePath;
     const line = getCursorLine(filePath);
 
-    console.log('[sync] filePath:', filePath, 'line:', line);
-
     if (line === undefined) {
-        console.log('[sync] abort: no cursor data');
         return;
     }
 
@@ -97,8 +88,6 @@ function syncScrollToCursor(panel: vscode.WebviewPanel) {
         filePath,
         line
     });
-
-    console.log('[sync] postMessage sent');
 }
 
 
@@ -178,138 +167,6 @@ async function handleWebviewMessage(message: any) {
     }
 }
 
-function buildWebviewScript(): string {
-    return `
-    <script>
-    (function(){
-        const vscode = acquireVsCodeApi();
-
-        // ===== header auto hide =====
-        const header = document.querySelector('.edit-hint');
-        let hideTimer = null;
-        const HIDE_DELAY = 1500;
-
-        function showHeader() {
-            if (!header) return;
-            header.classList.remove('hidden');
-        }
-
-        function hideHeader() {
-            if (!header) return;
-            header.classList.add('hidden');
-        }
-
-        function resetHeaderTimer() {
-            showHeader();
-
-            if (hideTimer) clearTimeout(hideTimer);
-
-            hideTimer = setTimeout(() => {
-                hideHeader();
-            }, HIDE_DELAY);
-        }
-
-        document.body.addEventListener('click', (e) => {
-            const link = e.target.closest('a');
-            if (link) {
-                const href = link.getAttribute('data-href');
-                if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
-                    e.preventDefault();
-                    vscode.postMessage({ type: 'openExternal', url: href });
-                }
-                return;
-            }
-
-            const targetLineDiv = e.target.closest('.vjs-line');
-            if (targetLineDiv) {
-                const lineStr = targetLineDiv.getAttribute('data-line');
-                const fileContainer = targetLineDiv.closest('[data-file]');
-                const filePath = fileContainer?.getAttribute('data-file');
-                if (lineStr && filePath) {
-                    vscode.postMessage({
-                        type: 'jumpToLine',
-                        filePath,
-                        line: parseInt(lineStr, 10)
-                    });
-                    return;
-                }
-            }
-
-            const fileRoot = e.target.closest('[data-file]');
-            if (fileRoot) {
-                const filePath = fileRoot.getAttribute('data-file');
-                if (filePath) {
-                    vscode.postMessage({
-                        type: 'jumpToFile',
-                        filePath
-                    });
-                    return;
-                }
-            }
-        });
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === 'Escape') {
-                vscode.postMessage({ type: 'edit' });
-            }
-        });
-
-        // ===== interaction detection =====
-        window.addEventListener('scroll', resetHeaderTimer, { passive: true });
-        window.addEventListener('wheel', resetHeaderTimer, { passive: true });
-
-        window.addEventListener('keydown', (e) => {
-            const keys = [
-                'ArrowUp','ArrowDown',
-                'PageUp','PageDown',
-                'Home','End',' '
-            ];
-            if (keys.includes(e.key)) {
-                resetHeaderTimer();
-            }
-        });
-
-        // マウスは軽く間引く
-        let lastMove = 0;
-        window.addEventListener('mousemove', () => {
-            const now = Date.now();
-            if (now - lastMove > 200) {
-                resetHeaderTimer();
-                lastMove = now;
-            }
-        });
-    })();
-
-    window.addEventListener('message', event => {
-        const msg = event.data;
-
-        if (msg.type === 'scrollToTop') {
-            window.scrollTo({ top: 0, behavior: 'auto' });
-            return;
-        }
-
-        if (msg.type === 'scrollToLine') {
-            const { filePath, line } = msg;
-            if (typeof line !== 'number') return;
-
-            const fileBlock = Array.from(document.querySelectorAll('.file-block'))
-                .find(el => el.getAttribute('data-file') === filePath);
-
-            if (!fileBlock) return;
-
-            const el = fileBlock.querySelector(
-                '.vjs-line[data-line="' + line + '"]'
-            );
-
-            if (!el) return;
-
-            el.scrollIntoView({ block: 'center' });
-        }
-    });
-    </script>
-    `;
-}
-
 async function buildHtml(
     panel: vscode.WebviewPanel,
     filesToPreview: FileMeta[],
@@ -348,38 +205,34 @@ async function buildHtml(
         htmlContent += '</div>\n';
     }
 
+    const templatePath = vscode.Uri.file(
+        path.join(extensionContext.extensionPath, 'resources/template.html')
+    );
+    const templateBuffer = await vscode.workspace.fs.readFile(templatePath);
+    let template = Buffer.from(templateBuffer).toString('utf8');
+
     const cssPath = vscode.Uri.file(
         path.join(extensionContext.extensionPath, 'resources/webview.css')
     );
     const cssUri = panel.webview.asWebviewUri(cssPath);
 
+    const scriptPath = vscode.Uri.file(
+        path.join(extensionContext.extensionPath, 'resources/webview.js')
+    );
+    const scriptUri = panel.webview.asWebviewUri(scriptPath);
+
     const hintText = vscode.l10n.t("Click or press Enter to edit");
     const isDark = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark;
     const themeUrl = getHljsThemeUrl(isDark);
 
-    return `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <meta http-equiv="Content-Security-Policy" content="
-                default-src 'none';
-                img-src ${webview.cspSource} https: data:;
-                style-src ${webview.cspSource} 'unsafe-inline' https://cdnjs.cloudflare.com;
-                script-src ${webview.cspSource} 'unsafe-inline' https://cdnjs.cloudflare.com;
-            ">
-            <link rel="stylesheet" type="text/css" href="${cssUri}">
-            <link id="hljs-theme" rel="stylesheet" href="${themeUrl}">
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
-        </head>
-        <body>
-            <div class="edit-hint">${hintText}</div>
-            ${htmlContent}
-            ${warningHtml}
-            ${buildWebviewScript()}
-        </body>
-        </html>
-    `;
+    return template
+        .replace(/{{cspSource}}/g, webview.cspSource)
+        .replace(/{{cssUri}}/g, cssUri.toString())
+        .replace(/{{themeUrl}}/g, themeUrl)
+        .replace(/{{hintText}}/g, hintText)
+        .replace(/{{content}}/g, htmlContent)
+        .replace(/{{warning}}/g, warningHtml)
+        .replace(/{{scriptUri}}/g, scriptUri.toString());
 }
 
 export async function updatePreviewPanel(
