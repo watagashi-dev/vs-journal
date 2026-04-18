@@ -86,63 +86,68 @@ declare function acquireVsCodeApi(): any;
     // =========================================================
     // Click handling
     // =========================================================
+
+
+
+    function handleClick(e: MouseEvent): void {
+        const target = e.target as HTMLElement | null;
+
+        if (!target) {
+            return;
+        }
+
+        // External link
+        const link = target.closest('a');
+
+        if (link) {
+            const href = link.getAttribute('data-href');
+
+            if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
+                e.preventDefault();
+                postMessage({ type: 'openExternal', url: href });
+            }
+
+            return;
+        }
+
+        // Line jump
+        const lineEl = target.closest('.vjs-line');
+
+        if (lineEl) {
+            const lineStr = lineEl.getAttribute('data-line');
+            const fileContainer = lineEl.closest('[data-file]');
+            const filePath = fileContainer?.getAttribute('data-file');
+
+            if (lineStr && filePath) {
+                postMessage({
+                    type: 'jumpToLine',
+                    filePath,
+                    line: parseInt(lineStr, 10)
+                });
+
+                return;
+            }
+        }
+
+        // File jump
+        const fileRoot = target.closest('[data-file]');
+
+        if (fileRoot) {
+            const filePath = fileRoot.getAttribute('data-file');
+
+            if (filePath) {
+                postMessage({
+                    type: 'jumpToFile',
+                    filePath
+                });
+            }
+
+            return;
+        }
+    }
+
     function setupClickHandler(): void {
-        document.body.addEventListener('click', (e) => {
-            const target = e.target as HTMLElement | null;
-
-            if (!target) {
-                return;
-            }
-
-            // External link
-            const link = target.closest('a');
-
-            if (link) {
-                const href = link.getAttribute('data-href');
-
-                if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
-                    e.preventDefault();
-                    postMessage({ type: 'openExternal', url: href });
-                }
-
-                return;
-            }
-
-            // Line jump
-            const lineEl = target.closest('.vjs-line');
-
-            if (lineEl) {
-                const lineStr = lineEl.getAttribute('data-line');
-                const fileContainer = lineEl.closest('[data-file]');
-                const filePath = fileContainer?.getAttribute('data-file');
-
-                if (lineStr && filePath) {
-                    postMessage({
-                        type: 'jumpToLine',
-                        filePath,
-                        line: parseInt(lineStr, 10)
-                    });
-
-                    return;
-                }
-            }
-
-            // File jump
-            const fileRoot = target.closest('[data-file]');
-
-            if (fileRoot) {
-                const filePath = fileRoot.getAttribute('data-file');
-
-                if (filePath) {
-                    postMessage({
-                        type: 'jumpToFile',
-                        filePath
-                    });
-                }
-
-                return;
-            }
-        });
+        document.body.addEventListener('click', handleClick);
     }
 
     // =========================================================
