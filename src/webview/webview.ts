@@ -37,6 +37,24 @@ declare function acquireVsCodeApi(): any;
     const header = document.querySelector('.edit-hint');
 
     // =========================================================
+    // DOM helpers
+    // =========================================================
+    function getHeader(): Element | null {
+        return header;
+    }
+
+    function getFileBlock(filePath: string): Element | undefined {
+        return Array.from(document.querySelectorAll('.file-block'))
+            .find((el) => el.getAttribute('data-file') === filePath);
+    }
+
+    function getLineElement(fileBlock: Element, line: number): Element | null {
+        return fileBlock.querySelector(
+            '.vjs-line[data-line="' + line + '"]'
+        );
+    }
+
+    // =========================================================
     // Header control
     // =========================================================
     function showHeader(): void {
@@ -196,17 +214,13 @@ declare function acquireVsCodeApi(): any;
                     return;
                 }
 
-                const fileBlock = Array.from(
-                    document.querySelectorAll('.file-block')
-                ).find((el) => el.getAttribute('data-file') === filePath);
+                const fileBlock = getFileBlock(filePath);
 
                 if (!fileBlock) {
                     return;
                 }
 
-                const target = fileBlock.querySelector(
-                    '.vjs-line[data-line="' + line + '"]'
-                );
+                const target = getLineElement(fileBlock, line);
 
                 if (!target) {
                     return;
