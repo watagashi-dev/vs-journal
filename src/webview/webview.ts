@@ -7,10 +7,10 @@ declare function acquireVsCodeApi(): any;
     const vscode = acquireVsCodeApi();
 
     type VsCodeMessage =
-    | { type: 'openExternal'; url: string }
-    | { type: 'jumpToLine'; filePath: string; line: number }
-    | { type: 'jumpToFile'; filePath: string }
-    | { type: 'edit' };
+        | { type: 'openExternal'; url: string }
+        | { type: 'jumpToLine'; filePath: string; line: number }
+        | { type: 'jumpToFile'; filePath: string }
+        | { type: 'edit' };
 
     function postMessage(msg: VsCodeMessage): void {
         vscode.postMessage(msg);
@@ -36,13 +36,6 @@ declare function acquireVsCodeApi(): any;
     // =========================================================
     const header = document.querySelector('.edit-hint') as HTMLElement | null;
 
-    // =========================================================
-    // DOM helpers
-    // =========================================================
-    function getHeader(): Element | null {
-        return header;
-    }
-
     function getFileBlock(filePath: string): HTMLElement | undefined {
         return Array.from(document.querySelectorAll<HTMLElement>('.file-block'))
             .find((el) => el.getAttribute('data-file') === filePath);
@@ -50,73 +43,49 @@ declare function acquireVsCodeApi(): any;
 
     function getLineElement(fileBlock: Element, line: number): HTMLElement | null {
         return fileBlock.querySelector<HTMLElement>(
-            '.vjs-line[data-line="' + line + '"]'
+            `.vjs-line[data-line="${line}"]`
         );
     }
 
     // =========================================================
-    // Header control
+    // Header
     // =========================================================
-    function showHeader(): void {
-        if (!header) {
-            return;
-        }
-        header.classList.remove('hidden');
-    }
-
-    function hideHeader(): void {
-        if (!header) {
-            return;
-        }
-        header.classList.add('hidden');
-    }
-
     function resetHeaderTimer(): void {
-        showHeader();
+        if (!header) return;
+
+        header.classList.remove('hidden');
 
         if (state.hideTimer) {
             clearTimeout(state.hideTimer);
         }
 
         state.hideTimer = setTimeout(() => {
-            hideHeader();
+            header.classList.add('hidden');
         }, HIDE_DELAY);
     }
 
     // =========================================================
-    // Click handling
+    // Click
     // =========================================================
-
-
-
     function handleClick(e: MouseEvent): void {
         const target = e.target as HTMLElement | null;
+        if (!target) return;
 
-        if (!target) {
-            return;
-        }
-
-        // External link
         const link = target.closest('a');
-
         if (link) {
             const href = link.getAttribute('data-href');
-
-            if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
+            if (href?.startsWith('http')) {
                 e.preventDefault();
                 postMessage({ type: 'openExternal', url: href });
             }
-
             return;
         }
 
-        // Line jump
         const lineEl = target.closest('.vjs-line');
-
         if (lineEl) {
             const lineStr = lineEl.getAttribute('data-line');
-            const fileContainer = lineEl.closest('[data-file]');
-            const filePath = fileContainer?.getAttribute('data-file');
+            const file = lineEl.closest('[data-file]');
+            const filePath = file?.getAttribute('data-file');
 
             if (lineStr && filePath) {
                 postMessage({
@@ -124,25 +93,16 @@ declare function acquireVsCodeApi(): any;
                     filePath,
                     line: parseInt(lineStr, 10)
                 });
-
-                return;
             }
+            return;
         }
 
-        // File jump
         const fileRoot = target.closest('[data-file]');
-
         if (fileRoot) {
             const filePath = fileRoot.getAttribute('data-file');
-
             if (filePath) {
-                postMessage({
-                    type: 'jumpToFile',
-                    filePath
-                });
+                postMessage({ type: 'jumpToFile', filePath });
             }
-
-            return;
         }
     }
 
@@ -151,36 +111,24 @@ declare function acquireVsCodeApi(): any;
     }
 
     // =========================================================
-    // Keyboard handling
+    // Keyboard
     // =========================================================
-    function handleKeydown(e: KeyboardEvent): void {
-        if (e.key === 'Enter' || e.key === 'Escape') {
-            postMessage({ type: 'edit' });
-            return;
-        }
-
-        const keys = [
-            'ArrowUp',
-            'ArrowDown',
-            'PageUp',
-            'PageDown',
-            'Home',
-            'End',
-            ' '
-        ];
-
-        if (keys.includes(e.key)) {
-            resetHeaderTimer();
-            return;
-        }
-    }
-
     function setupKeyHandler(): void {
-        window.addEventListener('keydown', handleKeydown);
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === 'Escape') {
+                postMessage({ type: 'edit' });
+            }
+
+            if (
+                ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)
+            ) {
+                resetHeaderTimer();
+            }
+        });
     }
 
     // =========================================================
-    // Window interaction
+    // Window
     // =========================================================
     function setupWindowHandlers(): void {
         window.addEventListener('scroll', resetHeaderTimer, { passive: true });
@@ -188,7 +136,6 @@ declare function acquireVsCodeApi(): any;
 
         window.addEventListener('mousemove', () => {
             const now = Date.now();
-
             if (now - state.lastMouseMove > 200) {
                 resetHeaderTimer();
                 state.lastMouseMove = now;
@@ -197,48 +144,59 @@ declare function acquireVsCodeApi(): any;
     }
 
     // =========================================================
-    // Message handling
+    // Highlight.js（型問題回避込み）
     // =========================================================
+    function runHighlight(): void {
+        const hljs = (window as any).hljs;
+        if (!hljs) return;
+        hljs.highlightAll();
+    }
+
+    // theme変更対応（旧コードで消えがちな部分）
     function setupMessageHandler(): void {
         window.addEventListener('message', (event) => {
-            type IncomingMessage =
-                | { type: 'scrollToTop' }
-                | { type: 'scrollToLine'; filePath: string; line: number };
+            const msg = event.data;
 
-            const msg = event.data as IncomingMessage | null;
-
-            if (!msg || typeof msg !== 'object') {
-                return;
+            if (msg?.type === 'themeChanged') {
+                const link = document.getElementById('hljs-theme') as HTMLLinkElement | null;
+                if (link && msg.themeUrl) {
+                    link.href = msg.themeUrl;
+                    runHighlight();
+                }
             }
 
-            if (msg.type === 'scrollToTop') {
+            if (msg?.type === 'scrollToTop') {
                 window.scrollTo({ top: 0, behavior: 'auto' });
-                return;
             }
 
-            if (msg.type === 'scrollToLine') {
-                const { filePath, line } = msg;
+            if (msg?.type === 'scrollToLine') {
+                const fileBlock = getFileBlock(msg.filePath);
+                const target = fileBlock && getLineElement(fileBlock, msg.line);
 
-                if (typeof line !== 'number') {
-                    return;
-                }
-
-                const fileBlock = getFileBlock(filePath);
-
-                if (!fileBlock) {
-                    return;
-                }
-
-                const target = getLineElement(fileBlock, line);
-
-                if (!target) {
-                    return;
-                }
-
-                target.scrollIntoView({ block: 'center' });
-                return;
+                target?.scrollIntoView({ block: 'center' });
             }
         });
+    }
+
+    // =========================================================
+    // Warning animation
+    // =========================================================
+    function initWarningBehavior(): void {
+        const warning = document.querySelector('.vjs-limit-warning');
+        if (!warning) { return; }
+
+        const observer = new IntersectionObserver((entries) => {
+            for (const entry of entries) {
+                if (entry.isIntersecting) {
+                    requestAnimationFrame(() => {
+                        warning.classList.add('show');
+                    });
+                    observer.disconnect();
+                }
+            }
+        }, { threshold: 0.3 });
+
+        observer.observe(warning);
     }
 
     // =========================================================
@@ -249,7 +207,14 @@ declare function acquireVsCodeApi(): any;
         setupKeyHandler();
         setupWindowHandlers();
         setupMessageHandler();
+        initWarningBehavior();
     }
 
     init();
+
+    if (document.readyState === 'loading') {
+        window.addEventListener('DOMContentLoaded', runHighlight);
+    } else {
+        runHighlight();
+    }
 })();

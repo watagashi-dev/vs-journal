@@ -75,6 +75,12 @@
 				"npm: watch-tests"
 			],
 			"problemMatcher": []
-		}
+		},
+        {
+            "label": "npm: build",
+            "type": "npm",
+            "script": "build",
+            "problemMatcher": []
+        }
 	]
 }

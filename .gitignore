@@ -3,7 +3,6 @@ out/
 dist/
 node_modules/
 .vscode-test/
-resources/webview/webview.js
 
 # パッケージ（配布用ファイル）
 *.vsix

@@ -62,7 +62,7 @@ function getLocalResourceRoots(): vscode.Uri[] {
     // Webview resources (always required)
     roots.push(
         vscode.Uri.file(
-            path.join(extensionContext.extensionPath, 'resources')
+            path.join(extensionContext.extensionPath, 'dist')
         )
     );
 
@@ -228,18 +228,18 @@ async function buildHtml(
     }
 
     const templatePath = vscode.Uri.file(
-        path.join(extensionContext.extensionPath, 'resources/template.html')
+        path.join(extensionContext.extensionPath, 'src/webview/template.html')
     );
     const templateBuffer = await vscode.workspace.fs.readFile(templatePath);
     let template = Buffer.from(templateBuffer).toString('utf8');
 
     const cssPath = vscode.Uri.file(
-        path.join(extensionContext.extensionPath, 'resources/webview.css')
+        path.join(extensionContext.extensionPath, 'dist/webview/webview.css')
     );
     const cssUri = panel.webview.asWebviewUri(cssPath);
 
     const scriptPath = vscode.Uri.file(
-        path.join(extensionContext.extensionPath, 'resources/webview/webview.js')
+        path.join(extensionContext.extensionPath, 'dist/webview/webview.js')
     );
     const scriptUri = panel.webview.asWebviewUri(scriptPath);
 
