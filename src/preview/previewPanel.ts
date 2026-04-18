@@ -217,7 +217,7 @@ async function buildHtml(
     const cssUri = panel.webview.asWebviewUri(cssPath);
 
     const scriptPath = vscode.Uri.file(
-        path.join(extensionContext.extensionPath, 'resources/webview.js')
+        path.join(extensionContext.extensionPath, 'resources/webview/webview.js')
     );
     const scriptUri = panel.webview.asWebviewUri(scriptPath);
 
