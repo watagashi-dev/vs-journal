@@ -161,8 +161,30 @@ async function handleWebviewMessage(message: any) {
     }
 
     if (message.type === 'edit' && currentDocument) {
-        const doc = await vscode.workspace.openTextDocument(currentDocument.uri);
-        await vscode.window.showTextDocument(doc);
+        const uri = currentDocument.uri;
+
+        const isOpenedInTab = vscode.window.tabGroups.all.some(group =>
+            group.tabs.some(tab => {
+                const input = tab.input as vscode.TabInputText;
+                return input?.uri?.fsPath === uri.fsPath;
+            })
+        );
+
+        let selection: vscode.Range | undefined;
+
+        if (!isOpenedInTab) {
+            const pos = new vscode.Position(0, 0);
+            selection = new vscode.Range(pos, pos);
+        }
+
+        const doc = await vscode.workspace.openTextDocument(uri);
+
+        await vscode.window.showTextDocument(doc, {
+            selection,
+            preserveFocus: false,
+            preview: false
+        });
+
         return;
     }
 }
