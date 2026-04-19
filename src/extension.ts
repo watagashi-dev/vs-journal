@@ -415,6 +415,30 @@ export async function activate(context: vscode.ExtensionContext) {
             });
         }),
 
+        vscode.commands.registerCommand('vs-journal.addVirtualTag', async () => {
+            const tag = await vscode.window.showInputBox({
+                prompt: vscode.l10n.t('Enter virtual tag name')
+            });
+
+            if (!tag) {
+                return;
+            }
+
+            const trimmed = tag.trim();
+
+            if (trimmed.length === 0) {
+                return;
+            }
+
+            // --- Register virtual tag (empty entry allowed for now) ---
+            if (!virtualTagIndexMap.has(trimmed)) {
+                virtualTagIndexMap.set(trimmed, []);
+            }
+
+            // --- Refresh tree ---
+            rebuildTree();
+        }),
+
         // Command to increment tag usage count
         vscode.commands.registerCommand('vsJournal.incrementTagUsage', (tag: string) => {
             sessionTagUsage.set(tag, (sessionTagUsage.get(tag) ?? 0) + 1);

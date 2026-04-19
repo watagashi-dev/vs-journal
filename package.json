@@ -44,6 +44,11 @@
         "command": "vs-journal.selectJournalDir",
         "title": "%command.selectJournalDir%",
         "icon": "$(gear)"
+      },
+      {
+        "command": "vs-journal.addVirtualTag",
+        "title": "%command.addVirtualTag%",
+        "icon": "$(tag)"
       }
     ],
     "configuration": {
@@ -123,6 +128,11 @@
           "command": "vs-journal.selectJournalDir",
           "when": "view == vsJournalTags",
           "group": "navigation@3"
+        },
+        {
+          "command": "vs-journal.addVirtualTag",
+          "when": "view == vsJournalTags",
+          "group": "navigation@4"
         }
       ],
       "commandPalette": [
@@ -135,6 +145,10 @@
         },
         {
           "command": "vs-journal.selectJournalDir"
+        },
+        {
+          "command": "vs-journal.addVirtualTag",
+          "when": "view.vsJournalTags.visible"
         }
       ]
     },
