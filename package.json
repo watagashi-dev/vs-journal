@@ -88,7 +88,7 @@
       "activitybar": [
         {
           "id": "vsJournal",
-          "title": "vsJournal",
+          "title": "VS Journal",
           "icon": "resources/icon.svg"
         }
       ]
