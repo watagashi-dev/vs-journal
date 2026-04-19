@@ -165,7 +165,11 @@
     "build:webview": "tsc -p ./tsconfig.webview.json && npm run build:webview:copy",
     "watch": "concurrently \"npm:watch:extension\" \"npm:watch:webview\"",
     "watch:extension": "tsc -w -p ./tsconfig.json",
-    "watch:webview": "tsc -w -p ./tsconfig.webview.json"
+    "watch:webview": "tsc -w -p ./tsconfig.webview.json",
+    "lint": "eslint src",
+    "test": "vscode-test",
+    "pretest": "npm run compile-tests && npm run lint",
+    "compile-tests": "tsc -p . --outDir out"
   },
   "devDependencies": {
     "@types/markdown-it": "^14.1.2",
