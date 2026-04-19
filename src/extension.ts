@@ -123,6 +123,13 @@ function rebuildTree() {
     tagProvider.refresh(result.system, result.user, result.virtual);
 }
 
+function readFileEntry(filePath: string): { content: string; stats: fs.Stats } {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const stats = fs.statSync(filePath);
+
+    return { content, stats };
+}
+
 async function refreshAllData() {
     const journalDir = getJournalDir();
     const fullDir = getAbsoluteJournalDir(journalDir);
@@ -142,45 +149,62 @@ async function refreshAllData() {
     // --- Analyze files and register user tags ---
     for (const file of files) {
         const filePath = path.join(fullDir, file);
-        const meta = createFileMeta(filePath);
+
+        // --- Read file ---
+        const { content, stats } = readFileEntry(filePath);
+
+        // --- Create meta ---
+        const meta = createFileMeta(filePath, content, stats);
         fileMetaMap.set(filePath, meta);
 
         // Add user tags
-        meta.tags.forEach(tag => {
-            const arr = userTagIndexMap.get(tag) ?? [];
-            userTagIndexMap.set(tag, [...arr, meta]);
-        });
+        addUserTagsFromMeta(meta);
     }
     rebuildSystemTags();
+}
+
+function removeUserTagsFromMeta(oldMeta: FileMeta | undefined) {
+    if (!oldMeta) {
+        return;
+    }
+
+    oldMeta.tags.forEach(tag => {
+        const files = userTagIndexMap.get(tag);
+
+        if (files) {
+            const filtered = files.filter(f => f.filePath !== oldMeta.filePath);
+
+            if (filtered.length === 0) {
+                userTagIndexMap.delete(tag);
+            } else {
+                userTagIndexMap.set(tag, filtered);
+            }
+        }
+    });
+}
+
+function addUserTagsFromMeta(meta: FileMeta) {
+    meta.tags.forEach(tag => {
+        const arr = userTagIndexMap.get(tag) ?? [];
+        userTagIndexMap.set(tag, [...arr, meta]);
+    });
 }
 
 function updateSingleFile(filePath: string) {
     const oldMeta = fileMetaMap.get(filePath);
 
     // --- Remove from old user tags ---
-    if (oldMeta) {
-        oldMeta.tags.forEach(tag => {
-            const files = userTagIndexMap.get(tag);
-            if (files) {
-                const filtered = files.filter(f => f.filePath !== filePath);
-                if (filtered.length === 0) {
-                    userTagIndexMap.delete(tag);
-                } else {
-                    userTagIndexMap.set(tag, filtered);
-                }
-            }
-        });
-    }
+    removeUserTagsFromMeta(oldMeta);
+
+    // --- Read file ---
+    const { content, stats } = readFileEntry(filePath);
 
     // --- Create new FileMeta ---
-    const newMeta = createFileMeta(filePath);
+    const newMeta = createFileMeta(filePath, content, stats);
     fileMetaMap.set(filePath, newMeta);
 
     // --- Add to user tags ---
-    newMeta.tags.forEach(tag => {
-        const arr = userTagIndexMap.get(tag) ?? [];
-        userTagIndexMap.set(tag, [...arr, newMeta]);
-    });
+    addUserTagsFromMeta(newMeta);
 
     rebuildSystemTags();
 }
