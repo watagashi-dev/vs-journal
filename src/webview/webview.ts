@@ -10,6 +10,7 @@ declare function acquireVsCodeApi(): any;
         | { type: 'openExternal'; url: string }
         | { type: 'jumpToLine'; filePath: string; line: number }
         | { type: 'jumpToFile'; filePath: string }
+        | { type: 'closePreview' }
         | { type: 'edit' };
 
     function postMessage(msg: VsCodeMessage): void {
@@ -31,6 +32,12 @@ declare function acquireVsCodeApi(): any;
 
     const HIDE_DELAY = 1500;
 
+    let previewFileCount = 0;
+
+    function setPreviewFileCount(count: number): void {
+        previewFileCount = count;
+    }
+
     // =========================================================
     // DOM
     // =========================================================
@@ -51,7 +58,7 @@ declare function acquireVsCodeApi(): any;
     // Header
     // =========================================================
     function resetHeaderTimer(): void {
-        if (!header) return;
+        if (!header) { return; }
 
         header.classList.remove('hidden');
 
@@ -69,7 +76,7 @@ declare function acquireVsCodeApi(): any;
     // =========================================================
     function handleClick(e: MouseEvent): void {
         const target = e.target as HTMLElement | null;
-        if (!target) return;
+        if (!target) { return; }
 
         const link = target.closest('a');
         if (link) {
@@ -116,7 +123,12 @@ declare function acquireVsCodeApi(): any;
     function setupKeyHandler(): void {
         window.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === 'Escape') {
-                postMessage({ type: 'edit' });
+                if (previewFileCount > 1) {
+                    postMessage({ type: 'closePreview' });
+                }
+                else {
+                    postMessage({ type: 'edit' });
+                }
             }
 
             if (
@@ -148,7 +160,7 @@ declare function acquireVsCodeApi(): any;
     // =========================================================
     function runHighlight(): void {
         const hljs = (window as any).hljs;
-        if (!hljs) return;
+        if (!hljs) { return; }
         hljs.highlightAll();
     }
 
@@ -174,6 +186,11 @@ declare function acquireVsCodeApi(): any;
                 const target = fileBlock && getLineElement(fileBlock, msg.line);
 
                 target?.scrollIntoView({ block: 'center' });
+            }
+
+            if (msg.type === 'setPreviewCount') {
+                setPreviewFileCount(msg.count);
+                return;
             }
         });
     }

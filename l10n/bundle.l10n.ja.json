@@ -8,6 +8,7 @@
   "{month}/{day}/{year}": "{year}年{month}月{day}日",
   "{hour}:{minute}": "{hour}:{minute}",
   "Click or press Enter to edit": "クリックまたはEnterで編集",
+  "Click to edit, or press Enter to close preview": "クリックで編集、または Enter でプレビューを閉じる",
   "There are no files for this tag": "このタグに対応するファイルはありません",
   "Preview truncated: size limit exceeded": "サイズ上限のため一部のみ表示しています",
   "Preview truncated: too many files": "ファイル数上限のため一部のみ表示しています"

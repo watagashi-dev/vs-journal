@@ -187,6 +187,18 @@ async function handleWebviewMessage(message: any) {
 
         return;
     }
+    if (message.type === 'closePreview' && currentPanel) {
+        currentPanel.dispose();
+        return;
+    }
+}
+
+function getHintText(count: number): string {
+    if (count > 1) {
+        return vscode.l10n.t("Click to edit, or press Enter to close preview");
+    }
+
+    return vscode.l10n.t("Click or press Enter to edit");
 }
 
 async function buildHtml(
@@ -243,7 +255,7 @@ async function buildHtml(
     );
     const scriptUri = panel.webview.asWebviewUri(scriptPath);
 
-    const hintText = vscode.l10n.t("Click or press Enter to edit");
+    const hintText = getHintText(filesToPreview.length);
     const isDark = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark;
     const themeUrl = getHljsThemeUrl(isDark);
 
@@ -268,6 +280,10 @@ export async function updatePreviewPanel(
     try {
         const html = await buildHtml(panel, filesToPreview, options);
         panel.webview.html = html;
+        panel.webview.postMessage({
+            type: 'setPreviewCount',
+            count: filesToPreview.length
+        });
     } catch (e) {
         // Preview update skipped
     }

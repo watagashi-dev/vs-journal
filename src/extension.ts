@@ -190,10 +190,10 @@ function checkPreviewLimits(files: FileMeta[]): {
     limitExceeded: boolean;
     message?: string;
 } {
-//    const MAX_TOTAL_SIZE = 2 * 1024 * 1024; // 2MB
-//    const MAX_FILES = 80;
-    const MAX_TOTAL_SIZE = 3 * 1024;
-    const MAX_FILES = 4;
+    const MAX_TOTAL_SIZE = 2 * 1024 * 1024; // 2MB
+    const MAX_FILES = 80;
+//    const MAX_TOTAL_SIZE = 3 * 1024;
+//    const MAX_FILES = 4;
 
     let totalSize = 0;
     const result: FileMeta[] = [];
