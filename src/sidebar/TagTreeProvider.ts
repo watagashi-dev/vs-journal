@@ -94,8 +94,10 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
                 result.push(item);
 
                 // List tags beneath as siblings
+                const isVirtual = label === vscode.l10n.t('Virtual Tags');
+
                 for (const node of nodes) {
-                    result.push(this.createTagItem(node));
+                    result.push(this.createTagItem(node, isVirtual));
                 }
             };
 
@@ -145,10 +147,16 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         return Promise.resolve(children);
     }
 
-    private createTagItem(node: TagHierarchyNode): VSTagItem {
+    private createTagItem(node: TagHierarchyNode, isVirtual = false): VSTagItem {
+        const count = node.files.length;
+
+        const label = isVirtual
+            ? `${node.name} (${count})`
+            : vscode.l10n.t(node.name);
+
         const item = new VSTagItem(
             node,
-            vscode.l10n.t(node.name),
+            label,
             vscode.TreeItemCollapsibleState.Collapsed,
             'tag'
         );

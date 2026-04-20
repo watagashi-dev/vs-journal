@@ -1,4 +1,12 @@
+import { FileMeta } from './models/FileMeta';
+
 const cursorLineMap = new Map<string, number>();
+
+export const systemTagIndexMap = new Map<string, FileMeta[]>(); 
+export const userTagIndexMap = new Map<string, FileMeta[]>(); 
+export const virtualTagIndexMap = new Map<string, FileMeta[]>();
+
+export const virtualTagSet = new Set<string>();
 
 export function setCursorLine(filePath: string, line: number) {
     // Store the latest cursor line for the given file
