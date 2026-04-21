@@ -94,10 +94,11 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
                 result.push(item);
 
                 // List tags beneath as siblings
-                const isVirtual = label === vscode.l10n.t('Virtual Tags');
+                const needCount = label !== vscode.l10n.t('User Tags');
+                const needTranslate = label === vscode.l10n.t('System Tags');
 
                 for (const node of nodes) {
-                    result.push(this.createTagItem(node, isVirtual));
+                    result.push(this.createTagItem(node, needCount, needTranslate));
                 }
             };
 
@@ -147,12 +148,11 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         return Promise.resolve(children);
     }
 
-    private createTagItem(node: TagHierarchyNode, isVirtual = false): VSTagItem {
+    private createTagItem(node: TagHierarchyNode, needCount = false, needTranslate = false): VSTagItem {
         const count = node.files.length;
+        const name = needTranslate ? vscode.l10n.t(node.name) : node.name; 
 
-        const label = isVirtual
-            ? `${node.name} (${count})`
-            : vscode.l10n.t(node.name);
+        const label = needCount ? name + `(${count})` : name;
 
         const item = new VSTagItem(
             node,
