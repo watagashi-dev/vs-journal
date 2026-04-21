@@ -11,5 +11,6 @@
   "view.vsJournal.tags.empty": "No entries",
   "command.newEntry": "VS Journal: New Entry",
   "command.previewEntry": "VS Journal: Preview Entry",
-  "command.selectJournalDir": "VS Journal: Select Journal Directory"
+  "command.selectJournalDir": "VS Journal: Select Journal Directory",
+  "command.addVirtualTag": "VS Journal: Add Virtual Tag"
 }

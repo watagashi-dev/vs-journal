@@ -11,5 +11,6 @@
   "view.vsJournal.tags.empty": "エントリーがありません",
   "command.newEntry": "VS Journal: 新規メモ作成",
   "command.previewEntry": "VS Journal: メモプレビュー",
-  "command.selectJournalDir": "VS Journal: ジャーナルフォルダ選択"
+  "command.selectJournalDir": "VS Journal: ジャーナルフォルダ選択",
+  "command.addVirtualTag": "VS Journal: 仮想タグを追加"
 }

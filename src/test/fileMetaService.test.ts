@@ -14,14 +14,13 @@ function assertTags(actual: string[], expected: string[], label = '') {
     }
 }
 
-
 suite('fileMetaService tests', () => {
 
     test('extracts title from first heading', () => {
         const mockContent = `# My Title
 #tag1 #tag2
 `;
-        const meta = createFileMeta('dummy.md', () => mockContent);
+        const meta = createFileMeta('dummy.md', mockContent);
 
         assert.strictEqual(meta.title, 'My Title');
         assert.deepStrictEqual(meta.tags, ['tag1', 'tag2']);
@@ -31,7 +30,7 @@ suite('fileMetaService tests', () => {
         const mockContent = `Some text
 #tag3
 `;
-        const meta = createFileMeta('fileName.md', () => mockContent);
+        const meta = createFileMeta('fileName.md', mockContent);
 
         assert.strictEqual(meta.title, 'fileName.md');
         assert.deepStrictEqual(meta.tags, ['tag3']);
@@ -42,7 +41,7 @@ suite('fileMetaService tests', () => {
 #tag4 #tag5
 # Another heading
 `;
-        const meta = createFileMeta('test.md', () => mockContent);
+        const meta = createFileMeta('test.md', mockContent);
 
         assert.strictEqual(meta.title, 'Heading');
         assert.deepStrictEqual(meta.tags, ['tag4', 'tag5']);
@@ -54,7 +53,7 @@ suite('fileMetaService tests', () => {
 
 #tag6
 `;
-        const meta = createFileMeta('test.md', () => mockContent);
+        const meta = createFileMeta('test.md', mockContent);
 
         assert.strictEqual(meta.title, 'Heading');
         assert.deepStrictEqual(meta.tags, ['tag4', 'tag5', 'tag6']);
@@ -66,7 +65,7 @@ suite('fileMetaService tests', () => {
 
 #tag6
 `;
-        const meta = createFileMeta('test.md', () => mockContent);
+        const meta = createFileMeta('test.md', mockContent);
 
         assert.strictEqual(meta.title, 'Heading');
         assert.deepStrictEqual(meta.tags, ['tag6']);
@@ -79,12 +78,11 @@ suite('fileMetaService tests', () => {
 
 #tag6
 `;
-        const meta = createFileMeta('test.md', () => mockContent);
+        const meta = createFileMeta('test.md', mockContent);
 
         assert.strictEqual(meta.title, 'Heading');
         assertTags(meta.tags, ['tag5', 'tag6'], label);
     });
-
 
     test('hierarchy tags', () => {
         const mockContent = `# Heading
@@ -92,7 +90,7 @@ suite('fileMetaService tests', () => {
 
 #tag4/tag5 #tag6
 `;
-        const meta = createFileMeta('test.md', () => mockContent);
+        const meta = createFileMeta('test.md', mockContent);
 
         assert.strictEqual(meta.title, 'Heading');
         assert.deepStrictEqual(meta.tags, ['tag4/tag5', 'tag6']);
@@ -110,7 +108,7 @@ inv main(int argc, char *argv[])
 #endif
 \`\`\`
 `;
-        const meta = createFileMeta('test.md', () => mockContent);
+        const meta = createFileMeta('test.md', mockContent);
 
         assert.strictEqual(meta.title, 'Heading');
         assert.deepStrictEqual(meta.tags, []);
@@ -128,7 +126,7 @@ inv main(int argc, char *argv[])
     #endif
 \`\`\`
 `;
-        const meta = createFileMeta('test.md', () => mockContent);
+        const meta = createFileMeta('test.md', mockContent);
 
         assert.strictEqual(meta.title, 'Heading');
         assert.deepStrictEqual(meta.tags, []);
@@ -147,9 +145,43 @@ inv main(int argc, char *argv[])
 
 #endif
 `;
-        const meta = createFileMeta('test.md', () => mockContent);
+        const meta = createFileMeta('test.md', mockContent);
 
         assert.strictEqual(meta.title, 'Heading');
         assert.deepStrictEqual(meta.tags, ['endif']);
+    });
+
+    test('createFileMeta does not require file system access when content is provided', function () {
+        const label = (this.test && this.test.title) || '';
+        const content = `# Title
+    #tag1 #tag2`;
+
+        const meta = createFileMeta('any.md', content, {
+            ctimeMs: 100,
+            mtimeMs: 200,
+            size: 10
+        } as any);
+
+        assert.strictEqual(meta.title, 'Title');
+        assertTags(meta.tags, ['tag1', 'tag2'], label);
+    });
+
+    test('tags are ignored inside inline code and code blocks consistently', function () {
+        const label = (this.test && this.test.title) || '';
+        const content = `
+    # Title
+
+    \`\`\`
+    #tag1
+    \`\`\`
+
+    \`#tag2\`
+
+    #tag3
+    `;
+
+        const meta = createFileMeta('test.md', content);
+
+        assertTags(meta.tags, ['tag3'], label);
     });
 });
