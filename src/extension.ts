@@ -23,7 +23,7 @@ import {
     clearCursorLine,
     setCursorLine,
     systemTagIndexMap, userTagIndexMap, virtualTagIndexMap,
-    virtualTagSet
+    virtualTagSet, resetVirtualTags
 } from './state';
 import {
     indexVirtualTags, indexVirtualTagForAllFiles,
@@ -523,6 +523,7 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(async event => {
             if (event.affectsConfiguration('vsJournal.journalDir')) {
+                resetVirtualTags();
                 await performScan();
                 setupWatcher();
                 disposePreviewPanel();

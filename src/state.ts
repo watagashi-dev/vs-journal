@@ -33,3 +33,8 @@ export function clearCursorLine(filePath: string) {
     // Explicitly remove cursor tracking for a file
     cursorLineMap.delete(filePath);
 }
+
+export function resetVirtualTags(): void {
+    virtualTagSet.clear();
+    virtualTagIndexMap.clear();
+}
