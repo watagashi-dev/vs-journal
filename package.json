@@ -96,14 +96,14 @@
     "views": {
       "vsJournal": [
         {
-          "id": "vsJournalTags",
+          "id": "VSJournal.TagTree",
           "name": ""
         }
       ]
     },
     "viewsWelcome": [
       {
-        "view": "vsJournalTags",
+        "view": "VSJournal.TagTree",
         "contents": "%view.vsJournal.tags.empty%"
       }
     ],
@@ -111,17 +111,17 @@
       "view/title": [
         {
           "command": "vs-journal.newEntry",
-          "when": "view == vsJournalTags",
+          "when": "view == VSJournal.TagTree",
           "group": "navigation@1"
         },
         {
           "command": "vs-journal.previewEntry",
-          "when": "view == vsJournalTags",
+          "when": "view == VSJournal.TagTree",
           "group": "navigation@2"
         },
         {
           "command": "vs-journal.selectJournalDir",
-          "when": "view == vsJournalTags",
+          "when": "view == VSJournal.TagTree",
           "group": "navigation@3"
         }
       ],
@@ -131,7 +131,7 @@
         },
         {
           "command": "vs-journal.previewEntry",
-          "when": "view.vsJournalTags.visible"
+          "when": "view.VSJournal.TagTree.visible"
         },
         {
           "command": "vs-journal.selectJournalDir"
@@ -146,14 +146,9 @@
       },
       {
         "command": "vs-journal.previewEntry",
-        "when": "view.vsJournalTags.visible",
+        "when": "view.VSJournal.TagTree.visible",
         "key": "ctrl+alt+p",
         "mac": "cmd+option+p"
-      },
-      {
-        "command": "vsJournalTags.focus",
-        "key": "ctrl+alt+j",
-        "mac": "cmd+option+j"
       }
     ]
   },

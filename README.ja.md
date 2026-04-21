@@ -226,7 +226,6 @@ Cmd+Option+P (Mac)
 |------|-----------------|-------|
 | 新しいメモ | Ctrl+Alt+N | Cmd+Option+N |
 | プレビュー | Ctrl+Alt+P | Cmd+Option+P |
-| タグビューにフォーカス | Ctrl+Alt+J | Cmd+Option+J |
 
 ---
 

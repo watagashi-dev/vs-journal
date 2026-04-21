@@ -270,7 +270,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // --- Tag Tree ---
     tagProvider = new TagTreeProvider();
-    vscode.window.createTreeView('vsJournalTags', {
+    vscode.window.createTreeView('VSJournal.TagTree', {
         treeDataProvider: tagProvider,
         showCollapseAll: true,
     });

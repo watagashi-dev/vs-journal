@@ -271,7 +271,6 @@ Cmd+Option+P (macOS)
 | :--- | :--- | :--- |
 | New Entry | Ctrl+Alt+N | Cmd+Option+N |
 | Preview | Ctrl+Alt+P | Cmd+Option+P |
-| Focus Tag View | Ctrl+Alt+J | Cmd+Option+J |
 
 ---
 
