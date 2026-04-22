@@ -12,5 +12,7 @@
   "There are no files for this tag": "このタグに対応するファイルはありません",
   "Preview truncated: size limit exceeded": "サイズ上限のため一部のみ表示しています",
   "Preview truncated: too many files": "ファイル数上限のため一部のみ表示しています",
-  "Enter virtual tag name": "仮想タグ名を入力してください"
+  "Enter virtual tag name": "仮想タグ名を入力してください",
+  "Delete this file?": "このファイルを削除しますか？",
+  "Delete": "削除"
 }

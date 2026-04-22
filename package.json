@@ -49,6 +49,10 @@
         "command": "vs-journal.addVirtualTag",
         "title": "%command.addVirtualTag%",
         "icon": "$(tag)"
+      },
+      {
+        "command": "vsJournal.deleteFile",
+        "title": "%command.deleteFile.title%"
       }
     ],
     "configuration": {
@@ -71,6 +75,12 @@
           "default": true,
           "description": "%config.enableDateTime.description%",
           "markdownDescription": "%config.enableDateTime.markdownDescription%"
+        },
+        "vsJournal.confirmDeleteFile": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.confirmDeleteFile.description%",
+          "markdownDescription": "%config.confirmDeleteFile.markdownDescription%"
         },
         "vsJournal.systemTags.visibility": {
           "type": "object",
@@ -131,7 +141,7 @@
         },
         {
           "command": "vs-journal.addVirtualTag",
-          "when": "view == vsJournalTags",
+          "when": "view == VSJournal.TagTree",
           "group": "navigation@4"
         }
       ],
@@ -148,7 +158,13 @@
         },
         {
           "command": "vs-journal.addVirtualTag",
-          "when": "view.vsJournalTags.visible"
+          "when": "view.VSJournal.TagTree.visible"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "vsJournal.deleteFile",
+          "when": "view == VSJournal.TagTree && viewItem == file"
         }
       ]
     },

@@ -236,6 +236,7 @@ Cmd+Option+P (Mac)
 | vsJournal.journalDir | 保存フォルダ | $HOME/VSJournal |
 | vsJournal.autoSave | 自動保存(ms) | 800 |
 | vsJournal.enableDateTime | 日時自動挿入 | true |
+| vsJournal.confirmDeleteFile | ファイル削除確認 | true |
 | vsJournal.systemTags.visibility | システムタグ表示制御 | { "Today": true } |
 
 例:

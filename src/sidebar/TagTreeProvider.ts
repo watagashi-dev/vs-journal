@@ -13,6 +13,14 @@ class VSTagItem extends vscode.TreeItem {
         super(label, collapsibleState);
         this.contextValue = contextValue;
     }
+    // Node type for logic
+    public type?: 'file' | 'tag' | 'section' | 'spacer' | 'spinner';
+
+    // File path (only for file nodes)
+    public path?: string;
+
+    // File meta (only for file nodes)
+    public file?: FileMeta;
 }
 
 function createSpacerItem(): VSTagItem {
@@ -22,6 +30,7 @@ function createSpacerItem(): VSTagItem {
         vscode.TreeItemCollapsibleState.None,
         'spacer'
     );
+    spacer.type = 'spacer';
     spacer.command = undefined; // Not clickable
     spacer.iconPath = undefined; // No icon
     spacer.tooltip = '';
@@ -45,6 +54,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             vscode.TreeItemCollapsibleState.None,
             'spinner'
         );
+        spinner.type = 'spinner';
         spinner.iconPath = new vscode.ThemeIcon('sync~spin'); // Spinning icon
         spinner.command = undefined; // Not clickable
         spinner.tooltip = '';
@@ -90,6 +100,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
                 );
 
                 // Use icon for visual emphasis
+                item.type = 'section';
                 item.iconPath = new vscode.ThemeIcon('folder-opened', new vscode.ThemeColor('charts.blue'));
                 result.push(item);
 
@@ -134,6 +145,10 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
                 'file'
             );
 
+            item.type = 'file';
+            item.path = file.filePath;
+            item.file = file;
+
             item.command = {
                 command: 'vs-journal.previewEntry',
                 title: 'Preview Entry',
@@ -160,6 +175,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             vscode.TreeItemCollapsibleState.Collapsed,
             'tag'
         );
+        item.type = 'tag';
 
         item.command = {
             command: 'vs-journal.onTagClick',

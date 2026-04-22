@@ -313,7 +313,10 @@ export async function activate(context: vscode.ExtensionContext) {
             updateSingleFile(uri.fsPath);
             rebuildTree();
         });
-        fileWatcher.onDidDelete(() => refreshAllData());
+        fileWatcher.onDidDelete(() => {
+            refreshAllData();
+            rebuildTree();
+        });
 
         context.subscriptions.push(fileWatcher);
     };
@@ -470,6 +473,27 @@ export async function activate(context: vscode.ExtensionContext) {
 
             // --- Refresh tree ---
             rebuildTree();
+        }),
+
+        vscode.commands.registerCommand('vsJournal.deleteFile', async (item) => {
+            if (!item || item.type !== 'file' || !item.path) { return; }
+
+            const config = vscode.workspace.getConfiguration('vsJournal');
+            const confirm = config.get<boolean>('confirmDeleteFile', true);
+
+            if (confirm) {
+                const deleteLabel = vscode.l10n.t('Delete');
+                const result = await vscode.window.showWarningMessage(
+                    vscode.l10n.t('Delete this file?'),
+                    { modal: true },
+                    deleteLabel
+                );
+
+                if (result !== deleteLabel) { return; }
+            }
+            const uri = vscode.Uri.file(item.path);
+
+            await vscode.workspace.fs.delete(uri, { useTrash: true });
         }),
 
         // Command to increment tag usage count

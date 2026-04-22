@@ -8,9 +8,12 @@
   "config.enableDateTime.markdownDescription": "Automatically insert the current date and time below the heading when creating a new journal entry.",
   "config.systemTags.today.description": "Enable or disable the Today system tag in the tag tree.",
   "config.systemTags.today.markdownDescription": "Use this setting to control the visibility of the Today system tag in the tag tree.\n\nSet to true to display Today, false to hide it.",
+  "config.confirmDeleteFile.description": "Show a confirmation dialog before deleting a file from the tag tree.",
+  "config.confirmDeleteFile.markdownDescription": "If enabled, a confirmation dialog will appear before deleting a file from the tag tree. Disable this to delete files without confirmation.",
   "view.vsJournal.tags.empty": "No entries",
   "command.newEntry": "VS Journal: New Entry",
   "command.previewEntry": "VS Journal: Preview Entry",
   "command.selectJournalDir": "VS Journal: Select Journal Directory",
-  "command.addVirtualTag": "VS Journal: Add Virtual Tag"
+  "command.addVirtualTag": "VS Journal: Add Virtual Tag",
+  "command.deleteFile.title": "Delete File"
 }
