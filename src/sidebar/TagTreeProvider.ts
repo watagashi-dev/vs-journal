@@ -3,6 +3,41 @@ import { TagHierarchyNode } from '../services/TagHierarchyBuilder';
 import { getJournalRelativePath } from '../extension';
 import { FileMeta } from '../models/FileMeta';
 
+type TagSection = {
+    key: 'system' | 'user' | 'virtual';
+    getNodes: (provider: TagTreeProvider) => TagHierarchyNode[];
+    label: string;
+};
+
+const TAG_SECTIONS: TagSection[] = [
+    {
+        key: 'system',
+        label: vscode.l10n.t('System Tags'),
+        getNodes: (p) => p.getSystemNodes(),
+    },
+    {
+        key: 'user',
+        label: vscode.l10n.t('User Tags'),
+        getNodes: (p) => p.getUserNodes(),
+    },
+    {
+        key: 'virtual',
+        label: vscode.l10n.t('Virtual Tags'),
+        getNodes: (p) => p.getVirtualNodes(),
+    },
+];
+
+function formatTagLabel(
+    name: string,
+    count: number,
+    needCount: boolean,
+    needTranslate: boolean
+): string {
+    const base = needTranslate ? vscode.l10n.t(name) : name;
+
+    return needCount ? `${base}(${count})` : base;
+}
+
 class VSTagItem extends vscode.TreeItem {
     constructor(
         public readonly node: TagHierarchyNode | null,
@@ -47,6 +82,18 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
     private virtualNodes: TagHierarchyNode[] = [];
     private isScanning = false;
 
+    public getSystemNodes(): TagHierarchyNode[] {
+        return this.systemNodes;
+    }
+
+    public getUserNodes(): TagHierarchyNode[] {
+        return this.userNodes;
+    }
+
+    public getVirtualNodes(): TagHierarchyNode[] {
+        return this.virtualNodes;
+    }
+
     public createSpinnerItem(): VSTagItem {
         const spinner = new VSTagItem(
             null,
@@ -89,35 +136,34 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         if (!element) {
             const result: VSTagItem[] = [];
 
-            const pushSection = (label: string, nodes: TagHierarchyNode[]) => {
-
+            const pushSection = (section: TagSection) => {
                 // Section header (not clickable, no collapse chevron)
                 const item = new VSTagItem(
                     null,
-                    label,
+                    section.label,
                     vscode.TreeItemCollapsibleState.None,
                     'section'
                 );
 
                 // Use icon for visual emphasis
                 item.type = 'section';
+                item.tooltip = '';
                 item.iconPath = new vscode.ThemeIcon('folder-opened', new vscode.ThemeColor('charts.blue'));
                 result.push(item);
 
                 // List tags beneath as siblings
-                const needCount = label !== vscode.l10n.t('User Tags');
-                const needTranslate = label === vscode.l10n.t('System Tags');
+                const needCount = section.key !== 'user';
+                const needTranslate = section.key === 'system';
 
-                for (const node of nodes) {
+                for (const node of section.getNodes(this)) {
                     result.push(this.createTagItem(node, needCount, needTranslate));
                 }
             };
 
-            pushSection(vscode.l10n.t('System Tags'), this.systemNodes);
+            for (const section of TAG_SECTIONS) {
+                pushSection(section);
+            }
             // result.push(createSpacerItem());
-            pushSection(vscode.l10n.t('User Tags'), this.userNodes);
-            // result.push(createSpacerItem());
-            pushSection(vscode.l10n.t('Virtual Tags'), this.virtualNodes);
 
             return Promise.resolve(result);
         }
@@ -176,6 +222,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             'tag'
         );
         item.type = 'tag';
+        item.tooltip = '';
 
         item.command = {
             command: 'vs-journal.onTagClick',
