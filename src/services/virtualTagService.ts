@@ -1,5 +1,4 @@
 import { FileMeta } from '../models/FileMeta';
-import { readFileEntry } from '../extension';
 import {
     virtualTagSet,
     virtualTagIndexMap
@@ -84,47 +83,5 @@ export function rebuildVirtualTagIndex(
     for (const meta of fileMetaMap.values()) {
         const content = readFile(meta.filePath);
         indexVirtualTags(meta, content, caseSensitive);
-    }
-}
-
-/**
- * Index a newly added virtual tag against all existing files.
- * This is incremental update (not full rebuild).
- */
-export function indexVirtualTagForAllFiles(
-    tag: string,
-    fileMetaMap: Map<string, FileMeta>,
-    caseSensitive: boolean
-): void {
-
-    for (const meta of fileMetaMap.values()) {
-
-        const { content } = readFileEntry(meta.filePath);
-
-        if (!matchVirtualTag(tag, content, caseSensitive)) {
-            continue;
-        }
-
-        addMetaToTagIndex(tag, meta);
-    }
-}
-
-export function reindexSingleVirtualTag(
-    tag: string,
-    fileMetaMap: Map<string, FileMeta>,
-    caseSensitive: boolean
-): void {
-
-    virtualTagIndexMap.delete(tag);
-
-    for (const meta of fileMetaMap.values()) {
-
-        const { content } = readFileEntry(meta.filePath);
-
-        if (!matchVirtualTag(tag, content, caseSensitive)) {
-            continue;
-        }
-
-        addMetaToTagIndex(tag, meta);
     }
 }

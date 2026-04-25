@@ -26,9 +26,9 @@ import {
     virtualTagSet, resetVirtualTags
 } from './state';
 import {
-    indexVirtualTags, indexVirtualTagForAllFiles,
+    indexVirtualTags,
     removeVirtualTagsForFile,
-    rebuildVirtualTagIndex, reindexSingleVirtualTag
+    rebuildVirtualTagIndex,
 } from './services/virtualTagService';
 
 let tagProvider: TagTreeProvider;
@@ -152,7 +152,6 @@ async function refreshAllData() {
     const fullDir = getAbsoluteJournalDir(journalDir);
     const config = vscode.workspace.getConfiguration('vsJournal');
     const caseSensitive = config.get<boolean>('virtualTags.caseSensitive', true);
-    console.log('refreshAllData called with caseSensitive:', caseSensitive);
 
     fileMetaMap.clear();
     userTagIndexMap.clear();
@@ -218,7 +217,6 @@ function addUserTagsFromMeta(meta: FileMeta) {
 function updateSingleFile(filePath: string) {
     const config = vscode.workspace.getConfiguration('vsJournal');
     const caseSensitive = config.get<boolean>('virtualTags.caseSensitive', true);
-    console.log('updateSingleFile called with caseSensitive:', caseSensitive);
 
     const oldMeta = fileMetaMap.get(filePath);
 
@@ -476,7 +474,10 @@ export async function activate(context: vscode.ExtensionContext) {
             if (!virtualTagIndexMap.has(trimmed)) {
                 virtualTagIndexMap.set(trimmed, []);
             }
-            indexVirtualTagForAllFiles( trimmed, fileMetaMap, caseSensitive);
+            const readFileContent = (filePath: string): string => {
+                return readFileEntry(filePath).content;
+            };
+            rebuildVirtualTagIndex(fileMetaMap, readFileContent, caseSensitive);
 
             // --- Refresh tree ---
             rebuildTree();
@@ -572,10 +573,12 @@ export async function activate(context: vscode.ExtensionContext) {
 
                 virtualTagIndexMap.clear();
 
+                const readFileContent = (filePath: string): string => {
+                    return readFileEntry(filePath).content;
+                };
                 for (const tag of virtualTagSet) {
-                    reindexSingleVirtualTag(tag, fileMetaMap, caseSensitive);
+                    rebuildVirtualTagIndex(fileMetaMap, readFileContent, caseSensitive);
                 }
-
                 rebuildTree();
             }
         }),
