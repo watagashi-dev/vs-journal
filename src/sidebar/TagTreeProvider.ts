@@ -7,6 +7,8 @@ type TagSection = {
     key: 'system' | 'user' | 'virtual';
     getNodes: (provider: TagTreeProvider) => TagHierarchyNode[];
     label: string;
+    needCount: boolean;
+    needTranslate: boolean;
 };
 
 const TAG_SECTIONS: TagSection[] = [
@@ -14,28 +16,37 @@ const TAG_SECTIONS: TagSection[] = [
         key: 'system',
         label: vscode.l10n.t('System Tags'),
         getNodes: (p) => p.getSystemNodes(),
+        needCount: true,
+        needTranslate: true,
     },
     {
         key: 'user',
         label: vscode.l10n.t('User Tags'),
         getNodes: (p) => p.getUserNodes(),
+        needCount: false,
+        needTranslate: false,
     },
     {
         key: 'virtual',
         label: vscode.l10n.t('Virtual Tags'),
         getNodes: (p) => p.getVirtualNodes(),
+        needCount: true,
+        needTranslate: false,
     },
 ];
 
 function formatTagLabel(
-    name: string,
-    count: number,
-    needCount: boolean,
-    needTranslate: boolean
+    node: TagHierarchyNode,
+    section: TagSection
 ): string {
-    const base = needTranslate ? vscode.l10n.t(name) : name;
+    const base = section.needTranslate ? vscode.l10n.t(node.name) : node.name;
 
-    return needCount ? `${base}(${count})` : base;
+    if (!section.needCount) {
+        return base;
+    }
+
+    const count = node.files.length;
+    return `${base}(${count})`;
 }
 
 class VSTagItem extends vscode.TreeItem {
@@ -151,12 +162,8 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
                 item.iconPath = new vscode.ThemeIcon('folder-opened', new vscode.ThemeColor('charts.blue'));
                 result.push(item);
 
-                // List tags beneath as siblings
-                const needCount = section.key !== 'user';
-                const needTranslate = section.key === 'system';
-
                 for (const node of section.getNodes(this)) {
-                    result.push(this.createTagItem(node, needCount, needTranslate));
+                    result.push(this.createTagItem(node, section));
                 }
             };
 
@@ -209,18 +216,15 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         return Promise.resolve(children);
     }
 
-    private createTagItem(node: TagHierarchyNode, needCount = false, needTranslate = false): VSTagItem {
-        const count = node.files.length;
-        const name = needTranslate ? vscode.l10n.t(node.name) : node.name; 
-
-        const label = needCount ? name + `(${count})` : name;
-
+    private createTagItem(node: TagHierarchyNode, section?: TagSection): VSTagItem {
+        const label = section ? formatTagLabel(node, section) : node.name;
         const item = new VSTagItem(
             node,
             label,
             vscode.TreeItemCollapsibleState.Collapsed,
             'tag'
         );
+
         item.type = 'tag';
         item.tooltip = '';
 
