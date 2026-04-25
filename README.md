@@ -129,7 +129,13 @@ Tags can be nested using `/` (up to 4 levels):
 
 ---
 
-### 4. Tag Autocompletion
+### 4. Virtual Tags (Dynamic Tagging)
+
+Assign tags dynamically based on specific keywords without writing physical hashtags into your files. This allows you to group related notes automatically based on their content.
+
+---
+
+### 5. Tag Autocompletion
 
 Tags are suggested as you type based on existing tags.
 
@@ -139,7 +145,7 @@ Tags are suggested as you type based on existing tags.
 
 ---
 
-### 5. Enhanced Preview
+### 6. Enhanced Preview
 
 The Markdown preview is optimized for readability and interaction.
 
@@ -158,17 +164,18 @@ Clicking a tag shows all related notes merged into a single preview.
 
 ---
 
-### 6. Tag View
+### 7. Tag View
 
 Organize and navigate notes through a hierarchical tag tree.
 
 - Tags displayed as a tree structure
 - Automatically sorted alphabetically
 - Files within tags are sorted by title
+- **File Management**: Delete files directly from the Tag Tree context menu.
 
 ---
 
-### 7. System Tags
+### 8. System Tags
 
 Tags automatically assigned based on file state.
 
@@ -179,7 +186,7 @@ These are dynamically generated and not based on file content.
 
 ---
 
-### 8. Keyboard & UI Interaction
+### 9. Keyboard & UI Interaction
 
 Quick access to preview while editing.
 
@@ -262,6 +269,7 @@ Cmd+Option+P (macOS)
 | VS Journal: New Entry | Create a new note |
 | VS Journal: Preview Entry | Preview a note |
 | VS Journal: Select Journal Directory | Change storage folder |
+| VS Journal: Add Virtual Tag | Add a new virtual tag |
 
 ---
 
@@ -281,6 +289,8 @@ Cmd+Option+P (macOS)
 | vsJournal.journalDir | Storage folder | $HOME/VSJournal |
 | vsJournal.autoSave | Auto-save delay (ms) | 800 |
 | vsJournal.enableDateTime | Insert date/time on new file | true |
+| vsJournal.confirmDeleteFile | Confirm before deleting file | true |
+| vsJournal.virtualTags.caseSensitive | Case-sensitive virtual tags | false |
 | vsJournal.systemTags.visibility | Control system tag visibility | { "Today": true } |
 
 Example:
@@ -290,6 +300,8 @@ Example:
   "vsJournal.journalDir": "/path/to/journal",
   "vsJournal.autoSave": 30000,
   "vsJournal.enableDateTime": false,
+  "vsJournal.confirmDeleteFile": false,
+  "vsJournal.virtualTags.caseSensitive": true,
   "vsJournal.systemTags.visibility": {
     "Today": true
   }

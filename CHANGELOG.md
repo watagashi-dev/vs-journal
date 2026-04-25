@@ -1,6 +1,34 @@
 # Change Log
 
-## [0.1.3] - 2026-04-XX
+## [0.3.0] - 2026-04
+
+### Added
+- **Virtual Tags**: Introduced a dynamic tagging system. You can now add "Virtual Tags" that automatically group files containing specific keywords without manually adding hash tags to the file content.
+- **File Deletion**: Added a "Delete File" command to the tag tree context menu.
+- **Scroll Synchronization**: The preview now automatically scrolls to the line corresponding to your cursor position in the editor.
+- **Configuration Options**:
+    - `vsJournal.confirmDeleteFile`: Toggle the confirmation dialog when deleting files.
+    - `vsJournal.virtualTags.caseSensitive`: Control whether virtual tag keyword matching is case-sensitive.
+
+### Changed
+- **Webview Refactoring**: The preview panel has been completely refactored. It now uses an external HTML template and separate TypeScript/CSS files, improving maintainability and performance.
+- **UI Enhancements**: 
+    - Updated command icons (`new-file`, `preview`, `tag`) for a more native VS Code look.
+    - Activity Bar title changed from "vsJournal" to "VS Journal".
+    - The "Edit Hint" in the preview now automatically hides during scrolling/inactivity and adapts based on the number of files being previewed.
+- **State Management**: Internal logic for tag indexing and metadata extraction has been optimized to reduce redundant file system access.
+- **Localization**: Expanded Japanese localization coverage for new commands, settings, and UI strings.
+
+### Removed
+- Removed the "Focus Tag View" keyboard shortcut (`Ctrl+Alt+J`) to avoid potential conflicts and simplify the default keybinding set.
+
+### Fixed
+- Improved file watcher logic to correctly trigger a tree rebuild when files are deleted externally.
+- Fixed tag extraction consistency across code blocks and inline code.
+
+---
+
+## [0.2.0] - 2026-04-12
 
 ### New Features
 
