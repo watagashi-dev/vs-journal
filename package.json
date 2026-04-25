@@ -82,6 +82,12 @@
           "description": "%config.confirmDeleteFile.description%",
           "markdownDescription": "%config.confirmDeleteFile.markdownDescription%"
         },
+        "vsJournal.virtualTags.caseSensitive": {
+          "type": "boolean",
+          "default": false,
+          "description": "%config.virtualTags.caseSensitive.description%",
+          "markdownDescription": "%config.virtualTags.caseSensitive.markdownDescription%"
+        },
         "vsJournal.systemTags.visibility": {
           "type": "object",
           "default": {

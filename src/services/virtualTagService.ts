@@ -10,36 +10,27 @@ import {
  */
 export function indexVirtualTags(
     meta: FileMeta,
-    content: string
+    content: string,
+    caseSensitive: boolean
 ): void {
 
     if (virtualTagSet.size === 0) {
         return;
     }
 
-    const lines = content.split(/\r?\n/);
+    const targetContent = caseSensitive ? content : content.toLowerCase();
 
     for (const tag of virtualTagSet) {
 
-        const hitLines: number[] = [];
+        const targetTag = caseSensitive ? tag : tag.toLowerCase();
 
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-
-            if (line.includes(tag)) {
-                hitLines.push(i);
-            }
-        }
-
-        if (hitLines.length === 0) {
+        if (!targetContent.includes(targetTag)) {
             continue;
         }
 
-        // --- index map ---
         const files = virtualTagIndexMap.get(tag) ?? [];
 
-        const exists = files.some(f => f.filePath === meta.filePath);
-        if (!exists) {
+        if (!files.some(f => f.filePath === meta.filePath)) {
             virtualTagIndexMap.set(tag, [...files, meta]);
         }
     }
@@ -70,7 +61,8 @@ export function removeVirtualTagsForFile(filePath: string): void {
  */
 export function rebuildVirtualTagIndex(
     fileMetaMap: Map<string, FileMeta>,
-    readFile: (filePath: string) => string
+    readFile: (filePath: string) => string,
+    caseSensitive: boolean
 ): void {
 
     virtualTagIndexMap.clear();
@@ -81,7 +73,7 @@ export function rebuildVirtualTagIndex(
 
     for (const meta of fileMetaMap.values()) {
         const content = readFile(meta.filePath);
-        indexVirtualTags(meta, content);
+        indexVirtualTags(meta, content, caseSensitive);
     }
 }
 
@@ -91,13 +83,51 @@ export function rebuildVirtualTagIndex(
  */
 export function indexVirtualTagForAllFiles(
     tag: string,
-    fileMetaMap: Map<string, FileMeta>
+    fileMetaMap: Map<string, FileMeta>,
+    caseSensitive: boolean
 ): void {
+
+    const normalizedTag = caseSensitive ? tag : tag.toLowerCase();
 
     for (const meta of fileMetaMap.values()) {
         const { content } = readFileEntry(meta.filePath);
 
-        if (!content.includes(tag)) {
+        const normalizedContent = caseSensitive
+            ? content
+            : content.toLowerCase();
+
+        if (!normalizedContent.includes(normalizedTag)) {
+            continue;
+        }
+
+        const list = virtualTagIndexMap.get(tag) ?? [];
+
+        if (!list.some(m => m.filePath === meta.filePath)) {
+            list.push(meta);
+            virtualTagIndexMap.set(tag, list);
+        }
+    }
+}
+
+export function reindexSingleVirtualTag(
+    tag: string,
+    fileMetaMap: Map<string, FileMeta>,
+    caseSensitive: boolean
+): void {
+
+    virtualTagIndexMap.delete(tag);
+
+    const normalizedTag = caseSensitive ? tag : tag.toLowerCase();
+
+    for (const meta of fileMetaMap.values()) {
+
+        const { content } = readFileEntry(meta.filePath);
+
+        const normalizedContent = caseSensitive
+            ? content
+            : content.toLowerCase();
+
+        if (!normalizedContent.includes(normalizedTag)) {
             continue;
         }
 

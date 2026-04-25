@@ -28,7 +28,7 @@ import {
 import {
     indexVirtualTags, indexVirtualTagForAllFiles,
     removeVirtualTagsForFile,
-    rebuildVirtualTagIndex
+    rebuildVirtualTagIndex, reindexSingleVirtualTag
 } from './services/virtualTagService';
 
 let tagProvider: TagTreeProvider;
@@ -150,6 +150,9 @@ export function readFileEntry(filePath: string): { content: string; stats: fs.St
 async function refreshAllData() {
     const journalDir = getJournalDir();
     const fullDir = getAbsoluteJournalDir(journalDir);
+    const config = vscode.workspace.getConfiguration('vsJournal');
+    const caseSensitive = config.get<boolean>('virtualTags.caseSensitive', true);
+    console.log('refreshAllData called with caseSensitive:', caseSensitive);
 
     fileMetaMap.clear();
     userTagIndexMap.clear();
@@ -182,7 +185,7 @@ async function refreshAllData() {
         return fileCache.get(filePath)?.content ?? '';
     };
 
-    rebuildVirtualTagIndex(fileMetaMap, readFileContent);
+    rebuildVirtualTagIndex(fileMetaMap, readFileContent, caseSensitive);
 }
 
 function removeUserTagsFromMeta(oldMeta: FileMeta | undefined) {
@@ -213,6 +216,10 @@ function addUserTagsFromMeta(meta: FileMeta) {
 }
 
 function updateSingleFile(filePath: string) {
+    const config = vscode.workspace.getConfiguration('vsJournal');
+    const caseSensitive = config.get<boolean>('virtualTags.caseSensitive', true);
+    console.log('updateSingleFile called with caseSensitive:', caseSensitive);
+
     const oldMeta = fileMetaMap.get(filePath);
 
     // --- Remove from old user tags ---
@@ -230,7 +237,7 @@ function updateSingleFile(filePath: string) {
 
     // --- Virtual tags ---
     removeVirtualTagsForFile(filePath);
-    indexVirtualTags(newMeta, content);
+    indexVirtualTags(newMeta, content, caseSensitive);
 
     rebuildSystemTags();
 }
@@ -445,6 +452,9 @@ export async function activate(context: vscode.ExtensionContext) {
         }),
 
         vscode.commands.registerCommand('vs-journal.addVirtualTag', async () => {
+            const config = vscode.workspace.getConfiguration('vsJournal');
+            const caseSensitive = config.get<boolean>('virtualTags.caseSensitive', true);
+
             const tag = await vscode.window.showInputBox({
                 prompt: vscode.l10n.t('Enter virtual tag name')
             });
@@ -466,10 +476,7 @@ export async function activate(context: vscode.ExtensionContext) {
             if (!virtualTagIndexMap.has(trimmed)) {
                 virtualTagIndexMap.set(trimmed, []);
             }
-            indexVirtualTagForAllFiles(
-                trimmed,
-                fileMetaMap
-            );
+            indexVirtualTagForAllFiles( trimmed, fileMetaMap, caseSensitive);
 
             // --- Refresh tree ---
             rebuildTree();
@@ -558,6 +565,18 @@ export async function activate(context: vscode.ExtensionContext) {
             }
             if (event.affectsConfiguration('vsJournal.systemTags.visibility')) {
                 rebuildTree(); // No rescan required
+            }
+            if (event.affectsConfiguration('vsJournal.virtualTags.caseSensitive')){
+                const config = vscode.workspace.getConfiguration('vsJournal');
+                const caseSensitive = config.get<boolean>('virtualTags.caseSensitive', true);
+
+                virtualTagIndexMap.clear();
+
+                for (const tag of virtualTagSet) {
+                    reindexSingleVirtualTag(tag, fileMetaMap, caseSensitive);
+                }
+
+                rebuildTree();
             }
         }),
 
