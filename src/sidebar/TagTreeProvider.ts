@@ -159,6 +159,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
                 // Use icon for visual emphasis
                 item.type = 'section';
                 item.tooltip = '';
+                item.id = `section:${section.key}`;
                 item.iconPath = new vscode.ThemeIcon('folder-opened', new vscode.ThemeColor('charts.blue'));
                 result.push(item);
 
@@ -199,6 +200,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             );
 
             item.type = 'file';
+            item.id = `file:${file.filePath}`;
             item.path = file.filePath;
             item.file = file;
 
@@ -226,6 +228,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         );
 
         item.type = 'tag';
+        item.id = `${section?.key ?? 'unknown'}:tag:${node.name}`;
         item.tooltip = '';
 
         item.command = {
