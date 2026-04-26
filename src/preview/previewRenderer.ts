@@ -8,10 +8,10 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
         linkify: true,
         typographer: true
     }).use(taskLists, {
-        enabled: true,
-        label: true,
-        labelAfter: true
-    });;
+        enabled: false,
+        label: false,
+        labelAfter: false
+    });
 
     const defaultRender = md.renderer.renderToken.bind(md.renderer);
 

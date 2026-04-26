@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'none';
+        img-src {{cspSource}} https: data:;
+        style-src {{cspSource}} 'unsafe-inline' https://cdnjs.cloudflare.com;
+        script-src {{cspSource}} https://cdnjs.cloudflare.com;
+    ">
+    <link rel="stylesheet" href="{{cssUri}}">
+    <link id="hljs-theme" rel="stylesheet" href="{{themeUrl}}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+</head>
+<body>
+    <div class="edit-hint">{{hintText}}</div>
+
+    {{content}}
+
+    {{warning}}
+
+    <script src="{{scriptUri}}"></script>
+</body>
+</html>

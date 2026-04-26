@@ -19,14 +19,22 @@ import {
     notifyThemeChanged, disposePreviewPanel
 } from './preview/previewPanel';
 import { shouldShowCompletionMultiLine, getCurrentTagAtCursor } from './services/tagLogic';
+import {
+    clearCursorLine,
+    setCursorLine,
+    systemTagIndexMap, userTagIndexMap, virtualTagIndexMap,
+    virtualTagSet, resetVirtualTags
+} from './state';
+import {
+    indexVirtualTags,
+    removeVirtualTagsForFile,
+    rebuildVirtualTagIndex,
+} from './services/virtualTagService';
 
 let tagProvider: TagTreeProvider;
 
 // State management
 const fileMetaMap = new Map<string, FileMeta>();
-const systemTagIndexMap = new Map<string, FileMeta[]>(); 
-const userTagIndexMap = new Map<string, FileMeta[]>(); 
-const virtualTagIndexMap = new Map<string, FileMeta[]>(); 
 const sessionTagUsage = new Map<string, number>();
 
 function getJournalDir(): string {
@@ -113,24 +121,42 @@ function rebuildTree() {
         }
     }
 
+    // --- Ensure virtual tags exist even with 0 entries ---
+    const normalizedVirtualMap = new Map<string, FileMeta[]>();
+
+    for (const tag of virtualTagSet) {
+        normalizedVirtualMap.set(
+            tag,
+            virtualTagIndexMap.get(tag) ?? []
+        );
+    }
+
     const hierarchyBuilder = new TagHierarchyBuilder();
     const result = hierarchyBuilder.build(
         filteredSystemMap,
         userTagIndexMap,
-        virtualTagIndexMap
+        normalizedVirtualMap
     );
     tagProvider.refresh(result.system, result.user, result.virtual);
+}
+
+export function readFileEntry(filePath: string): { content: string; stats: fs.Stats } {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const stats = fs.statSync(filePath);
+
+    return { content, stats };
 }
 
 async function refreshAllData() {
     const journalDir = getJournalDir();
     const fullDir = getAbsoluteJournalDir(journalDir);
+    const config = vscode.workspace.getConfiguration('vsJournal');
+    const caseSensitive = config.get<boolean>('virtualTags.caseSensitive', true);
 
-    // Clear existing data
     fileMetaMap.clear();
     userTagIndexMap.clear();
-    systemTagIndexMap.clear();  // Map used for system tags display
-    virtualTagIndexMap.clear(); // Currently empty
+    systemTagIndexMap.clear();
+    virtualTagIndexMap.clear();
 
     if (!fullDir || !fs.existsSync(fullDir)) {
         return;
@@ -138,48 +164,78 @@ async function refreshAllData() {
 
     const files = fs.readdirSync(fullDir).filter(f => f.endsWith('.md'));
 
-    // --- Analyze files and register user tags ---
+    const fileCache = new Map<string, { content: string; stats: fs.Stats }>();
+
     for (const file of files) {
         const filePath = path.join(fullDir, file);
-        const meta = createFileMeta(filePath);
+
+        const entry = readFileEntry(filePath);
+        fileCache.set(filePath, entry);
+
+        const meta = createFileMeta(filePath, entry.content, entry.stats);
         fileMetaMap.set(filePath, meta);
 
-        // Add user tags
-        meta.tags.forEach(tag => {
-            const arr = userTagIndexMap.get(tag) ?? [];
-            userTagIndexMap.set(tag, [...arr, meta]);
-        });
+        addUserTagsFromMeta(meta);
     }
+
     rebuildSystemTags();
+
+    const readFileContent = (filePath: string): string => {
+        return fileCache.get(filePath)?.content ?? '';
+    };
+
+    rebuildVirtualTagIndex(fileMetaMap, readFileContent, caseSensitive);
+}
+
+function removeUserTagsFromMeta(oldMeta: FileMeta | undefined) {
+    if (!oldMeta) {
+        return;
+    }
+
+    oldMeta.tags.forEach(tag => {
+        const files = userTagIndexMap.get(tag);
+
+        if (files) {
+            const filtered = files.filter(f => f.filePath !== oldMeta.filePath);
+
+            if (filtered.length === 0) {
+                userTagIndexMap.delete(tag);
+            } else {
+                userTagIndexMap.set(tag, filtered);
+            }
+        }
+    });
+}
+
+function addUserTagsFromMeta(meta: FileMeta) {
+    meta.tags.forEach(tag => {
+        const arr = userTagIndexMap.get(tag) ?? [];
+        userTagIndexMap.set(tag, [...arr, meta]);
+    });
 }
 
 function updateSingleFile(filePath: string) {
+    const config = vscode.workspace.getConfiguration('vsJournal');
+    const caseSensitive = config.get<boolean>('virtualTags.caseSensitive', true);
+
     const oldMeta = fileMetaMap.get(filePath);
 
     // --- Remove from old user tags ---
-    if (oldMeta) {
-        oldMeta.tags.forEach(tag => {
-            const files = userTagIndexMap.get(tag);
-            if (files) {
-                const filtered = files.filter(f => f.filePath !== filePath);
-                if (filtered.length === 0) {
-                    userTagIndexMap.delete(tag);
-                } else {
-                    userTagIndexMap.set(tag, filtered);
-                }
-            }
-        });
-    }
+    removeUserTagsFromMeta(oldMeta);
+
+    // --- Read file ---
+    const { content, stats } = readFileEntry(filePath);
 
     // --- Create new FileMeta ---
-    const newMeta = createFileMeta(filePath);
+    const newMeta = createFileMeta(filePath, content, stats);
     fileMetaMap.set(filePath, newMeta);
 
     // --- Add to user tags ---
-    newMeta.tags.forEach(tag => {
-        const arr = userTagIndexMap.get(tag) ?? [];
-        userTagIndexMap.set(tag, [...arr, newMeta]);
-    });
+    addUserTagsFromMeta(newMeta);
+
+    // --- Virtual tags ---
+    removeVirtualTagsForFile(filePath);
+    indexVirtualTags(newMeta, content, caseSensitive);
 
     rebuildSystemTags();
 }
@@ -262,14 +318,17 @@ export async function activate(context: vscode.ExtensionContext) {
             updateSingleFile(uri.fsPath);
             rebuildTree();
         });
-        fileWatcher.onDidDelete(() => refreshAllData());
+        fileWatcher.onDidDelete(() => {
+            refreshAllData();
+            rebuildTree();
+        });
 
         context.subscriptions.push(fileWatcher);
     };
 
     // --- Tag Tree ---
     tagProvider = new TagTreeProvider();
-    vscode.window.createTreeView('vsJournalTags', {
+    vscode.window.createTreeView('VSJournal.TagTree', {
         treeDataProvider: tagProvider,
         showCollapseAll: true,
     });
@@ -313,6 +372,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
         vscode.commands.registerCommand('vs-journal.previewEntry', async (arg?: unknown) => {
             let filePath: string | undefined;
+
             if (typeof arg === 'string') {
                 filePath = arg;
             } else if (arg && typeof arg === 'object' && 'fsPath' in arg) {
@@ -320,14 +380,23 @@ export async function activate(context: vscode.ExtensionContext) {
             }
 
             let document: vscode.TextDocument | undefined;
-            if (filePath) {
-                document = await vscode.workspace.openTextDocument(filePath);
+        
+            if (!filePath) {
+                const editor = vscode.window.activeTextEditor;
+                if (editor && isJournalFile(editor.document)) {
+                    filePath = editor.document.uri.fsPath;
+                }
             }
-            else if (vscode.window.activeTextEditor && isJournalFile(vscode.window.activeTextEditor.document)) {
-                document = vscode.window.activeTextEditor.document;
-            } else {
+        
+            if (!filePath) {
                 return;
             }
+        
+            document = await vscode.workspace.openTextDocument(filePath);
+
+            // Initialize cursor (safe)
+            const lineCount = document.lineCount;
+            setCursorLine(filePath, lineCount > 0 ? 0 : 0);
 
             setCurrentDocument(document);
             const column = vscode.ViewColumn.Active;
@@ -335,20 +404,19 @@ export async function activate(context: vscode.ExtensionContext) {
             const panel = ensurePreviewPanel(column);
 
             await measure("preview generation", async () => {
-                if (filePath) {
-                    const meta = createFileMeta(filePath);
-                    const check = checkPreviewLimits([meta]);
-                    setPreviewState(panel, check.limitedFiles);
-                    await updatePreviewPanel(panel, check.limitedFiles, {
-                        limitExceeded: check.limitExceeded,
-                        message: check.message
-                    });
-                } else if (vscode.window.activeTextEditor && isJournalFile(vscode.window.activeTextEditor.document)) {
-                    const docMeta = createFileMeta(vscode.window.activeTextEditor.document.uri.fsPath);
-                    await updatePreviewPanel(panel, [docMeta]);
-                } else {
-                    return;
-                }
+                const meta = createFileMeta(filePath);
+                const check = checkPreviewLimits([meta]);
+        
+                setPreviewState(panel, check.limitedFiles);
+        
+                await updatePreviewPanel(panel, check.limitedFiles, {
+                    limitExceeded: check.limitExceeded,
+                    message: check.message
+                });
+        
+                panel.webview.postMessage({
+                    type: 'scrollToTop'
+                });
             });
         }),
 
@@ -379,6 +447,61 @@ export async function activate(context: vscode.ExtensionContext) {
                 limitExceeded: check.limitExceeded,
                 message: check.message
             });
+        }),
+
+        vscode.commands.registerCommand('vs-journal.addVirtualTag', async () => {
+            const config = vscode.workspace.getConfiguration('vsJournal');
+            const caseSensitive = config.get<boolean>('virtualTags.caseSensitive', true);
+
+            const tag = await vscode.window.showInputBox({
+                prompt: vscode.l10n.t('Enter virtual tag name')
+            });
+
+            if (!tag) {
+                return;
+            }
+
+            const trimmed = tag.trim();
+
+            if (trimmed.length === 0) {
+                return;
+            }
+
+            // --- Register virtual tag (core) ---
+            virtualTagSet.add(trimmed);
+
+            // --- Register virtual tag (empty entry allowed for now) ---
+            if (!virtualTagIndexMap.has(trimmed)) {
+                virtualTagIndexMap.set(trimmed, []);
+            }
+            const readFileContent = (filePath: string): string => {
+                return readFileEntry(filePath).content;
+            };
+            rebuildVirtualTagIndex(fileMetaMap, readFileContent, caseSensitive);
+
+            // --- Refresh tree ---
+            rebuildTree();
+        }),
+
+        vscode.commands.registerCommand('vsJournal.deleteFile', async (item) => {
+            if (!item || item.type !== 'file' || !item.path) { return; }
+
+            const config = vscode.workspace.getConfiguration('vsJournal');
+            const confirm = config.get<boolean>('confirmDeleteFile', true);
+
+            if (confirm) {
+                const deleteLabel = vscode.l10n.t('Delete');
+                const result = await vscode.window.showWarningMessage(
+                    vscode.l10n.t('Delete this file?'),
+                    { modal: true },
+                    deleteLabel
+                );
+
+                if (result !== deleteLabel) { return; }
+            }
+            const uri = vscode.Uri.file(item.path);
+
+            await vscode.workspace.fs.delete(uri, { useTrash: true });
         }),
 
         // Command to increment tag usage count
@@ -432,6 +555,7 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration(async event => {
             if (event.affectsConfiguration('vsJournal.journalDir')) {
+                resetVirtualTags();
                 await performScan();
                 setupWatcher();
                 disposePreviewPanel();
@@ -442,6 +566,20 @@ export async function activate(context: vscode.ExtensionContext) {
             }
             if (event.affectsConfiguration('vsJournal.systemTags.visibility')) {
                 rebuildTree(); // No rescan required
+            }
+            if (event.affectsConfiguration('vsJournal.virtualTags.caseSensitive')){
+                const config = vscode.workspace.getConfiguration('vsJournal');
+                const caseSensitive = config.get<boolean>('virtualTags.caseSensitive', true);
+
+                virtualTagIndexMap.clear();
+
+                const readFileContent = (filePath: string): string => {
+                    return readFileEntry(filePath).content;
+                };
+                for (const tag of virtualTagSet) {
+                    rebuildVirtualTagIndex(fileMetaMap, readFileContent, caseSensitive);
+                }
+                rebuildTree();
             }
         }),
 
@@ -476,12 +614,27 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.workspace.onDidChangeTextDocument(event => {
             if (!isJournalFile(event.document)) {return;}
             scheduleAutoSave(event.document);
+        }),
+    
+        vscode.workspace.onDidCloseTextDocument(document => {
+            clearCursorLine(document.uri.fsPath);
         })
     );
 
     context.subscriptions.push(
         vscode.window.onDidChangeActiveColorTheme((theme) => {
             notifyThemeChanged();
+        }),
+
+        vscode.window.onDidChangeTextEditorSelection((e) => {
+            const filePath = e.textEditor.document.uri.fsPath;
+            const line = e.selections?.[0]?.active.line ?? 0;
+
+            if (!isJournalFile(e.textEditor.document)) {
+                return;
+            }
+
+            setCursorLine(filePath, line);
         })
     );
 

@@ -7,7 +7,8 @@
             "label": "watch",
             "dependsOn": [
                 "npm: watch:tsc",
-                "npm: watch:esbuild"
+                "npm: watch:esbuild",
+                "npm: watch:webview"
             ],
             "presentation": {
                 "reveal": "never"
@@ -52,6 +53,21 @@
 			},
 			"group": "build"
 		},
+        {
+            "type": "npm",
+            "script": "compile:webview",
+            "group": "build",
+            "label": "npm: compile:webview",
+            "problemMatcher": "$tsc"
+        },
+        {
+            "type": "npm",
+            "script": "watch:webview",
+            "group": "build",
+            "label": "npm: watch:webview",
+            "isBackground": true,
+            "problemMatcher": "$tsc-watch"
+        },
 		{
 			"label": "tasks: watch-tests",
 			"dependsOn": [
@@ -59,6 +75,15 @@
 				"npm: watch-tests"
 			],
 			"problemMatcher": []
-		}
+		},
+        {
+            "label": "npm: build",
+            "type": "npm",
+            "script": "build",
+            "presentation": {
+                "reveal": "never"
+            },
+            "problemMatcher": []
+        }
 	]
 }
