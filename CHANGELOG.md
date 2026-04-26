@@ -25,6 +25,7 @@
 ### Fixed
 - Improved file watcher logic to correctly trigger a tree rebuild when files are deleted externally.
 - Fixed tag extraction consistency across code blocks and inline code.
+- Fixed duplicate rendering of inline code in task list items.
 
 ---
 
