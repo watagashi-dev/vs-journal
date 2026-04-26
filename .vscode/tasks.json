@@ -80,6 +80,9 @@
             "label": "npm: build",
             "type": "npm",
             "script": "build",
+            "presentation": {
+                "reveal": "never"
+            },
             "problemMatcher": []
         }
 	]
