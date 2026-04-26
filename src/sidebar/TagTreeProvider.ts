@@ -9,6 +9,9 @@ type TagSection = {
     label: string;
     needCount: boolean;
     needTranslate: boolean;
+    // fall back behavior
+    emptyLabel?: string;
+    emptyCommand?: string;
 };
 
 const TAG_SECTIONS: TagSection[] = [
@@ -25,6 +28,7 @@ const TAG_SECTIONS: TagSection[] = [
         getNodes: (p) => p.getUserNodes(),
         needCount: false,
         needTranslate: false,
+        emptyLabel: vscode.l10n.t('No tags found'),
     },
     {
         key: 'virtual',
@@ -32,6 +36,8 @@ const TAG_SECTIONS: TagSection[] = [
         getNodes: (p) => p.getVirtualNodes(),
         needCount: true,
         needTranslate: false,
+        emptyLabel: vscode.l10n.t('No virtual tags yet'),
+        emptyCommand: 'vs-journal.addVirtualTag',
     },
 ];
 
@@ -163,7 +169,31 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
                 item.iconPath = new vscode.ThemeIcon('folder-opened', new vscode.ThemeColor('charts.blue'));
                 result.push(item);
 
-                for (const node of section.getNodes(this)) {
+                const nodes = section.getNodes(this);
+
+                // ===== EMPTY STATE =====
+                if (nodes.length === 0 && section.emptyLabel) {
+                    const empty = new VSTagItem(
+                        null,
+                        section.emptyLabel,
+                        vscode.TreeItemCollapsibleState.None,
+                        'empty'
+                    );
+            
+                    empty.type = 'spacer'; // 既存流用でもOK
+                    if (section.emptyCommand) {
+                        empty.command = {
+                            command: section.emptyCommand,
+                            title: section.emptyLabel,
+                        };
+                    };
+                    empty.iconPath = undefined;
+                    empty.tooltip = '';
+            
+                    result.push(empty);
+                    return;
+                }
+                for (const node of nodes) {
                     result.push(this.createTagItem(node, section));
                 }
             };

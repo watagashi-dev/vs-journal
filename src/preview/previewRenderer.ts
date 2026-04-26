@@ -11,7 +11,7 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
         enabled: false,
         label: false,
         labelAfter: false
-    });;
+    });
 
     const defaultRender = md.renderer.renderToken.bind(md.renderer);
 

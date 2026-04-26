@@ -164,7 +164,7 @@ async function refreshAllData() {
 
     const files = fs.readdirSync(fullDir).filter(f => f.endsWith('.md'));
 
-    const fileCache = new Map<string, { content: string; stats: any }>();
+    const fileCache = new Map<string, { content: string; stats: fs.Stats }>();
 
     for (const file of files) {
         const filePath = path.join(fullDir, file);
@@ -394,7 +394,7 @@ export async function activate(context: vscode.ExtensionContext) {
         
             document = await vscode.workspace.openTextDocument(filePath);
 
-            // cursor初期化（安全）
+            // Initialize cursor (safe)
             const lineCount = document.lineCount;
             setCursorLine(filePath, lineCount > 0 ? 0 : 0);
 
