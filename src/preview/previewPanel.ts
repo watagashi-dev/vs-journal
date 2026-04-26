@@ -240,7 +240,7 @@ async function buildHtml(
     }
 
     const templatePath = vscode.Uri.file(
-        path.join(extensionContext.extensionPath, 'src/webview/template.html')
+        path.join(extensionContext.extensionPath, 'dist/webview/template.html')
     );
     const templateBuffer = await vscode.workspace.fs.readFile(templatePath);
     let template = Buffer.from(templateBuffer).toString('utf8');
