@@ -53,6 +53,10 @@
       {
         "command": "vsJournal.deleteFile",
         "title": "%command.deleteFile.title%"
+      },
+      {
+        "command": "vsJournal.deleteVirtualTag",
+        "title": "%command.deleteVirtualTag.title%"
       }
     ],
     "configuration": {
@@ -81,6 +85,12 @@
           "default": true,
           "description": "%config.confirmDeleteFile.description%",
           "markdownDescription": "%config.confirmDeleteFile.markdownDescription%"
+        },
+        "vsJournal.confirmDeleteVirtualTag": {
+          "type": "boolean",
+          "default": true,
+          "description": "%config.confirmDeleteVirtualTag.description%",
+          "markdownDescription": "%config.confirmDeleteVirtualTag.markdownDescription%"
         },
         "vsJournal.virtualTags.caseSensitive": {
           "type": "boolean",
@@ -171,6 +181,10 @@
         {
           "command": "vsJournal.deleteFile",
           "when": "view == VSJournal.TagTree && viewItem == file"
+        },
+        {
+          "command": "vsJournal.deleteVirtualTag",
+          "when": "view == VSJournal.TagTree && viewItem =~ /tag:virtual/"
         }
       ]
     },

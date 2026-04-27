@@ -5,6 +5,7 @@ import { FileMeta } from '../models/FileMeta';
 
 type TagSection = {
     key: 'system' | 'user' | 'virtual';
+    source: 'system' | 'user' | 'generated';
     getNodes: (provider: TagTreeProvider) => TagHierarchyNode[];
     label: string;
     needCount: boolean;
@@ -17,6 +18,7 @@ type TagSection = {
 const TAG_SECTIONS: TagSection[] = [
     {
         key: 'system',
+        source: 'system',
         label: vscode.l10n.t('System Tags'),
         getNodes: (p) => p.getSystemNodes(),
         needCount: true,
@@ -24,6 +26,7 @@ const TAG_SECTIONS: TagSection[] = [
     },
     {
         key: 'user',
+        source: 'user',
         label: vscode.l10n.t('User Tags'),
         getNodes: (p) => p.getUserNodes(),
         needCount: false,
@@ -32,6 +35,7 @@ const TAG_SECTIONS: TagSection[] = [
     },
     {
         key: 'virtual',
+        source: 'generated',
         label: vscode.l10n.t('Virtual Tags'),
         getNodes: (p) => p.getVirtualNodes(),
         needCount: true,
@@ -73,6 +77,8 @@ class VSTagItem extends vscode.TreeItem {
 
     // File meta (only for file nodes)
     public file?: FileMeta;
+
+    public nodeSource?: 'system' | 'user' | 'generated';
 }
 
 function createSpacerItem(): VSTagItem {
@@ -250,14 +256,19 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
 
     private createTagItem(node: TagHierarchyNode, section?: TagSection): VSTagItem {
         const label = section ? formatTagLabel(node, section) : node.name;
+        const context = section
+            ? `tag:${section.key} source:${section.source}`
+            : 'tag';
+
         const item = new VSTagItem(
             node,
             label,
             vscode.TreeItemCollapsibleState.Collapsed,
-            'tag'
+            context
         );
 
         item.type = 'tag';
+        item.nodeSource = section?.source;
         item.id = `${section?.key ?? 'unknown'}:tag:${node.name}`;
         item.tooltip = '';
 

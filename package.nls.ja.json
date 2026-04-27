@@ -10,6 +10,8 @@
   "config.systemTags.today.markdownDescription": "この設定でタグツリーに 今日 システムタグを表示するかどうかを制御します。\n\ntrue にすると表示、false にすると非表示になります。",
   "config.confirmDeleteFile.description": "タグツリーからファイルを削除する前に確認ダイアログを表示します。",
   "config.confirmDeleteFile.markdownDescription": "有効にすると、タグツリーからファイルを削除する前に確認ダイアログが表示されます。無効にすると確認なしで削除されます。",
+  "config.confirmDeleteVirtualTag.description": "タグツリーから仮想タグを削除する前に確認ダイアログを表示します。",
+  "config.confirmDeleteVirtualTag.markdownDescription": "有効にすると、タグツリーから仮想タグを削除する前に確認ダイアログが表示されます。無効にすると確認なしで削除されます。",
   "config.virtualTags.caseSensitive.description": "仮想タグの一致時に大文字・小文字を区別します。",
   "config.virtualTags.caseSensitive.markdownDescription": "仮想タグの一致で**大文字・小文字を区別するか**を設定します。\n\n- **有効**: `foo` は `foo` のみ一致\n- **無効**: `foo` は `foo`, `Foo`, `FOO` に一致",
   "view.vsJournal.tags.empty": "エントリーがありません",
@@ -17,5 +19,6 @@
   "command.previewEntry": "VS Journal: メモプレビュー",
   "command.selectJournalDir": "VS Journal: ジャーナルフォルダ選択",
   "command.addVirtualTag": "VS Journal: 仮想タグを追加",
-  "command.deleteFile.title": "ファイルを削除"
+  "command.deleteFile.title": "ファイルを削除",
+  "command.deleteVirtualTag.title": "仮想タグを削除"
 }

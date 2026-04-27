@@ -483,6 +483,52 @@ export async function activate(context: vscode.ExtensionContext) {
             rebuildTree();
         }),
 
+        vscode.commands.registerCommand('vsJournal.deleteVirtualTag',
+            async (item: { node?: TagHierarchyNode; nodeSource?: 'system' | 'user' | 'generated'; }) => {
+                if (!item || item.nodeSource !== 'generated') {
+                    return;
+                }
+                const node = item.node;
+                if (!node) {
+                    return;
+                }
+                if (!virtualTagSet.has(node.name)) {
+                    return;
+                }
+
+                const config = vscode.workspace.getConfiguration('vsJournal');
+                const confirm = config.get<boolean>('confirmDeleteVirtualTag', true);
+
+                if (confirm) {
+                    const deleteLabel = vscode.l10n.t('Delete');
+                    const result = await vscode.window.showWarningMessage(
+                        vscode.l10n.t('Delete this virtual tag?'),
+                        { modal: true },
+                        deleteLabel
+                    );
+
+                    if (result !== deleteLabel) {
+                        return;
+                    }
+                }
+
+                // 1. remove from source
+                virtualTagSet.delete(node.name);
+
+                // 2. rebuild derived structures
+                const readFileContent = (filePath: string): string => {
+                    return readFileEntry(filePath).content;
+                };
+
+                const caseSensitive = config.get<boolean>('virtualTags.caseSensitive', true);
+
+                rebuildVirtualTagIndex(fileMetaMap, readFileContent, caseSensitive);
+
+                // 3. rebuild UI
+                rebuildTree();
+            }
+        ),
+
         vscode.commands.registerCommand('vsJournal.deleteFile', async (item) => {
             if (!item || item.type !== 'file' || !item.path) { return; }
 

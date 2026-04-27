@@ -10,6 +10,8 @@
   "config.systemTags.today.markdownDescription": "Use this setting to control the visibility of the Today system tag in the tag tree.\n\nSet to true to display Today, false to hide it.",
   "config.confirmDeleteFile.description": "Show a confirmation dialog before deleting a file from the tag tree.",
   "config.confirmDeleteFile.markdownDescription": "If enabled, a confirmation dialog will appear before deleting a file from the tag tree. Disable this to delete files without confirmation.",
+  "config.confirmDeleteVirtualTag.description": "Show a confirmation dialog before deleting a virtual tag from the tag tree.",
+  "config.confirmDeleteVirtualTag.markdownDescription": "If enabled, a confirmation dialog will appear before deleting a virtual tag from the tag tree. Disable this to delete files without confirmation.",
   "config.virtualTags.caseSensitive.description": "Match virtual tags with case sensitivity. When disabled, matching ignores letter case.",
   "config.virtualTags.caseSensitive.markdownDescription": "Control whether virtual tag matching is **case-sensitive**.\n\n- **Enabled**: `foo` matches only `foo`\n- **Disabled**: `foo` matches `foo`, `Foo`, `FOO`",
   "view.vsJournal.tags.empty": "No entries",
@@ -17,5 +19,6 @@
   "command.previewEntry": "VS Journal: Preview Entry",
   "command.selectJournalDir": "VS Journal: Select Journal Directory",
   "command.addVirtualTag": "VS Journal: Add Virtual Tag",
-  "command.deleteFile.title": "Delete File"
+  "command.deleteFile.title": "Delete File",
+  "command.deleteVirtualTag.title": "Delete Virtual Tag"
 }
