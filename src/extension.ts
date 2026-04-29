@@ -432,7 +432,7 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         }),
 
-        vscode.commands.registerCommand('vs-journal.onTagClick', async (node: TagHierarchyNode) => {
+        vscode.commands.registerCommand('vsJournal.previewMultiEntry', async (node: TagHierarchyNode) => {
             const filesToPreview = node.files; // Ignore child tags
 
             if (filesToPreview.length === 0) {

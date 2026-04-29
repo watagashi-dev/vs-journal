@@ -273,7 +273,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         item.tooltip = '';
 
         item.command = {
-            command: 'vs-journal.onTagClick',
+            command: 'vsJournal.previewMultiEntry',
             title: 'Open Tag',
             arguments: [node]
         };

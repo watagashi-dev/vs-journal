@@ -386,3 +386,10 @@ body > *:first-child {
     transform: translateY(0);
   }
 }
+
+.vjs-user-tag {
+    color: var(--vscode-textLink-foreground);
+    background-color: rgba(100, 150, 255, 0.08);
+    border-radius: 3px;
+    padding: 0 2px;
+}

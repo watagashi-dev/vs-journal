@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import MarkdownIt from 'markdown-it';
 import taskLists from 'markdown-it-task-lists';
 
+import { getTagRanges } from '../services/tagLogic';
+
 export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | undefined) {
     const md = new MarkdownIt({
         html: true,
@@ -147,6 +149,50 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
         }
 
         return defaultLinkOpen(tokens, idx, options, env, self);
+    };
+
+    // ===== USER TAG HIGHLIGHT (safe, using existing logic) =====
+    const escapeHtml = (str: string) =>
+        str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+    md.renderer.rules.text = (tokens, idx) => {
+        const token = tokens[idx];
+        const content: string = token.content;
+
+        // 空行や短すぎるものはそのまま
+        if (!content || content.indexOf('#') === -1) {
+            return escapeHtml(content);
+        }
+
+        // ★ ここ重要：1行前提で処理
+        const ranges = getTagRanges(content);
+
+        if (ranges.length === 0) {
+            return escapeHtml(content);
+        }
+
+        let result = '';
+        let lastIndex = 0;
+
+        for (const r of ranges) {
+            // 前のテキスト
+            result += escapeHtml(content.slice(lastIndex, r.start));
+
+            const tagText = content.slice(r.start, r.end);
+
+            // タグ部分
+            result += `<span class="vjs-user-tag">${escapeHtml(tagText)}</span>`;
+
+            lastIndex = r.end;
+        }
+
+        // 残り
+        result += escapeHtml(content.slice(lastIndex));
+
+        return result;
     };
 
     return md;
