@@ -407,8 +407,10 @@ export async function activate(context: vscode.ExtensionContext) {
                 const meta = createFileMeta(filePath);
                 const check = checkPreviewLimits([meta]);
         
-                setPreviewState(panel, check.limitedFiles);
-        
+                setPreviewState(panel, {
+                    files: check.limitedFiles,
+                    context: { type: 'file' }
+                });
                 await updatePreviewPanel(panel, check.limitedFiles, {
                     limitExceeded: check.limitExceeded,
                     message: check.message
@@ -442,7 +444,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
             const panel = ensurePreviewPanel(vscode.ViewColumn.Active);
             const check = checkPreviewLimits(filesToPreview);
-            setPreviewState(panel, check.limitedFiles);
+            setPreviewState(panel, {
+                files: check.limitedFiles,
+                context: { type: 'file' }
+            });
             await updatePreviewPanel(panel, check.limitedFiles, {
                 limitExceeded: check.limitExceeded,
                 message: check.message
@@ -639,18 +644,20 @@ export async function activate(context: vscode.ExtensionContext) {
             const panel = getCurrentPanel();
             if (!panel) { return; }
 
-            const currentFiles = getPreviewState(panel);
-            if (!currentFiles) { return; }
+            const state = getPreviewState(panel);
+            if (!state) { return; }
 
             const meta = createFileMeta(document.uri.fsPath);
-            const updatedFiles = currentFiles.map(f =>
+            const updatedFiles = state.files.map(f =>
                 f.filePath === meta.filePath ? meta : f
             );
 
             const check = checkPreviewLimits(updatedFiles);
 
-            setPreviewState(panel, check.limitedFiles);
-
+            setPreviewState(panel, {
+                files: check.limitedFiles,
+                context: state.context
+            });
             await updatePreviewPanel(panel, check.limitedFiles, {
                 limitExceeded: check.limitExceeded,
                 message: check.message

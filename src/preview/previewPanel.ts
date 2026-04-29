@@ -9,13 +9,18 @@ let currentDocument: vscode.TextDocument | undefined;
 let extensionContext: vscode.ExtensionContext;
 
 // ===== Preview State =====
-const previewStateMap = new Map<vscode.WebviewPanel, FileMeta[]>();
+type PreviewState = {
+    files: FileMeta[];
+    context?: any;
+};
 
-export function setPreviewState(panel: vscode.WebviewPanel, files: FileMeta[]) {
-    previewStateMap.set(panel, files);
+const previewStateMap = new Map<vscode.WebviewPanel, PreviewState>();
+
+export function setPreviewState(panel: vscode.WebviewPanel, state: PreviewState) {
+    previewStateMap.set(panel, state);
 }
 
-export function getPreviewState(panel: vscode.WebviewPanel): FileMeta[] | undefined {
+export function getPreviewState(panel: vscode.WebviewPanel): PreviewState | undefined {
     return previewStateMap.get(panel);
 }
 
@@ -70,13 +75,13 @@ function getLocalResourceRoots(): vscode.Uri[] {
 }
 
 function syncScrollToCursor(panel: vscode.WebviewPanel) {
-    const previewFiles = getPreviewState(panel);
+    const state = getPreviewState(panel);
 
-    if (!previewFiles || previewFiles.length !== 1) {
+    if (!state || state.files.length !== 1) {
         return;
     }
 
-    const filePath = previewFiles[0].filePath;
+    const filePath = state.files[0].filePath;
     const line = getCursorLine(filePath);
 
     if (line === undefined) {
