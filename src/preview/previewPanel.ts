@@ -8,14 +8,26 @@ let currentPanel: vscode.WebviewPanel | undefined;
 let currentDocument: vscode.TextDocument | undefined;
 let extensionContext: vscode.ExtensionContext;
 
-// ===== Preview State =====
-const previewStateMap = new Map<vscode.WebviewPanel, FileMeta[]>();
+export type PreviewContext =
+    | { type: 'file' }
+    | { type: 'tag'; source: 'system' | 'user' }
+    | { type: 'virtual-tag'; tag: string };
 
-export function setPreviewState(panel: vscode.WebviewPanel, files: FileMeta[]) {
-    previewStateMap.set(panel, files);
+const previewStateMap = new Map<
+    vscode.WebviewPanel,
+    { files: FileMeta[]; context?: PreviewContext }
+>();
+
+export function setPreviewState(
+    panel: vscode.WebviewPanel,
+    state: { files: FileMeta[]; context?: PreviewContext }
+) {
+    previewStateMap.set(panel, state);
 }
 
-export function getPreviewState(panel: vscode.WebviewPanel): FileMeta[] | undefined {
+export function getPreviewState(
+    panel: vscode.WebviewPanel
+): { files: FileMeta[]; context?: PreviewContext } | undefined {
     return previewStateMap.get(panel);
 }
 
@@ -70,13 +82,13 @@ function getLocalResourceRoots(): vscode.Uri[] {
 }
 
 function syncScrollToCursor(panel: vscode.WebviewPanel) {
-    const previewFiles = getPreviewState(panel);
+    const state = getPreviewState(panel);
 
-    if (!previewFiles || previewFiles.length !== 1) {
+    if (!state || state.files.length !== 1) {
         return;
     }
 
-    const filePath = previewFiles[0].filePath;
+    const filePath = state.files[0].filePath;
     const line = getCursorLine(filePath);
 
     if (line === undefined) {
@@ -207,6 +219,7 @@ async function buildHtml(
     options?: {
         limitExceeded?: boolean;
         message?: string;
+        context?: PreviewContext;
     }
 ): Promise<string> {
     const webview = panel.webview;
@@ -235,7 +248,14 @@ async function buildHtml(
         );
         const text = Buffer.from(fileText).toString('utf8');
 
-        htmlContent += md.render(text, { filePath: fileMeta.filePath });
+        htmlContent += md.render(text, {
+            filePath: fileMeta.filePath,
+            context: options?.context,
+            caseSensitive: vscode.workspace
+                .getConfiguration('vsJournal')
+                .get<boolean>('virtualTags.caseSensitive', true)
+        });
+
         htmlContent += '</div>\n';
     }
 
@@ -266,6 +286,11 @@ async function buildHtml(
         .replace(/{{hintText}}/g, hintText)
         .replace(/{{content}}/g, htmlContent)
         .replace(/{{warning}}/g, warningHtml)
+        .replace(/{{virtualTag}}/g,
+            options?.context?.type === 'virtual-tag'
+                ? options.context.tag
+                : ''
+        )
         .replace(/{{scriptUri}}/g, scriptUri.toString());
 }
 
@@ -278,7 +303,12 @@ export async function updatePreviewPanel(
     }
 ) {
     try {
-        const html = await buildHtml(panel, filesToPreview, options);
+        const state = getPreviewState(panel);
+
+        const html = await buildHtml(panel, filesToPreview, {
+            ...options,
+            context: state?.context
+        });
         panel.webview.html = html;
         panel.webview.postMessage({
             type: 'setPreviewCount',

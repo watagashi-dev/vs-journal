@@ -79,6 +79,8 @@ class VSTagItem extends vscode.TreeItem {
     public file?: FileMeta;
 
     public nodeSource?: 'system' | 'user' | 'generated';
+    public sectionKey?: string;
+    public parentTag?: string;
 }
 
 function createSpacerItem(): VSTagItem {
@@ -185,7 +187,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
                         vscode.TreeItemCollapsibleState.None,
                         'empty'
                     );
-            
+
                     empty.type = 'spacer'; // 既存流用でもOK
                     if (section.emptyCommand) {
                         empty.command = {
@@ -195,7 +197,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
                     };
                     empty.iconPath = undefined;
                     empty.tooltip = '';
-            
+
                     result.push(empty);
                     return;
                 }
@@ -236,17 +238,35 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             );
 
             item.type = 'file';
-            item.id = `file:${file.filePath}`;
+            item.sectionKey = element.nodeSource === 'generated'
+                ? 'virtual'
+                : element.nodeSource === 'system'
+                    ? 'system'
+                    : 'user';
+
+            item.parentTag = node.name;
+
+            item.id = `${item.sectionKey}:${node.name}:file:${file.filePath}`;
             item.path = file.filePath;
             item.file = file;
 
             item.command = {
                 command: 'vs-journal.previewEntry',
                 title: 'Preview Entry',
-                arguments: [file.filePath]
+                arguments: [{
+                    filePath: file.filePath,
+                    context: element.nodeSource === 'generated'
+                        ? { type: 'virtual-tag', tag: element.node?.name }
+                        : element.nodeSource === 'system'
+                            ? { type: 'tag', source: 'system' }
+                            : element.nodeSource === 'user'
+                                ? { type: 'tag', source: 'user' }
+                                : { type: 'file' }
+                }]
             };
 
-            item.tooltip = getJournalRelativePath(file.filePath);
+            //            item.tooltip = getJournalRelativePath(file.filePath);
+            item.tooltip = item.id;
 
             children.push(item);
         }

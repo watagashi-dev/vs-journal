@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="
@@ -12,7 +13,9 @@
     <link id="hljs-theme" rel="stylesheet" href="{{themeUrl}}">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
 </head>
-<body>
+
+
+<body data-virtual-tag="{{virtualTag}}">
     <div class="edit-hint">{{hintText}}</div>
 
     {{content}}
@@ -21,4 +24,5 @@
 
     <script src="{{scriptUri}}"></script>
 </body>
+
 </html>

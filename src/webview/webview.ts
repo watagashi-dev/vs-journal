@@ -1,4 +1,5 @@
 declare function acquireVsCodeApi(): any;
+const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
 
 (function () {
     // =========================================================
@@ -162,6 +163,27 @@ declare function acquireVsCodeApi(): any;
         const hljs = (window as any).hljs;
         if (!hljs) { return; }
         hljs.highlightAll();
+        applyVirtualTagHighlight();
+    }
+
+    function applyVirtualTagHighlight(): void {
+        const keyword = VIRTUAL_TAG;
+        if (!keyword) { return; }
+
+        const blocks = document.querySelectorAll('pre code');
+
+        blocks.forEach((el) => {
+            const html = el.innerHTML;
+
+            if (!html.includes(keyword)) {
+                return;
+            }
+
+            el.innerHTML = html.replaceAll(
+                keyword,
+                `<span class="vjs-virtual-tag">${keyword}</span>`
+            );
+        });
     }
 
     // theme変更対応（旧コードで消えがちな部分）
@@ -227,11 +249,14 @@ declare function acquireVsCodeApi(): any;
         initWarningBehavior();
     }
 
-    init();
+    function start() {
+        init();
+        runHighlight();
+    }
 
     if (document.readyState === 'loading') {
-        window.addEventListener('DOMContentLoaded', runHighlight);
+        window.addEventListener('DOMContentLoaded', start);
     } else {
-        runHighlight();
+        start();
     }
 })();

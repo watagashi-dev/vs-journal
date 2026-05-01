@@ -79,7 +79,7 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
         // Existing processing (adding line numbers, etc.)
         addLineAttr(tokens, idx, env);
 
-        // Treat Markdown tables as borderless
+        // Treat Markdown tables as border less
         const existingClass = tokens[idx].attrGet('class');
         if (existingClass) {
             tokens[idx].attrSet('class', existingClass + ' vjs-md-table');
@@ -151,46 +151,76 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
         return defaultLinkOpen(tokens, idx, options, env, self);
     };
 
-    // ===== USER TAG HIGHLIGHT (safe, using existing logic) =====
-    const escapeHtml = (str: string) =>
-        str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-
-    md.renderer.rules.text = (tokens, idx) => {
+    md.renderer.rules.text = (tokens, idx, options, env) => {
         const token = tokens[idx];
         const content: string = token.content;
+        const context = env?.context;
 
-        // 空行や短すぎるものはそのまま
-        if (!content || content.indexOf('#') === -1) {
-            return escapeHtml(content);
+        if (!content) {
+            return '';
         }
 
-        // ★ ここ重要：1行前提で処理
+        const escapeHtml = (str: string) =>
+            str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+
+        // ===== USER TAG RANGES =====
         const ranges = getTagRanges(content);
 
+        const applyVirtualTag = (text: string): string => {
+            if (context?.type !== 'virtual-tag') {
+                return escapeHtml(text);
+            }
+
+            const keyword = context.tag;
+            if (!keyword) {
+                return escapeHtml(text);
+            }
+
+            const caseSensitive = env?.caseSensitive ?? true;
+
+            if (caseSensitive) {
+                return escapeHtml(text).replaceAll(
+                    escapeHtml(keyword),
+                    `<span class="vjs-virtual-tag">${escapeHtml(keyword)}</span>`
+                );
+            }
+
+            // case-insensitive
+            const escaped = escapeHtml(text);
+            const regex = new RegExp(keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+
+            return escaped.replace(regex, (match) =>
+                `<span class="vjs-virtual-tag">${escapeHtml(match)}</span>`
+            );
+        };
+
+        // ===== NO USER TAG =====
         if (ranges.length === 0) {
-            return escapeHtml(content);
+            return applyVirtualTag(content);
         }
 
+        // ===== SPLIT BY USER TAG =====
         let result = '';
         let lastIndex = 0;
 
         for (const r of ranges) {
-            // 前のテキスト
-            result += escapeHtml(content.slice(lastIndex, r.start));
+            // --- non-tag segment ---
+            const segment = content.slice(lastIndex, r.start);
+            result += applyVirtualTag(segment);
 
+            // --- user tag (priority) ---
             const tagText = content.slice(r.start, r.end);
-
-            // タグ部分
             result += `<span class="vjs-user-tag">${escapeHtml(tagText)}</span>`;
 
             lastIndex = r.end;
         }
 
-        // 残り
-        result += escapeHtml(content.slice(lastIndex));
+        // --- tail ---
+        const tail = content.slice(lastIndex);
+        result += applyVirtualTag(tail);
 
         return result;
     };
