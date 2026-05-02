@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { TagHierarchyNode } from '../services/TagHierarchyBuilder';
 import { getJournalRelativePath } from '../extension';
 import { FileMeta } from '../models/FileMeta';
+import { PreviewContext } from '../preview/previewPanel';
 
 type TagSection = {
     key: 'system' | 'user' | 'virtual';
@@ -81,6 +82,8 @@ class VSTagItem extends vscode.TreeItem {
     public nodeSource?: 'system' | 'user' | 'generated';
     public sectionKey?: string;
     public parentTag?: string;
+    // Preview context passed to preview layer
+    public previewContext?: PreviewContext;
 }
 
 function createSpacerItem(): VSTagItem {
@@ -256,12 +259,16 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
                 arguments: [{
                     filePath: file.filePath,
                     context: element.nodeSource === 'generated'
-                        ? { type: 'virtual-tag', tag: element.node?.name }
+                        ? {
+                            kind: 'tag',
+                            source: 'virtual',
+                            tagName: element.node?.name
+                        }
                         : element.nodeSource === 'system'
-                            ? { type: 'tag', source: 'system' }
+                            ? { kind: 'tag', source: 'system' }
                             : element.nodeSource === 'user'
-                                ? { type: 'tag', source: 'user' }
-                                : { type: 'file' }
+                                ? { kind: 'tag', source: 'user' }
+                                : { kind: 'file' }
                 }]
             };
 

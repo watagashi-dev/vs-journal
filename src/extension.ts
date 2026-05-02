@@ -389,7 +389,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
             if (typeof arg === 'string') {
                 filePath = arg;
-                context = { type: 'file' };
+                context = { kind: 'file' };
             } else if (arg && typeof arg === 'object') {
                 filePath = (arg as any).filePath ?? (arg as any).fsPath;
                 context = (arg as any).context ?? { type: 'file' };
@@ -459,9 +459,9 @@ export async function activate(context: vscode.ExtensionContext) {
             }
 
             const isVirtual = virtualTagSet.has(node.name);
-            const context = isVirtual
-                ? { type: 'virtual-tag' as const, tag: node.name }
-                : { type: 'tag' as const, source: 'user' as const };
+            const context: PreviewContext = isVirtual
+                ? { kind: 'tag', source: 'virtual', tagName: node.name }
+                : { kind: 'tag', source: 'user' };
 
             const panel = ensurePreviewPanel(vscode.ViewColumn.Active);
             await measure("preview multi entry generation", async () => {
