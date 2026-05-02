@@ -13,6 +13,23 @@ export type PreviewContext =
     | { type: 'tag'; source: 'system' | 'user' }
     | { type: 'virtual-tag'; tag: string };
 
+// =========================================
+// Virtual Tag Session (new unified state)
+// =========================================
+export type VirtualTagMatch = {
+    filePath: string;
+    line: number;
+    start: number;
+    end: number;
+};
+
+export type VirtualTagSession = {
+    keyword: string;
+    caseSensitive: boolean;
+    matches: VirtualTagMatch[];
+    currentIndex: number;
+};
+
 const previewStateMap = new Map<
     vscode.WebviewPanel,
     { files: FileMeta[]; context?: PreviewContext }
@@ -223,6 +240,24 @@ async function buildHtml(
     }
 ): Promise<string> {
     const webview = panel.webview;
+
+    // =========================================
+    // Create Virtual Tag Session (no behavior change yet)
+    // =========================================
+    let virtualTagSession: VirtualTagSession | undefined = undefined;
+
+    if (options?.context?.type === 'virtual-tag') {
+        const caseSensitive = vscode.workspace
+            .getConfiguration('vsJournal')
+            .get<boolean>('virtualTags.caseSensitive', true);
+
+        virtualTagSession = {
+            keyword: options.context.tag,
+            caseSensitive: caseSensitive,
+            matches: [],
+            currentIndex: 0
+        };
+    }
 
     let htmlContent = '';
     let warningHtml = '';
