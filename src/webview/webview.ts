@@ -177,70 +177,81 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
         if (!keyword) {
             return;
         }
-        const codeBlocks = Array.from(document.querySelectorAll('pre code'));
 
-        for (const block of codeBlocks) {
-            const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+        const escapeRegExp = (str: string): string => {
+            return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        };
 
-            const textNodes: Text[] = [];
+        const regex = caseSensitive
+            ? new RegExp(escapeRegExp(keyword), 'g')
+            : new RegExp(escapeRegExp(keyword), 'gi');
 
-            let node = walker.nextNode();
+        const root = document.body;
 
-            while (node) {
-                textNodes.push(node as Text);
-                node = walker.nextNode();
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+
+        const textNodes: Text[] = [];
+
+        let node = walker.nextNode();
+
+        while (node) {
+            const parent = node.parentElement;
+
+            if (parent) {
+                const tagName = parent.tagName;
+
+                // Skip script/style
+                if (tagName === 'SCRIPT' || tagName === 'STYLE') {
+                    node = walker.nextNode();
+                    continue;
+                }
             }
 
-            for (const textNode of textNodes) {
-                const original = textNode.nodeValue;
+            textNodes.push(node as Text);
+            node = walker.nextNode();
+        }
 
-                if (!original) {
-                    continue;
+        for (const textNode of textNodes) {
+            const original = textNode.nodeValue;
+
+            if (!original) {
+                continue;
+            }
+
+            if (!regex.test(original)) {
+                continue;
+            }
+
+            const fragment = document.createDocumentFragment();
+
+            let lastIndex = 0;
+
+            original.replace(regex, (match, offset) => {
+                const before = original.slice(lastIndex, offset);
+
+                if (before) {
+                    fragment.appendChild(document.createTextNode(before));
                 }
 
-                let regex: RegExp;
+                const span = document.createElement('span');
+                span.className = 'vjs-virtual-tag';
+                span.textContent = match;
 
-                if (caseSensitive) {
-                    regex = new RegExp(keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-                } else {
-                    regex = new RegExp(keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-                }
+                fragment.appendChild(span);
 
-                if (!regex.test(original)) {
-                    continue;
-                }
+                lastIndex = offset + match.length;
 
-                const fragment = document.createDocumentFragment();
+                return match;
+            });
 
-                let lastIndex = 0;
+            const tail = original.slice(lastIndex);
 
-                original.replace(regex, (match, offset) => {
-                    const before = original.slice(lastIndex, offset);
+            if (tail) {
+                fragment.appendChild(document.createTextNode(tail));
+            }
 
-                    if (before) {
-                        fragment.appendChild(document.createTextNode(before));
-                    }
-
-                    const span = document.createElement('span');
-                    span.className = 'vjs-virtual-tag';
-                    span.textContent = match;
-
-                    fragment.appendChild(span);
-
-                    lastIndex = offset + match.length;
-
-                    return match;
-                });
-
-                const tail = original.slice(lastIndex);
-
-                if (tail) {
-                    fragment.appendChild(document.createTextNode(tail));
-                }
-
-                if (textNode.parentNode) {
-                    textNode.parentNode.replaceChild(fragment, textNode);
-                }
+            if (textNode.parentNode) {
+                textNode.parentNode.replaceChild(fragment, textNode);
             }
         }
     }

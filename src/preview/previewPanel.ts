@@ -381,6 +381,21 @@ async function buildHtml(
         .replace(/{{hintText}}/g, hintText)
         .replace(/{{content}}/g, htmlContent)
         .replace(/{{warning}}/g, warningHtml)
+        .replace(/{{highlightRules}}/g, (() => {
+            if (options?.context?.type === 'virtual-tag') {
+                const rules = [
+                    {
+                        keyword: options.context.tag,
+                        className: 'vjs-virtual-tag',
+                        caseSensitive: vscode.workspace
+                            .getConfiguration('vsJournal')
+                            .get<boolean>('virtualTags.caseSensitive', true)
+                    }
+                ];
+                return encodeURIComponent(JSON.stringify(rules));
+            }
+            return '';
+        })())
         .replace(/{{virtualTag}}/g,
             options?.context?.type === 'virtual-tag'
                 ? options.context.tag
