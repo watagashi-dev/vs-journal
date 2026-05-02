@@ -341,14 +341,24 @@ async function buildHtml(
                 }
             }
         }
-        console.log('[VTS matches]', virtualTagSession?.matches.length);
 
         htmlContent += md.render(text, {
             filePath: fileMeta.filePath,
             context: options?.context,
             caseSensitive: vscode.workspace
                 .getConfiguration('vsJournal')
-                .get<boolean>('virtualTags.caseSensitive', true)
+                .get<boolean>('virtualTags.caseSensitive', true),
+            rules: options?.context?.type === 'virtual-tag'
+                ? [
+                    {
+                        keyword: options.context.tag,
+                        className: 'vjs-virtual-tag',
+                        caseSensitive: vscode.workspace
+                            .getConfiguration('vsJournal')
+                            .get<boolean>('virtualTags.caseSensitive', true)
+                    }
+                ]
+                : []
         });
 
         htmlContent += '</div>\n';

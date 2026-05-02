@@ -150,6 +150,43 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
 
         return defaultLinkOpen(tokens, idx, options, env, self);
     };
+    function applyRules(
+        text: string,
+        rules: Array<{
+            keyword: string;
+            className: string;
+            caseSensitive: boolean;
+        }>
+    ): string {
+        if (!rules || rules.length === 0) {
+            return text;
+        }
+
+        let result = text;
+
+        rules.forEach((rule) => {
+            const { keyword, className, caseSensitive } = rule;
+
+            if (!keyword) {
+                return;
+            }
+
+            const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+            if (caseSensitive) {
+                result = result.split(keyword).join(
+                    `<span class="${className}">${keyword}</span>`
+                );
+            } else {
+                const regex = new RegExp(escapedKeyword, 'gi');
+                result = result.replace(regex, (match) =>
+                    `<span class="${className}">${match}</span>`
+                );
+            }
+        });
+
+        return result;
+    }
 
     md.renderer.rules.text = (tokens, idx, options, env) => {
         const token = tokens[idx];
@@ -159,40 +196,40 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
             return '';
         }
 
-        const escapeHtml = (str: string) => {
-            return str
+        const escapeHtml = (str: string) =>
+            str
                 .replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;");
-        };
 
-        // ===== USER TAG RANGES =====
         const ranges = getTagRanges(content);
 
-        // ===== NO USER TAG =====
+        const rules = env?.rules ?? [];
+
+        const apply = (text: string): string => {
+            const escaped = escapeHtml(text);
+            return applyRules(escaped, rules);
+        };
+
         if (ranges.length === 0) {
-            return escapeHtml(content);
+            return apply(content);
         }
 
-        // ===== SPLIT BY USER TAG =====
         let result = '';
         let lastIndex = 0;
 
         for (const r of ranges) {
-            // non-tag segment
             const segment = content.slice(lastIndex, r.start);
-            result += escapeHtml(segment);
+            result += apply(segment);
 
-            // user tag
             const tagText = content.slice(r.start, r.end);
             result += `<span class="vjs-user-tag">${escapeHtml(tagText)}</span>`;
 
             lastIndex = r.end;
         }
 
-        // tail
         const tail = content.slice(lastIndex);
-        result += escapeHtml(tail);
+        result += apply(tail);
 
         return result;
     };
