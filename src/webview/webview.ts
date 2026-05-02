@@ -167,93 +167,125 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
     }
 
     function applyVirtualTagHighlight(): void {
-        const body = document.body;
-
-        const keyword = body.getAttribute('data-virtual-tag') || '';
-        const caseSensitiveAttr = body.getAttribute('data-case-sensitive');
-
-        const caseSensitive = caseSensitiveAttr === 'true';
-
-        if (!keyword) {
+        const raw = document.body.dataset.rules;
+        if (!raw) {
             return;
         }
 
-        const escapeRegExp = (str: string): string => {
-            return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        };
+        let rules: Array<{
+            keyword: string;
+            className: string;
+            caseSensitive: boolean;
+        }> = [];
 
-        const regex = caseSensitive
-            ? new RegExp(escapeRegExp(keyword), 'g')
-            : new RegExp(escapeRegExp(keyword), 'gi');
-
-        const root = document.body;
-
-        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-
-        const textNodes: Text[] = [];
-
-        let node = walker.nextNode();
-
-        while (node) {
-            const parent = node.parentElement;
-
-            if (parent) {
-                const tagName = parent.tagName;
-
-                // Skip script/style
-                if (tagName === 'SCRIPT' || tagName === 'STYLE') {
-                    node = walker.nextNode();
-                    continue;
-                }
-            }
-
-            textNodes.push(node as Text);
-            node = walker.nextNode();
+        try {
+            rules = JSON.parse(decodeURIComponent(raw));
+        } catch {
+            return;
         }
 
-        for (const textNode of textNodes) {
-            const original = textNode.nodeValue;
+        if (!rules || rules.length === 0) {
+            return;
+        }
 
-            if (!original) {
-                continue;
+        const codeBlocks = document.querySelectorAll('pre code');
+
+        codeBlocks.forEach((block) => {
+            const walker = document.createTreeWalker(
+                block,
+                NodeFilter.SHOW_TEXT,
+                null
+            );
+
+            const textNodes: Text[] = [];
+            let current: Node | null;
+
+            while ((current = walker.nextNode())) {
+                textNodes.push(current as Text);
             }
 
-            if (!regex.test(original)) {
-                continue;
-            }
-
-            const fragment = document.createDocumentFragment();
-
-            let lastIndex = 0;
-
-            original.replace(regex, (match, offset) => {
-                const before = original.slice(lastIndex, offset);
-
-                if (before) {
-                    fragment.appendChild(document.createTextNode(before));
+            textNodes.forEach((node) => {
+                let text = node.nodeValue;
+                if (!text) {
+                    return;
                 }
 
-                const span = document.createElement('span');
-                span.className = 'vjs-virtual-tag';
-                span.textContent = match;
+                let replaced = false;
 
-                fragment.appendChild(span);
+                rules.forEach((rule) => {
+                    const { keyword, className, caseSensitive } = rule;
 
-                lastIndex = offset + match.length;
+                    if (!keyword) {
+                        return;
+                    }
 
-                return match;
+                    if (caseSensitive) {
+                        if (!text!.includes(keyword)) {
+                            return;
+                        }
+
+                        const parts = text!.split(keyword);
+                        if (parts.length <= 1) {
+                            return;
+                        }
+
+                        const frag = document.createDocumentFragment();
+
+                        parts.forEach((part, i) => {
+                            if (i > 0) {
+                                const span = document.createElement('span');
+                                span.className = className;
+                                span.textContent = keyword;
+                                frag.appendChild(span);
+                            }
+                            if (part) {
+                                frag.appendChild(document.createTextNode(part));
+                            }
+                        });
+
+                        node.parentNode?.replaceChild(frag, node);
+                        replaced = true;
+                    } else {
+                        const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const regex = new RegExp(escaped, 'gi');
+
+                        if (!regex.test(text!)) {
+                            return;
+                        }
+
+                        const frag = document.createDocumentFragment();
+                        let lastIndex = 0;
+
+                        text!.replace(regex, (match, offset) => {
+                            const before = text!.slice(lastIndex, offset);
+                            if (before) {
+                                frag.appendChild(document.createTextNode(before));
+                            }
+
+                            const span = document.createElement('span');
+                            span.className = className;
+                            span.textContent = match;
+                            frag.appendChild(span);
+
+                            lastIndex = offset + match.length;
+                            return match;
+                        });
+
+                        const tail = text!.slice(lastIndex);
+                        if (tail) {
+                            frag.appendChild(document.createTextNode(tail));
+                        }
+
+                        node.parentNode?.replaceChild(frag, node);
+                        replaced = true;
+                    }
+                });
+
+                if (replaced) {
+                    // do nothing (node already replaced)
+                }
             });
-
-            const tail = original.slice(lastIndex);
-
-            if (tail) {
-                fragment.appendChild(document.createTextNode(tail));
-            }
-
-            if (textNode.parentNode) {
-                textNode.parentNode.replaceChild(fragment, textNode);
-            }
-        }
+        });
     }
 
     // theme変更対応（旧コードで消えがちな部分）
