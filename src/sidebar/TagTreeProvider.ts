@@ -6,7 +6,6 @@ import { PreviewContext } from '../preview/previewPanel';
 
 type TagSection = {
     key: 'system' | 'user' | 'virtual';
-    source: 'system' | 'user' | 'generated';
     getNodes: (provider: TagTreeProvider) => TagHierarchyNode[];
     label: string;
     needCount: boolean;
@@ -19,7 +18,6 @@ type TagSection = {
 const TAG_SECTIONS: TagSection[] = [
     {
         key: 'system',
-        source: 'system',
         label: vscode.l10n.t('System Tags'),
         getNodes: (p) => p.getSystemNodes(),
         needCount: true,
@@ -27,7 +25,6 @@ const TAG_SECTIONS: TagSection[] = [
     },
     {
         key: 'user',
-        source: 'user',
         label: vscode.l10n.t('User Tags'),
         getNodes: (p) => p.getUserNodes(),
         needCount: false,
@@ -36,7 +33,6 @@ const TAG_SECTIONS: TagSection[] = [
     },
     {
         key: 'virtual',
-        source: 'generated',
         label: vscode.l10n.t('Virtual Tags'),
         getNodes: (p) => p.getVirtualNodes(),
         needCount: true,
@@ -79,7 +75,6 @@ class VSTagItem extends vscode.TreeItem {
     // File meta (only for file nodes)
     public file?: FileMeta;
 
-    public nodeSource?: 'system' | 'user' | 'generated';
     public sectionKey?: string;
     public parentTag?: string;
     // Preview context passed to preview layer
@@ -241,11 +236,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             );
 
             item.type = 'file';
-            item.sectionKey = element.nodeSource === 'generated'
-                ? 'virtual'
-                : element.nodeSource === 'system'
-                    ? 'system'
-                    : 'user';
+            item.sectionKey = element.sectionKey;
 
             item.parentTag = node.name;
 
@@ -253,27 +244,24 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             item.path = file.filePath;
             item.file = file;
 
+            // Set preview context once
+            item.previewContext = {
+                kind: 'file'
+            };
+
             item.command = {
                 command: 'vs-journal.previewEntry',
                 title: 'Preview Entry',
                 arguments: [{
                     filePath: file.filePath,
-                    context: element.nodeSource === 'generated'
-                        ? {
-                            kind: 'tag',
-                            source: 'virtual',
-                            tagName: element.node?.name
-                        }
-                        : element.nodeSource === 'system'
-                            ? { kind: 'tag', source: 'system' }
-                            : element.nodeSource === 'user'
-                                ? { kind: 'tag', source: 'user' }
-                                : { kind: 'file' }
+                    context: {
+                        kind: 'tag',
+                        tagType: element.sectionKey ?? 'user',
+                        tagName: element.node?.name
+                    }
                 }]
             };
-
-            //            item.tooltip = getJournalRelativePath(file.filePath);
-            item.tooltip = item.id;
+            item.tooltip = getJournalRelativePath(file.filePath);
 
             children.push(item);
         }
@@ -284,7 +272,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
     private createTagItem(node: TagHierarchyNode, section?: TagSection): VSTagItem {
         const label = section ? formatTagLabel(node, section) : node.name;
         const context = section
-            ? `tag:${section.key} source:${section.source}`
+            ? `tag:${section.key}`
             : 'tag';
 
         const item = new VSTagItem(
@@ -295,7 +283,8 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         );
 
         item.type = 'tag';
-        item.nodeSource = section?.source;
+        item.sectionKey = section?.key;
+
         item.id = `${section?.key ?? 'unknown'}:tag:${node.name}`;
         item.tooltip = '';
 

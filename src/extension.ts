@@ -460,8 +460,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
             const isVirtual = virtualTagSet.has(node.name);
             const context: PreviewContext = isVirtual
-                ? { kind: 'tag', source: 'virtual', tagName: node.name }
-                : { kind: 'tag', source: 'user' };
+                ? { kind: 'tag', tagType: 'virtual', tagName: node.name }
+                : { kind: 'tag', tagType: 'user' };
 
             const panel = ensurePreviewPanel(vscode.ViewColumn.Active);
             await measure("preview multi entry generation", async () => {

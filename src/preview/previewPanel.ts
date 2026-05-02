@@ -8,9 +8,11 @@ let currentPanel: vscode.WebviewPanel | undefined;
 let currentDocument: vscode.TextDocument | undefined;
 let extensionContext: vscode.ExtensionContext;
 
-export type PreviewContext =
-    | { kind: 'file' }
-    | { kind: 'tag'; source: 'system' | 'user' | 'virtual'; tagName?: string };
+export type PreviewContext = {
+    kind: 'file' | 'tag';
+    tagType?: 'system' | 'user' | 'virtual';
+    tagName?: string;
+};
 
 // =========================================
 // Virtual Tag Session (new unified state)
@@ -247,7 +249,7 @@ async function buildHtml(
 
     if (
         options?.context?.kind === 'tag' &&
-        options.context.source === 'virtual'
+        options.context.tagType === 'virtual'
     ) {
         const caseSensitive = vscode.workspace
             .getConfiguration('vsJournal')
@@ -356,7 +358,7 @@ async function buildHtml(
             context: options?.context,
             rules:
                 options?.context?.kind === 'tag' &&
-                    options.context.source === 'virtual' &&
+                    options.context.tagType === 'virtual' &&
                     options.context.tagName
                     ? [{
                         keyword: options.context.tagName,
@@ -399,7 +401,7 @@ async function buildHtml(
         .replace(/{{highlightRules}}/g, (() => {
             if (
                 options?.context?.kind === 'tag' &&
-                options.context.source === 'virtual'
+                options.context.tagType === 'virtual'
             ) {
                 const keyword = options.context.tagName;
                 if (!keyword) {
