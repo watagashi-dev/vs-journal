@@ -386,6 +386,13 @@ async function buildHtml(
                 ? options.context.tag
                 : ''
         )
+        .replace(/{{caseSensitive}}/g,
+            String(
+                vscode.workspace
+                    .getConfiguration('vsJournal')
+                    .get<boolean>('virtualTags.caseSensitive', true)
+            )
+        )
         .replace(/{{scriptUri}}/g, scriptUri.toString());
 }
 

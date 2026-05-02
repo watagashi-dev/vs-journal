@@ -154,52 +154,24 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
     md.renderer.rules.text = (tokens, idx, options, env) => {
         const token = tokens[idx];
         const content: string = token.content;
-        const context = env?.context;
 
         if (!content) {
             return '';
         }
 
-        const escapeHtml = (str: string) =>
-            str
+        const escapeHtml = (str: string) => {
+            return str
                 .replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;");
+        };
 
         // ===== USER TAG RANGES =====
         const ranges = getTagRanges(content);
 
-        const applyVirtualTag = (text: string): string => {
-            if (context?.type !== 'virtual-tag') {
-                return escapeHtml(text);
-            }
-
-            const keyword = context.tag;
-            if (!keyword) {
-                return escapeHtml(text);
-            }
-
-            const caseSensitive = env?.caseSensitive ?? true;
-
-            if (caseSensitive) {
-                return escapeHtml(text).replaceAll(
-                    escapeHtml(keyword),
-                    `<span class="vjs-virtual-tag">${escapeHtml(keyword)}</span>`
-                );
-            }
-
-            // case-insensitive
-            const escaped = escapeHtml(text);
-            const regex = new RegExp(keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-
-            return escaped.replace(regex, (match) =>
-                `<span class="vjs-virtual-tag">${escapeHtml(match)}</span>`
-            );
-        };
-
         // ===== NO USER TAG =====
         if (ranges.length === 0) {
-            return applyVirtualTag(content);
+            return escapeHtml(content);
         }
 
         // ===== SPLIT BY USER TAG =====
@@ -207,20 +179,20 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
         let lastIndex = 0;
 
         for (const r of ranges) {
-            // --- non-tag segment ---
+            // non-tag segment
             const segment = content.slice(lastIndex, r.start);
-            result += applyVirtualTag(segment);
+            result += escapeHtml(segment);
 
-            // --- user tag (priority) ---
+            // user tag
             const tagText = content.slice(r.start, r.end);
             result += `<span class="vjs-user-tag">${escapeHtml(tagText)}</span>`;
 
             lastIndex = r.end;
         }
 
-        // --- tail ---
+        // tail
         const tail = content.slice(lastIndex);
-        result += applyVirtualTag(tail);
+        result += escapeHtml(tail);
 
         return result;
     };

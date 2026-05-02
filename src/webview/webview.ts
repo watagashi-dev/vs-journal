@@ -167,23 +167,82 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
     }
 
     function applyVirtualTagHighlight(): void {
-        const keyword = VIRTUAL_TAG;
-        if (!keyword) { return; }
+        const body = document.body;
 
-        const blocks = document.querySelectorAll('pre code');
+        const keyword = body.getAttribute('data-virtual-tag') || '';
+        const caseSensitiveAttr = body.getAttribute('data-case-sensitive');
 
-        blocks.forEach((el) => {
-            const html = el.innerHTML;
+        const caseSensitive = caseSensitiveAttr === 'true';
 
-            if (!html.includes(keyword)) {
-                return;
+        if (!keyword) {
+            return;
+        }
+        const codeBlocks = Array.from(document.querySelectorAll('pre code'));
+
+        for (const block of codeBlocks) {
+            const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+
+            const textNodes: Text[] = [];
+
+            let node = walker.nextNode();
+
+            while (node) {
+                textNodes.push(node as Text);
+                node = walker.nextNode();
             }
 
-            el.innerHTML = html.replaceAll(
-                keyword,
-                `<span class="vjs-virtual-tag">${keyword}</span>`
-            );
-        });
+            for (const textNode of textNodes) {
+                const original = textNode.nodeValue;
+
+                if (!original) {
+                    continue;
+                }
+
+                let regex: RegExp;
+
+                if (caseSensitive) {
+                    regex = new RegExp(keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+                } else {
+                    regex = new RegExp(keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+                }
+
+                if (!regex.test(original)) {
+                    continue;
+                }
+
+                const fragment = document.createDocumentFragment();
+
+                let lastIndex = 0;
+
+                original.replace(regex, (match, offset) => {
+                    const before = original.slice(lastIndex, offset);
+
+                    if (before) {
+                        fragment.appendChild(document.createTextNode(before));
+                    }
+
+                    const span = document.createElement('span');
+                    span.className = 'vjs-virtual-tag';
+                    span.textContent = match;
+
+                    fragment.appendChild(span);
+
+                    lastIndex = offset + match.length;
+
+                    return match;
+                });
+
+                const tail = original.slice(lastIndex);
+
+                if (tail) {
+                    fragment.appendChild(document.createTextNode(tail));
+                }
+
+                if (textNode.parentNode) {
+                    textNode.parentNode.replaceChild(fragment, textNode);
+                }
+            }
+        }
     }
 
     // theme変更対応（旧コードで消えがちな部分）
