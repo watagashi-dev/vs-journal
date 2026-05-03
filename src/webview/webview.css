@@ -406,3 +406,14 @@ body>*:first-child {
 .vjs-virtual-tag {
   background-color: rgba(255, 200, 0, 0.3);
 }
+
+.vjs-nav {
+  position: fixed;
+  top: 50px;
+  right: 16px;
+  opacity: 0.85;
+}
+
+.vjs-nav.hidden {
+  display: none;
+}

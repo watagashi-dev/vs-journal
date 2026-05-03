@@ -288,6 +288,26 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
         });
     }
 
+    const nav = document.getElementById('vjs-nav');
+    const counter = document.getElementById('vjs-counter');
+
+    let matches = [];
+    let currentIndex = 0;
+
+    function updateUI() {
+        if (!nav || !counter) { return; }
+
+        const m = matches.length;
+
+        if (m < 2) {
+            nav.classList.add('hidden');
+            return;
+        }
+
+        nav.classList.remove('hidden');
+        counter.textContent = `${currentIndex + 1} / ${m}`;
+    }
+
     // theme変更対応（旧コードで消えがちな部分）
     function setupMessageHandler(): void {
         window.addEventListener('message', (event) => {
@@ -315,6 +335,13 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
             if (msg.type === 'setPreviewCount') {
                 setPreviewFileCount(msg.count);
                 return;
+            }
+
+
+            if (msg.type === 'setMatches') {
+                matches = msg.matches || [];
+                currentIndex = 0;
+                updateUI();
             }
         });
     }

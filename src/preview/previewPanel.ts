@@ -40,6 +40,7 @@ const previewStateMap = new Map<
             keyword: string;
             className: string;
         }
+        virtualTagSession?: VirtualTagSession;
     }
 >();
 
@@ -49,6 +50,7 @@ export function setPreviewState(
         files: FileMeta[];
         context?: PreviewContext;
         highlight?: { keyword: string, className: string };
+        virtualTagSession?: VirtualTagSession;
     }
 ) {
     previewStateMap.set(panel, state);
@@ -59,7 +61,8 @@ export function getPreviewState(
 ): {
     files: FileMeta[];
     context?: PreviewContext;
-    highlight?: { keyword: string, className: string }
+    highlight?: { keyword: string, className: string };
+    virtualTagSession?: VirtualTagSession;
 } | undefined {
     return previewStateMap.get(panel);
 }
@@ -363,6 +366,10 @@ async function buildHtml(
                     }
                 }
             }
+            const state = getPreviewState(panel);
+            if (state) {
+                state.virtualTagSession = virtualTagSession;
+            }
         }
 
         htmlContent += md.render(text, {
@@ -442,6 +449,13 @@ export async function updatePreviewPanel(
             highlight: state?.highlight
         });
         panel.webview.html = html;
+
+        if (state?.virtualTagSession) {
+            panel.webview.postMessage({
+                type: 'setMatches',
+                matches: state.virtualTagSession.matches
+            });
+        }
         panel.webview.postMessage({
             type: 'setPreviewCount',
             count: filesToPreview.length
