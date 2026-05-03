@@ -33,19 +33,23 @@ export type VirtualTagSession = {
 
 const previewStateMap = new Map<
     vscode.WebviewPanel,
-    { files: FileMeta[]; context?: PreviewContext }
+    { files: FileMeta[]; context?: PreviewContext; highlight?: { keyword: string } }
 >();
 
 export function setPreviewState(
     panel: vscode.WebviewPanel,
-    state: { files: FileMeta[]; context?: PreviewContext }
+    state: {
+        files: FileMeta[];
+        context?: PreviewContext;
+        highlight?: { keyword: string };
+    }
 ) {
     previewStateMap.set(panel, state);
 }
 
 export function getPreviewState(
     panel: vscode.WebviewPanel
-): { files: FileMeta[]; context?: PreviewContext } | undefined {
+): { files: FileMeta[]; context?: PreviewContext; highlight?: { keyword: string } } | undefined {
     return previewStateMap.get(panel);
 }
 
@@ -238,30 +242,30 @@ async function buildHtml(
         limitExceeded?: boolean;
         message?: string;
         context?: PreviewContext;
+        highlight?: { keyword: string };
     }
 ): Promise<string> {
     const webview = panel.webview;
+
+    // =========================================
+    // Resolve highlight (single source of truth)
+    // =========================================
+    const highlight = options?.highlight;
+
+    const caseSensitive = vscode.workspace
+        .getConfiguration('vsJournal')
+        .get<boolean>('virtualTags.caseSensitive', true);
+
 
     // =========================================
     // Create Virtual Tag Session (no behavior change yet)
     // =========================================
     let virtualTagSession: VirtualTagSession | undefined = undefined;
 
-    if (
-        options?.context?.kind === 'tag' &&
-        options.context.tagType === 'virtual'
-    ) {
-        const caseSensitive = vscode.workspace
-            .getConfiguration('vsJournal')
-            .get<boolean>('virtualTags.caseSensitive', true);
-        const keyword = options.context.tagName;
-        if (!keyword) {
-            return '';
-        }
-
+    if (highlight?.keyword) {
         virtualTagSession = {
-            keyword: keyword,
-            caseSensitive: caseSensitive,
+            keyword: highlight.keyword,
+            caseSensitive,
             matches: [],
             currentIndex: 0
         };
@@ -350,22 +354,16 @@ async function buildHtml(
             }
         }
 
-        const caseSensitive = vscode.workspace
-            .getConfiguration('vsJournal')
-            .get<boolean>('virtualTags.caseSensitive', true);
         htmlContent += md.render(text, {
             filePath: fileMeta.filePath,
             context: options?.context,
-            rules:
-                options?.context?.kind === 'tag' &&
-                    options.context.tagType === 'virtual' &&
-                    options.context.tagName
-                    ? [{
-                        keyword: options.context.tagName,
-                        className: 'vjs-virtual-tag',
-                        caseSensitive: caseSensitive
-                    }]
-                    : []
+            rules: highlight
+                ? [{
+                    keyword: highlight.keyword,
+                    className: 'vjs-virtual-tag',
+                    caseSensitive
+                }]
+                : []
         });
 
         htmlContent += '</div>\n';
@@ -399,27 +397,19 @@ async function buildHtml(
         .replace(/{{content}}/g, htmlContent)
         .replace(/{{warning}}/g, warningHtml)
         .replace(/{{highlightRules}}/g, (() => {
-            if (
-                options?.context?.kind === 'tag' &&
-                options.context.tagType === 'virtual'
-            ) {
-                const keyword = options.context.tagName;
-                if (!keyword) {
-                    return '';
-                }
-
-                const rules = [
-                    {
-                        keyword,
-                        className: 'vjs-virtual-tag',
-                        caseSensitive: vscode.workspace
-                            .getConfiguration('vsJournal')
-                            .get<boolean>('virtualTags.caseSensitive', true)
-                    }
-                ];
-                return encodeURIComponent(JSON.stringify(rules));
+            if (!highlight) {
+                return '';
             }
-            return '';
+
+            const rules = [
+                {
+                    keyword: highlight.keyword,
+                    className: 'vjs-virtual-tag',
+                    caseSensitive
+                }
+            ];
+
+            return encodeURIComponent(JSON.stringify(rules));
         })())
         .replace(/{{scriptUri}}/g, scriptUri.toString());
 }
@@ -437,7 +427,8 @@ export async function updatePreviewPanel(
 
         const html = await buildHtml(panel, filesToPreview, {
             ...options,
-            context: state?.context
+            context: state?.context,
+            highlight: state?.highlight
         });
         panel.webview.html = html;
         panel.webview.postMessage({

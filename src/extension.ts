@@ -406,10 +406,13 @@ export async function activate(context: vscode.ExtensionContext) {
             if (typeof arg === 'string') {
                 filePath = arg;
                 context = { kind: 'file' };
-            } else if (arg && typeof arg === 'object') {
+            }
+            else if (arg && typeof arg === 'object') {
                 filePath = (arg as any).filePath ?? (arg as any).fsPath;
                 context = (arg as any).context ?? { kind: 'file' };
             }
+
+            const highlight = (arg as any)?.highlight;
             let document: vscode.TextDocument | undefined;
 
             if (!filePath) {
@@ -440,7 +443,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
                 setPreviewState(panel, {
                     files: check.limitedFiles,
-                    context
+                    context,
+                    highlight
                 });
                 await updatePreviewPanel(panel, check.limitedFiles, {
                     limitExceeded: check.limitExceeded,
@@ -465,7 +469,11 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         }),
 
-        vscode.commands.registerCommand('vsJournal.previewMultiEntry', async (node: TagHierarchyNode) => {
+        vscode.commands.registerCommand('vsJournal.previewMultiEntry', async (arg: any) => {
+
+            const node: TagHierarchyNode = arg.node;
+            const context: PreviewContext = arg.context;
+            const highlight = arg.highlight;
             const filesToPreview = node.files; // Ignore child tags
 
             if (filesToPreview.length === 0) {
@@ -473,18 +481,14 @@ export async function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-            const isVirtual = virtualTagSet.has(node.name);
-            const context: PreviewContext = isVirtual
-                ? { kind: 'tag', tagType: 'virtual', tagName: node.name }
-                : { kind: 'tag', tagType: 'user', tagName: node.name };
-
             const panel = ensurePreviewPanel(vscode.ViewColumn.Active);
             await measure("preview multi entry generation", async () => {
                 const check = checkPreviewLimits(filesToPreview);
 
                 setPreviewState(panel, {
                     files: check.limitedFiles,
-                    context
+                    context,
+                    highlight
                 });
                 await updatePreviewPanel(panel, check.limitedFiles, {
                     limitExceeded: check.limitExceeded,

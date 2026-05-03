@@ -10,6 +10,7 @@ type TagSection = {
     label: string;
     needCount: boolean;
     needTranslate: boolean;
+    highlight?: (tagName: string) => { keyword: string };
     // fall back behavior
     emptyLabel?: string;
     emptyCommand?: string;
@@ -39,6 +40,7 @@ const TAG_SECTIONS: TagSection[] = [
         needTranslate: false,
         emptyLabel: vscode.l10n.t('No virtual tags yet'),
         emptyCommand: 'vs-journal.addVirtualTag',
+        highlight: (tagName) => ({ keyword: tagName }),
     },
 ];
 
@@ -79,6 +81,9 @@ class VSTagItem extends vscode.TreeItem {
     public parentTag?: string;
     // Preview context passed to preview layer
     public previewContext?: PreviewContext;
+    public highlight?: {
+        keyword: string;
+    };
 }
 
 function createSpacerItem(): VSTagItem {
@@ -246,19 +251,17 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
 
             // Set preview context once
             item.previewContext = {
-                kind: 'file'
+                kind: 'file',
             };
 
+            item.highlight = element.highlight;
             item.command = {
                 command: 'vs-journal.previewEntry',
                 title: 'Preview Entry',
                 arguments: [{
                     filePath: file.filePath,
-                    context: {
-                        kind: 'tag',
-                        tagType: element.sectionKey ?? 'user',
-                        tagName: element.node?.name
-                    }
+                    context: item.previewContext,
+                    highlight: item.highlight
                 }]
             };
             item.tooltip = getJournalRelativePath(file.filePath);
@@ -285,13 +288,25 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         item.type = 'tag';
         item.sectionKey = section?.key;
 
+        if (section?.highlight) {
+            item.highlight = section.highlight(node.name);
+        }
+
         item.id = `${section?.key ?? 'unknown'}:tag:${node.name}`;
         item.tooltip = '';
 
         item.command = {
             command: 'vsJournal.previewMultiEntry',
             title: 'Open Tag',
-            arguments: [node]
+            arguments: [{
+                node,
+                context: {
+                    kind: 'tag',
+                    tagType: section?.key ?? 'user',
+                    tagName: node.name
+                },
+                highlight: item.highlight
+            }]
         };
 
         return item;
