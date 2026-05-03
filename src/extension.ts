@@ -250,6 +250,22 @@ function updateSingleFile(filePath: string) {
     rebuildSystemTags();
 }
 
+function buildPreviewContext(params: {
+    kind: 'file' | 'tag';
+    sectionKey?: 'system' | 'user' | 'virtual';
+    tagName?: string;
+}): PreviewContext {
+    if (params.kind === 'file') {
+        return { kind: 'file' };
+    }
+
+    return {
+        kind: 'tag',
+        tagType: params.sectionKey ?? 'user',
+        tagName: params.tagName
+    };
+}
+
 function checkPreviewLimits(files: FileMeta[]): {
     limitedFiles: FileMeta[];
     limitExceeded: boolean;
@@ -392,9 +408,8 @@ export async function activate(context: vscode.ExtensionContext) {
                 context = { kind: 'file' };
             } else if (arg && typeof arg === 'object') {
                 filePath = (arg as any).filePath ?? (arg as any).fsPath;
-                context = (arg as any).context ?? { type: 'file' };
+                context = (arg as any).context ?? { kind: 'file' };
             }
-
             let document: vscode.TextDocument | undefined;
 
             if (!filePath) {
@@ -461,11 +476,12 @@ export async function activate(context: vscode.ExtensionContext) {
             const isVirtual = virtualTagSet.has(node.name);
             const context: PreviewContext = isVirtual
                 ? { kind: 'tag', tagType: 'virtual', tagName: node.name }
-                : { kind: 'tag', tagType: 'user' };
+                : { kind: 'tag', tagType: 'user', tagName: node.name };
 
             const panel = ensurePreviewPanel(vscode.ViewColumn.Active);
             await measure("preview multi entry generation", async () => {
                 const check = checkPreviewLimits(filesToPreview);
+
                 setPreviewState(panel, {
                     files: check.limitedFiles,
                     context
