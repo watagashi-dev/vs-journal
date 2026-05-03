@@ -40,7 +40,7 @@ const TAG_SECTIONS: TagSection[] = [
         needTranslate: false,
         emptyLabel: vscode.l10n.t('No virtual tags yet'),
         emptyCommand: 'vs-journal.addVirtualTag',
-        highlight: (tagName) => ({ keyword: tagName }),
+        highlight: (tagName) => ({ keyword: tagName, className: 'vjs-virtual-tag' }),
     },
 ];
 

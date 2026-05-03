@@ -701,7 +701,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
             setPreviewState(panel, {
                 files: check.limitedFiles,
-                context: state.context
+                context: state.context,
+                highlight: state.highlight
             });
             await updatePreviewPanel(panel, check.limitedFiles, {
                 limitExceeded: check.limitExceeded,

@@ -33,7 +33,14 @@ export type VirtualTagSession = {
 
 const previewStateMap = new Map<
     vscode.WebviewPanel,
-    { files: FileMeta[]; context?: PreviewContext; highlight?: { keyword: string } }
+    {
+        files: FileMeta[];
+        context?: PreviewContext;
+        highlight?: {
+            keyword: string;
+            className: string;
+        }
+    }
 >();
 
 export function setPreviewState(
@@ -41,7 +48,7 @@ export function setPreviewState(
     state: {
         files: FileMeta[];
         context?: PreviewContext;
-        highlight?: { keyword: string };
+        highlight?: { keyword: string, className: string };
     }
 ) {
     previewStateMap.set(panel, state);
@@ -49,7 +56,11 @@ export function setPreviewState(
 
 export function getPreviewState(
     panel: vscode.WebviewPanel
-): { files: FileMeta[]; context?: PreviewContext; highlight?: { keyword: string } } | undefined {
+): {
+    files: FileMeta[];
+    context?: PreviewContext;
+    highlight?: { keyword: string, className: string }
+} | undefined {
     return previewStateMap.get(panel);
 }
 
@@ -242,7 +253,7 @@ async function buildHtml(
         limitExceeded?: boolean;
         message?: string;
         context?: PreviewContext;
-        highlight?: { keyword: string };
+        highlight?: { keyword: string, className: string };
     }
 ): Promise<string> {
     const webview = panel.webview;
@@ -360,7 +371,7 @@ async function buildHtml(
             rules: highlight
                 ? [{
                     keyword: highlight.keyword,
-                    className: 'vjs-virtual-tag',
+                    className: highlight.className,
                     caseSensitive
                 }]
                 : []
@@ -404,7 +415,7 @@ async function buildHtml(
             const rules = [
                 {
                     keyword: highlight.keyword,
-                    className: 'vjs-virtual-tag',
+                    className: highlight.className,
                     caseSensitive
                 }
             ];
