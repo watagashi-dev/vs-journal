@@ -412,6 +412,8 @@ body>*:first-child {
   top: 50px;
   right: 16px;
   opacity: 0.85;
+  z-index: 9999;
+  pointer-events: auto;
 }
 
 .vjs-nav.hidden {

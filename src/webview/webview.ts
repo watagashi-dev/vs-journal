@@ -14,6 +14,13 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
         | { type: 'closePreview' }
         | { type: 'edit' };
 
+    type VirtualMatch = {
+        filePath: string;
+        line: number;
+        start: number;
+        end: number;
+    };
+
     function postMessage(msg: VsCodeMessage): void {
         vscode.postMessage(msg);
     }
@@ -290,8 +297,10 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
 
     const nav = document.getElementById('vjs-nav');
     const counter = document.getElementById('vjs-counter');
+    const prevBtn = document.getElementById('vjs-prev');
+    const nextBtn = document.getElementById('vjs-next');
 
-    let matches = [];
+    let matches: VirtualMatch[] = [];
     let currentIndex = 0;
 
     function updateUI() {
@@ -307,6 +316,61 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
         nav.classList.remove('hidden');
         counter.textContent = `${currentIndex + 1} / ${m}`;
     }
+
+    function scrollToMatch(index: number) {
+        const el = highlightElements[index];
+        if (!el) { return; }
+
+        const rect = el.getBoundingClientRect();
+        const top = window.scrollY + rect.top - 80;
+
+        window.scrollTo({
+            top,
+            behavior: 'smooth'
+        });
+    }
+
+    function moveNext() {
+        if (matches.length === 0) { return; }
+
+        currentIndex = (currentIndex + 1) % matches.length;
+        scrollToMatch(currentIndex);
+        updateUI();
+    }
+
+    function movePrev() {
+        if (matches.length === 0) { return; }
+
+        currentIndex =
+            (currentIndex - 1 + matches.length) % matches.length;
+
+        scrollToMatch(currentIndex);
+        updateUI();
+    }
+
+    function setupNavButtons() {
+        if (nav) {
+            nav.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                movePrev();
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                moveNext();
+            });
+        }
+    }
+
+    let highlightElements: HTMLElement[] = [];
 
     // theme変更対応（旧コードで消えがちな部分）
     function setupMessageHandler(): void {
@@ -337,10 +401,12 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
                 return;
             }
 
-
             if (msg.type === 'setMatches') {
                 matches = msg.matches || [];
                 currentIndex = 0;
+                highlightElements = Array.from(
+                    document.querySelectorAll('.vjs-virtual-tag')
+                ) as HTMLElement[];
                 updateUI();
             }
         });
@@ -375,6 +441,7 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
         setupKeyHandler();
         setupWindowHandlers();
         setupMessageHandler();
+        setupNavButtons();
         initWarningBehavior();
     }
 
