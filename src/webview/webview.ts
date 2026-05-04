@@ -130,6 +130,19 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
     // =========================================================
     function setupKeyHandler(): void {
         window.addEventListener('keydown', (e) => {
+            // Ctrl + ↑ / ↓ → 仮想タグジャンプ
+            if (e.ctrlKey && e.key === 'ArrowDown') {
+                e.preventDefault();
+                moveNext();
+                return;
+            }
+
+            if (e.ctrlKey && e.key === 'ArrowUp') {
+                e.preventDefault();
+                movePrev();
+                return;
+            }
+
             if (e.key === 'Enter' || e.key === 'Escape') {
                 if (previewFileCount > 1) {
                     postMessage({ type: 'closePreview' });
