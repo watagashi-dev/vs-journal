@@ -164,6 +164,7 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
     // Window
     // =========================================================
     function setupWindowHandlers(): void {
+        window.addEventListener('scroll', updateCurrentIndexFromScroll, { passive: true });
         window.addEventListener('scroll', resetHeaderTimer, { passive: true });
         window.addEventListener('wheel', resetHeaderTimer, { passive: true });
 
@@ -330,9 +331,13 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
         counter.textContent = `${currentIndex + 1} / ${m}`;
     }
 
+    let lockedTargetIndex: number | null = null;
+
     function scrollToMatch(index: number) {
         const el = highlightElements[index];
         if (!el) { return; }
+
+        lockedTargetIndex = index;
 
         const rect = el.getBoundingClientRect();
         const top = window.scrollY + rect.top - 80;
@@ -341,6 +346,63 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
             top,
             behavior: 'smooth'
         });
+    }
+    function updateCurrentIndexFromScroll() {
+        if (!highlightElements.length) return;
+
+        if (lockedTargetIndex !== null) {
+            const el = highlightElements[lockedTargetIndex];
+            if (!el) return;
+
+            const rect = el.getBoundingClientRect();
+            const visible =
+                rect.top < window.innerHeight &&
+                rect.bottom > 0;
+
+            if (visible) {
+                currentIndex = lockedTargetIndex;
+                lockedTargetIndex = null;
+                updateUI();
+            }
+
+            return;
+        }
+
+        // ===== 通常スクロール時 =====
+
+        const currentEl = highlightElements[currentIndex];
+
+        // 今のがまだ見えてるなら何もしない
+        if (currentEl) {
+            const rect = currentEl.getBoundingClientRect();
+            const visible =
+                rect.top < window.innerHeight &&
+                rect.bottom > 0;
+
+            if (visible) return;
+        }
+
+        const center = window.innerHeight / 2;
+
+        let closestIndex = currentIndex;
+        let minDistance = Infinity;
+
+        highlightElements.forEach((el, index) => {
+            const rect = el.getBoundingClientRect();
+            const elCenter = rect.top + rect.height / 2;
+
+            const dist = Math.abs(elCenter - center);
+
+            if (dist < minDistance) {
+                minDistance = dist;
+                closestIndex = index;
+            }
+        });
+
+        if (closestIndex !== currentIndex) {
+            currentIndex = closestIndex;
+            updateUI();
+        }
     }
 
     function moveNext() {
