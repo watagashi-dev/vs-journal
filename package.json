@@ -112,6 +112,24 @@
           },
           "additionalProperties": false,
           "markdownDescription": "%config.systemTags.today.markdownDescription%"
+        },
+        "vsJournal.fileNameStyle": {
+          "type": "string",
+          "enum": [
+            "datetime-minute",
+            "datetime-hour",
+            "date-only",
+            "compact-datetime"
+          ],
+          "enumDescriptions": [
+            "2026-05-05-13-45",
+            "2026-05-05-13",
+            "2026-05-05",
+            "20260505-1345"
+          ],
+          "default": "datetime-minute",
+          "description": "%config.fileNameStyle.description%",
+          "markdownDescription": "%config.fileNameStyle.markdownDescription%"
         }
       }
     },
