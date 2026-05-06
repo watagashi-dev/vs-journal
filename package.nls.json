@@ -16,6 +16,8 @@
   "config.virtualTags.caseSensitive.markdownDescription": "Control whether virtual tag matching is **case-sensitive**.\n\n- **Enabled**: `foo` matches only `foo`\n- **Disabled**: `foo` matches `foo`, `Foo`, `FOO`",
   "config.fileNameStyle.description": "File name format for new notes.",
   "config.fileNameStyle.markdownDescription": "Controls how file names are generated for new notes.\n\nExamples:\n- `datetime-minute`: `2026-05-05-13-45`\n- `datetime-hour`: `2026-05-05-13`\n- `date-only`: `2026-05-05`\n- `compact-datetime`: `20260505-1345`\n\nOnly applies to newly created files. Existing files are not affected.",
+  "config.folderStructure.description": "Folder structure for storing new notes.",
+  "config.folderStructure.markdownDescription": "Controls how folders are created for new notes.\n\n**Examples:**\n- `flat`: `note.md`\n- `yyyy`: `2026/note.md`\n- `yyyy-mm`: `2026/05/note.md`\n- `yyyy-mm-dd`: `2026/05/05/note.md`\n\nOnly applies to newly created files. Existing files are not affected.",
   "view.vsJournal.tags.empty": "No entries",
   "command.newEntry": "VS Journal: New Entry",
   "command.previewEntry": "VS Journal: Preview Entry",
