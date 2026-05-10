@@ -57,6 +57,10 @@
       {
         "command": "vsJournal.deleteVirtualTag",
         "title": "%command.deleteVirtualTag.title%"
+      },
+      {
+        "command": "vsJournal.paste",
+        "title": "%command.paste%"
       }
     ],
     "configuration": {
@@ -140,14 +144,28 @@
             "yyyy-mm-dd"
           ],
           "enumDescriptions": [
-            "Save files directly in the base directory.",
-            "Group files by year (e.g. 2026/).",
-            "Group files by year and month (e.g. 2026/05/).",
-            "Group files by year, month, and day (e.g. 2026/05/05/)."
+            "%config.folderStructure.flat%",
+            "%config.folderStructure.year%",
+            "%config.folderStructure.yearMonth%",
+            "%config.folderStructure.yearMonthDay%"
           ],
           "default": "flat",
           "description": "%config.folderStructure.description%",
           "markdownDescription": "%config.folderStructure.markdownDescription%"
+        },
+        "vsJournal.paste.saveLocation": {
+          "type": "string",
+          "enum": [
+            "flat",
+            "structured"
+          ],
+          "enumDescriptions": [
+            "%config.paste.saveLocation.flat%",
+            "%config.paste.saveLocation.structured%"
+          ],
+          "default": "structured",
+          "description": "%config.paste.saveLocation.description%",
+          "markdownDescription": "%config.paste.saveLocation.markdownDescription%"
         }
       }
     },
@@ -235,6 +253,12 @@
         "when": "view.VSJournal.TagTree.visible",
         "key": "ctrl+alt+p",
         "mac": "cmd+option+p"
+      },
+      {
+        "command": "vsJournal.paste",
+        "when": "editorTextFocus && resourceExtname == .md",
+        "key": "ctrl+alt+v",
+        "mac": "cmd+option+v"
       }
     ]
   },

@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
+import { execFileSync } from 'child_process';
 import { FileMeta } from './models/FileMeta';
 import { measure } from './perf';
 import { TagHierarchyBuilder, TagHierarchyNode } from './services/TagHierarchyBuilder';
@@ -133,6 +134,205 @@ export function generateFullPath(date: Date, config: VSJournalConfig): string {
 
     return path.join(folder, fileName + '.md');
 }
+
+function getImageWindows(): Buffer | null {
+    try {
+        const script = `
+Add-Type -AssemblyName System.Drawing;
+$img = Get-Clipboard -Format Image;
+if ($img -eq $null) { exit 1 }
+$ms = New-Object System.IO.MemoryStream;
+$img.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png);
+[Console]::OpenStandardOutput().Write($ms.ToArray(), 0, $ms.Length);
+`;
+
+        const buffer = execFileSync(
+            'powershell',
+            ['-NoProfile', '-Command', script],
+            { encoding: 'buffer' }
+        );
+
+        return buffer.length > 0 ? buffer : null;
+    } catch {
+        return null;
+    }
+}
+
+function getImageMac(): Buffer | null {
+    try {
+        // pngpaste が前提（ほぼ入ってる or brewで入る）
+        const buffer = execFileSync('pngpaste', ['-'], {
+            encoding: 'buffer'
+        });
+
+        return buffer.length > 0 ? buffer : null;
+    } catch {
+        return null;
+    }
+}
+
+function getImageLinux(): Buffer | null {
+    // 優先: Wayland
+    try {
+        const buffer = execFileSync('wl-paste', ['--type', 'image/png'], {
+            encoding: 'buffer'
+        });
+
+        if (buffer.length > 0) {
+            return buffer;
+        }
+    } catch { }
+
+    // fallback: X11
+    try {
+        const buffer = execFileSync('xclip', [
+            '-selection',
+            'clipboard',
+            '-t',
+            'image/png',
+            '-o'
+        ], {
+            encoding: 'buffer'
+        });
+
+        if (buffer.length > 0) {
+            return buffer;
+        }
+    } catch { }
+
+    return null;
+}
+
+export function getImageFromClipboard(): Buffer | null {
+    try {
+        if (process.platform === 'win32') {
+            return getImageWindows();
+        }
+
+        if (process.platform === 'darwin') {
+            return getImageMac();
+        }
+
+        if (process.platform === 'linux') {
+            return getImageLinux();
+        }
+
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+type PasteImageTarget = {
+    directory: string;
+    fileName: string;
+    filePath: string;
+    relativePath: string;
+};
+
+export function createPasteImageTarget(
+    editor: vscode.TextEditor
+): PasteImageTarget {
+
+    const directory = resolveSaveDirectory(editor);
+    const fileName = getNextImageFileName(directory);
+    const filePath = path.join(directory, fileName);
+
+    const docDir = path.dirname(editor.document.uri.fsPath);
+
+    const relativePath = path
+        .relative(docDir, filePath)
+        .replace(/\\/g, '/');
+
+    return {
+        directory,
+        fileName,
+        filePath,
+        relativePath,
+    };
+}
+
+export function resolveSaveDirectory(
+    editor: vscode.TextEditor
+): string {
+
+    const config = vscode.workspace.getConfiguration('vsJournal');
+
+    const mode = config.get<'flat' | 'structured'>(
+        'paste.saveLocation',
+        'structured'
+    );
+
+    const docPath = editor.document.uri.fsPath;
+
+    const dir = path.dirname(docPath);
+
+    if (mode === 'flat') {
+        return dir;
+    }
+
+    const baseName = path.basename(
+        docPath,
+        path.extname(docPath)
+    );
+
+    const assetsDir = path.join(
+        dir,
+        `${baseName}_assets`
+    );
+
+    if (!fs.existsSync(assetsDir)) {
+        fs.mkdirSync(assetsDir, { recursive: true });
+    }
+
+    return assetsDir;
+}
+
+export function getNextImageFileName(
+    directory: string
+): string {
+
+    const files = fs.readdirSync(directory);
+
+    let max = 0;
+
+    for (const file of files) {
+
+        const match = file.match(/^img_(\d+)\.png$/);
+
+        if (!match) {
+            continue;
+        }
+
+        const num = parseInt(match[1], 10);
+
+        if (num > max) {
+            max = num;
+        }
+    }
+
+    const next = max + 1;
+
+    return `img_${next.toString().padStart(2, '0')}.png`;
+}
+
+export async function insertImageMarkdown(
+    editor: vscode.TextEditor,
+    relativePath: string,
+    fileName: string
+) {
+
+    const markdown =
+        `![${fileName}](${relativePath})`;
+
+    await editor.edit(editBuilder => {
+        editBuilder.insert(
+            editor.selection.active,
+            markdown
+        );
+    });
+}
+
 
 // --- centralized key normalization ---
 export function filePathToKey(filePath: string): string {
@@ -694,6 +894,38 @@ export async function activate(context: vscode.ExtensionContext) {
             await vscode.workspace.fs.delete(uri, { useTrash: true });
         }),
 
+        vscode.commands.registerCommand(
+            'vsJournal.paste',
+            async () => {
+                console.log('vsJournal.paste start');
+                const editor = vscode.window.activeTextEditor;
+
+                if (!editor || !isJournalFile(editor.document)) {
+                    return;
+                }
+
+                console.log('vsJournal.paste');
+                const buf = getImageFromClipboard();
+                console.log('buf', buf);
+
+                if (!buf) {
+                    return;
+                }
+
+                const target =
+                    createPasteImageTarget(editor);
+                console.log('filePath', target.filePath);
+
+                // 動作確認中なので一旦コメントアウト
+                // fs.writeFileSync(target.filePath, buf);
+
+                await insertImageMarkdown(
+                    editor,
+                    target.relativePath,
+                    target.fileName
+                );
+            }
+        ),
         // Command to increment tag usage count
         vscode.commands.registerCommand('vsJournal.incrementTagUsage', (tag: string) => {
             sessionTagUsage.set(tag, (sessionTagUsage.get(tag) ?? 0) + 1);
