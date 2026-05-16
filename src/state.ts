@@ -1,32 +1,35 @@
 import { FileMeta } from './models/FileMeta';
+import { filePathToKey } from './extension';
 
 const cursorLineMap = new Map<string, number>();
 
-export const systemTagIndexMap = new Map<string, FileMeta[]>(); 
-export const userTagIndexMap = new Map<string, FileMeta[]>(); 
-export const virtualTagIndexMap = new Map<string, FileMeta[]>();
+export const systemTagIndexMap = new Map<string, FileMeta[]>();
+export const userTagIndexMap = new Map<string, FileMeta[]>();
+export const virtualTagIndexMap = new Map<string, Map<string, FileMeta>>();
 
 export const virtualTagSet = new Set<string>();
 
 export function setCursorLine(filePath: string, line: number) {
     // Store the latest cursor line for the given file
-    cursorLineMap.set(filePath, line);
+    const fileKey = filePathToKey(filePath);
+    cursorLineMap.set(fileKey, line);
 }
 
 export function getCursorLine(filePath: string): number | undefined {
-     const line = cursorLineMap.get(filePath);
- 
-     // If the file no longer exists, remove stale entry
-     if (line !== undefined) {
-         try {
-             require('fs').accessSync(filePath);
-         } catch {
-             cursorLineMap.delete(filePath);
-             return undefined;
-         }
-     }
- 
-     return line;
+    const fileKey = filePathToKey(filePath);
+    const line = cursorLineMap.get(fileKey);
+
+    // If the file no longer exists, remove stale entry
+    if (line !== undefined) {
+        try {
+            require('fs').accessSync(filePath);
+        } catch {
+            cursorLineMap.delete(fileKey);
+            return undefined;
+        }
+    }
+
+    return line;
 }
 
 export function clearCursorLine(filePath: string) {

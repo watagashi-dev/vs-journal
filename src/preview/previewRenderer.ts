@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import MarkdownIt from 'markdown-it';
 import taskLists from 'markdown-it-task-lists';
 
+import { getTagRanges } from '../services/tagLogic';
+
 export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | undefined) {
     const md = new MarkdownIt({
         html: true,
@@ -77,7 +79,7 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
         // Existing processing (adding line numbers, etc.)
         addLineAttr(tokens, idx, env);
 
-        // Treat Markdown tables as borderless
+        // Treat Markdown tables as border less
         const existingClass = tokens[idx].attrGet('class');
         if (existingClass) {
             tokens[idx].attrSet('class', existingClass + ' vjs-md-table');
@@ -147,6 +149,89 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
         }
 
         return defaultLinkOpen(tokens, idx, options, env, self);
+    };
+    function applyRules(
+        text: string,
+        rules: Array<{
+            keyword: string;
+            className: string;
+            caseSensitive: boolean;
+        }>
+    ): string {
+        if (!rules || rules.length === 0) {
+            return text;
+        }
+
+        let result = text;
+
+        rules.forEach((rule) => {
+            const { keyword, className, caseSensitive } = rule;
+
+            if (!keyword) {
+                return;
+            }
+
+            const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+            if (caseSensitive) {
+                result = result.split(keyword).join(
+                    `<span class="${className}">${keyword}</span>`
+                );
+            } else {
+                const regex = new RegExp(escapedKeyword, 'gi');
+                result = result.replace(regex, (match) =>
+                    `<span class="${className}">${match}</span>`
+                );
+            }
+        });
+
+        return result;
+    }
+
+    md.renderer.rules.text = (tokens, idx, options, env) => {
+        const token = tokens[idx];
+        const content: string = token.content;
+
+        if (!content) {
+            return '';
+        }
+
+        const escapeHtml = (str: string) =>
+            str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+
+        const ranges = getTagRanges(content);
+
+        const rules = env?.rules ?? [];
+
+        const apply = (text: string): string => {
+            const escaped = escapeHtml(text);
+            return applyRules(escaped, rules);
+        };
+
+        if (ranges.length === 0) {
+            return apply(content);
+        }
+
+        let result = '';
+        let lastIndex = 0;
+
+        for (const r of ranges) {
+            const segment = content.slice(lastIndex, r.start);
+            result += apply(segment);
+
+            const tagText = content.slice(r.start, r.end);
+            result += `<span class="vjs-user-tag">${escapeHtml(tagText)}</span>`;
+
+            lastIndex = r.end;
+        }
+
+        const tail = content.slice(lastIndex);
+        result += apply(tail);
+
+        return result;
     };
 
     return md;

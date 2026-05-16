@@ -27,7 +27,12 @@ body {
    HEADINGS (GitHub rhythm)
    ========================================================= */
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-weight: 600;
   line-height: 1.25;
   margin-top: 1.4em;
@@ -46,10 +51,21 @@ h2 {
   margin-bottom: 0.3em;
 }
 
-h3 { font-size: 1.3em; }
-h4 { font-size: 1.15em; }
-h5 { font-size: 1.05em; }
-h6 { font-size: 1em; }
+h3 {
+  font-size: 1.3em;
+}
+
+h4 {
+  font-size: 1.15em;
+}
+
+h5 {
+  font-size: 1.05em;
+}
+
+h6 {
+  font-size: 1em;
+}
 
 /* =========================================================
    PARAGRAPH
@@ -63,7 +79,8 @@ p {
    LISTS
    ========================================================= */
 
-ul, ol {
+ul,
+ol {
   padding-left: 1.4em;
   margin: 0.3em 0 0.6em;
   margin-left: 1.4em;
@@ -78,7 +95,8 @@ li {
   word-break: break-word;
 }
 
-p, li {
+p,
+li {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
@@ -104,7 +122,7 @@ input[type="checkbox"] {
   margin-right: 6px;
 
   /* Border emphasis */
-  border: 2.3px solid var(--vscode-checkbox-border); 
+  border: 2.3px solid var(--vscode-checkbox-border);
   border-radius: 3px;
   background: var(--vscode-checkbox-background);
 
@@ -113,8 +131,9 @@ input[type="checkbox"] {
   position: relative;
 
   /* Baseline correction for Japanese text */
-  vertical-align: text-bottom; 
-  margin-top: 0px; /* Fine adjustment */
+  vertical-align: text-bottom;
+  margin-top: 0px;
+  /* Fine adjustment */
 }
 
 input[type="checkbox"]:checked {
@@ -166,10 +185,12 @@ code {
    CODE BLOCK
    ========================================================= */
 
-pre, code {
+pre,
+code {
   font-family: var(--vscode-editor-font-family);
   font-size: 0.9em;
-  color: var(--vscode-editor-foreground); /* Match editor theme */
+  color: var(--vscode-editor-foreground);
+  /* Match editor theme */
 }
 
 code {
@@ -241,57 +262,43 @@ table.vjs-md-table th,
 table.vjs-md-table td {
   padding: 4px 14px;
 
-  border-top: 1px solid color-mix(
-    in srgb,
-    var(--vscode-editor-foreground) 80%,
-    transparent
-  );
+  border-top: 1px solid color-mix(in srgb,
+      var(--vscode-editor-foreground) 80%,
+      transparent);
 
-  border-bottom: 1px solid color-mix(
-    in srgb,
-    var(--vscode-editor-foreground) 80%,
-    transparent
-  );
+  border-bottom: 1px solid color-mix(in srgb,
+      var(--vscode-editor-foreground) 80%,
+      transparent);
 
-  border-left: 1px solid color-mix(
-    in srgb,
-    var(--vscode-editor-foreground) 15%,
-    transparent
-  );
-  border-right: 1px solid color-mix(
-    in srgb,
-    var(--vscode-editor-foreground) 15%,
-    transparent
-  );
+  border-left: 1px solid color-mix(in srgb,
+      var(--vscode-editor-foreground) 15%,
+      transparent);
+  border-right: 1px solid color-mix(in srgb,
+      var(--vscode-editor-foreground) 15%,
+      transparent);
 }
 
 /* Emphasize header row underline */
 table.vjs-md-table th {
-  border-bottom: 2px solid color-mix(
-    in srgb,
-    var(--vscode-editor-foreground) 80%,
-    transparent
-  );
+  border-bottom: 2px solid color-mix(in srgb,
+      var(--vscode-editor-foreground) 80%,
+      transparent);
 }
 
 table:not([border]):not(.vjs-md-table) th,
 table:not([border]):not(.vjs-md-table) td {
   padding: 4px 14px;
 
-  border: 1px solid color-mix(
-    in srgb,
-    var(--vscode-editor-foreground) 25%,
-    transparent
-  );
+  border: 1px solid color-mix(in srgb,
+      var(--vscode-editor-foreground) 25%,
+      transparent);
 }
 
 table[border] th,
 table[border] td {
-  border: 1px solid color-mix(
-    in srgb,
-    var(--vscode-editor-foreground) 80%,
-    transparent
-  );
+  border: 1px solid color-mix(in srgb,
+      var(--vscode-editor-foreground) 80%,
+      transparent);
   padding: 4px 14px;
 }
 
@@ -314,7 +321,7 @@ p img {
    FIRST ELEMENT FIX
    ========================================================= */
 
-body > *:first-child {
+body>*:first-child {
   margin-top: 0;
 }
 
@@ -347,9 +354,9 @@ body > *:first-child {
 }
 
 .file-separator {
-    border-top: 1px solid var(--vscode-editorWidget-border);
-    margin: 24px 0;
-    padding-top: 16px;
+  border-top: 1px solid var(--vscode-editorWidget-border);
+  margin: 24px 0;
+  padding-top: 16px;
 }
 
 .vjs-limit-warning {
@@ -378,11 +385,37 @@ body > *:first-child {
     opacity: 0;
     transform: translateY(20px);
   }
+
   70% {
     opacity: 1;
     transform: translateY(-3px);
   }
+
   100% {
     transform: translateY(0);
   }
+}
+
+.vjs-user-tag {
+  color: var(--vscode-textLink-foreground);
+  background-color: rgba(100, 150, 255, 0.08);
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.vjs-virtual-tag {
+  background-color: rgba(255, 200, 0, 0.3);
+}
+
+.vjs-nav {
+  position: fixed;
+  top: 50px;
+  right: 16px;
+  opacity: 0.85;
+  z-index: 9999;
+  pointer-events: auto;
+}
+
+.vjs-nav.hidden {
+  display: none;
 }

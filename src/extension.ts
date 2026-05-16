@@ -12,6 +12,7 @@ import { TagTreeProvider } from './sidebar/TagTreeProvider';
 import { formatFileNameDate, formatDateString, formatTimeString } from './utils/date';
 import { getWorkspaceRoot } from './utils/workspace';
 import {
+    PreviewContext,
     setPreviewState, getPreviewState,
     ensurePreviewPanel, updatePreviewPanel,
     setExtensionContext, setCurrentDocument,
@@ -47,8 +48,8 @@ function getJournalDir(): string {
 }
 
 export function getAbsoluteJournalDir(
-  journalDir: string,
-  workspaceRoot?: string
+    journalDir: string,
+    workspaceRoot?: string
 ): string | undefined {
     if (path.isAbsolute(journalDir)) {
         return journalDir;
@@ -63,6 +64,12 @@ export function getJournalRelativePath(filePath: string): string {
         return filePath;
     }
     return path.relative(journalDir, filePath).replace(/\\/g, '/');
+}
+
+// --- centralized key normalization ---
+export function filePathToKey(filePath: string): string {
+    // VSCode standard identity
+    return vscode.Uri.file(filePath).toString();
 }
 
 type SystemTagDefinition = {
@@ -127,7 +134,7 @@ function rebuildTree() {
     for (const tag of virtualTagSet) {
         normalizedVirtualMap.set(
             tag,
-            virtualTagIndexMap.get(tag) ?? []
+            Array.from(virtualTagIndexMap.get(tag)?.values() ?? [])
         );
     }
 
@@ -170,10 +177,11 @@ async function refreshAllData() {
         const filePath = path.join(fullDir, file);
 
         const entry = readFileEntry(filePath);
-        fileCache.set(filePath, entry);
+        const key = filePathToKey(filePath);
+        fileCache.set(key, entry);
 
         const meta = createFileMeta(filePath, entry.content, entry.stats);
-        fileMetaMap.set(filePath, meta);
+        fileMetaMap.set(key, meta);
 
         addUserTagsFromMeta(meta);
     }
@@ -218,7 +226,8 @@ function updateSingleFile(filePath: string) {
     const config = vscode.workspace.getConfiguration('vsJournal');
     const caseSensitive = config.get<boolean>('virtualTags.caseSensitive', true);
 
-    const oldMeta = fileMetaMap.get(filePath);
+    const key = filePathToKey(filePath);
+    const oldMeta = fileMetaMap.get(key);
 
     // --- Remove from old user tags ---
     removeUserTagsFromMeta(oldMeta);
@@ -228,7 +237,8 @@ function updateSingleFile(filePath: string) {
 
     // --- Create new FileMeta ---
     const newMeta = createFileMeta(filePath, content, stats);
-    fileMetaMap.set(filePath, newMeta);
+    const newKey = filePathToKey(filePath);
+    fileMetaMap.set(newKey, newMeta);
 
     // --- Add to user tags ---
     addUserTagsFromMeta(newMeta);
@@ -240,6 +250,22 @@ function updateSingleFile(filePath: string) {
     rebuildSystemTags();
 }
 
+function buildPreviewContext(params: {
+    kind: 'file' | 'tag';
+    sectionKey?: 'system' | 'user' | 'virtual';
+    tagName?: string;
+}): PreviewContext {
+    if (params.kind === 'file') {
+        return { kind: 'file' };
+    }
+
+    return {
+        kind: 'tag',
+        tagType: params.sectionKey ?? 'user',
+        tagName: params.tagName
+    };
+}
+
 function checkPreviewLimits(files: FileMeta[]): {
     limitedFiles: FileMeta[];
     limitExceeded: boolean;
@@ -247,8 +273,8 @@ function checkPreviewLimits(files: FileMeta[]): {
 } {
     const MAX_TOTAL_SIZE = 2 * 1024 * 1024; // 2MB
     const MAX_FILES = 80;
-//    const MAX_TOTAL_SIZE = 3 * 1024;
-//    const MAX_FILES = 4;
+    //    const MAX_TOTAL_SIZE = 3 * 1024;
+    //    const MAX_FILES = 4;
 
     let totalSize = 0;
     const result: FileMeta[] = [];
@@ -302,10 +328,10 @@ export async function activate(context: vscode.ExtensionContext) {
     // --- File Watcher ---
     let fileWatcher: vscode.FileSystemWatcher | undefined;
     const setupWatcher = () => {
-        if (fileWatcher) {fileWatcher.dispose();}
+        if (fileWatcher) { fileWatcher.dispose(); }
 
         const absDir = getAbsoluteJournalDir(getJournalDir());
-        if (!absDir) {return;}
+        if (!absDir) { return; }
 
         const pattern = new vscode.RelativePattern(absDir, '**/*.md');
         fileWatcher = vscode.workspace.createFileSystemWatcher(pattern);
@@ -315,6 +341,9 @@ export async function activate(context: vscode.ExtensionContext) {
             rebuildTree();
         });
         fileWatcher.onDidChange(uri => {
+            const doc = vscode.workspace.textDocuments.find(d => d.uri.fsPath === uri.fsPath);
+
+            if (doc) { return; }
             updateSingleFile(uri.fsPath);
             rebuildTree();
         });
@@ -340,7 +369,7 @@ export async function activate(context: vscode.ExtensionContext) {
             let position: vscode.Position;
 
             const fullDir = getAbsoluteJournalDir(getJournalDir());
-            if (!fullDir) {return;}
+            if (!fullDir) { return; }
 
             const filename = `${formatFileNameDate(new Date())}.md`;
             const fullPath = path.join(fullDir, filename);
@@ -372,26 +401,31 @@ export async function activate(context: vscode.ExtensionContext) {
 
         vscode.commands.registerCommand('vs-journal.previewEntry', async (arg?: unknown) => {
             let filePath: string | undefined;
+            let context: PreviewContext | undefined;
 
             if (typeof arg === 'string') {
                 filePath = arg;
-            } else if (arg && typeof arg === 'object' && 'fsPath' in arg) {
-                filePath = (arg as any).fsPath;
+                context = { kind: 'file' };
+            }
+            else if (arg && typeof arg === 'object') {
+                filePath = (arg as any).filePath ?? (arg as any).fsPath;
+                context = (arg as any).context ?? { kind: 'file' };
             }
 
+            const highlight = (arg as any)?.highlight;
             let document: vscode.TextDocument | undefined;
-        
+
             if (!filePath) {
                 const editor = vscode.window.activeTextEditor;
                 if (editor && isJournalFile(editor.document)) {
                     filePath = editor.document.uri.fsPath;
                 }
             }
-        
+
             if (!filePath) {
                 return;
             }
-        
+
             document = await vscode.workspace.openTextDocument(filePath);
 
             // Initialize cursor (safe)
@@ -406,14 +440,17 @@ export async function activate(context: vscode.ExtensionContext) {
             await measure("preview generation", async () => {
                 const meta = createFileMeta(filePath);
                 const check = checkPreviewLimits([meta]);
-        
-                setPreviewState(panel, check.limitedFiles);
-        
+
+                setPreviewState(panel, {
+                    files: check.limitedFiles,
+                    context,
+                    highlight
+                });
                 await updatePreviewPanel(panel, check.limitedFiles, {
                     limitExceeded: check.limitExceeded,
                     message: check.message
                 });
-        
+
                 panel.webview.postMessage({
                     type: 'scrollToTop'
                 });
@@ -432,7 +469,11 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         }),
 
-        vscode.commands.registerCommand('vs-journal.onTagClick', async (node: TagHierarchyNode) => {
+        vscode.commands.registerCommand('vsJournal.previewMultiEntry', async (arg: any) => {
+
+            const node: TagHierarchyNode = arg.node;
+            const context: PreviewContext = arg.context;
+            const highlight = arg.highlight;
             const filesToPreview = node.files; // Ignore child tags
 
             if (filesToPreview.length === 0) {
@@ -441,11 +482,18 @@ export async function activate(context: vscode.ExtensionContext) {
             }
 
             const panel = ensurePreviewPanel(vscode.ViewColumn.Active);
-            const check = checkPreviewLimits(filesToPreview);
-            setPreviewState(panel, check.limitedFiles);
-            await updatePreviewPanel(panel, check.limitedFiles, {
-                limitExceeded: check.limitExceeded,
-                message: check.message
+            await measure("preview multi entry generation", async () => {
+                const check = checkPreviewLimits(filesToPreview);
+
+                setPreviewState(panel, {
+                    files: check.limitedFiles,
+                    context,
+                    highlight
+                });
+                await updatePreviewPanel(panel, check.limitedFiles, {
+                    limitExceeded: check.limitExceeded,
+                    message: check.message
+                });
             });
         }),
 
@@ -467,17 +515,19 @@ export async function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-            // --- Register virtual tag (core) ---
-            virtualTagSet.add(trimmed);
+            await measure("rebuild virtual tag", async () => {
+                // --- Register virtual tag (core) ---
+                virtualTagSet.add(trimmed);
 
-            // --- Register virtual tag (empty entry allowed for now) ---
-            if (!virtualTagIndexMap.has(trimmed)) {
-                virtualTagIndexMap.set(trimmed, []);
-            }
-            const readFileContent = (filePath: string): string => {
-                return readFileEntry(filePath).content;
-            };
-            rebuildVirtualTagIndex(fileMetaMap, readFileContent, caseSensitive);
+                // --- Register virtual tag (empty entry allowed for now) ---
+                if (!virtualTagIndexMap.has(trimmed)) {
+                    virtualTagIndexMap.set(trimmed, new Map<string, FileMeta>());
+                }
+                const readFileContent = (filePath: string): string => {
+                    return readFileEntry(filePath).content;
+                };
+                rebuildVirtualTagIndex(fileMetaMap, readFileContent, caseSensitive);
+            });
 
             // --- Refresh tree ---
             rebuildTree();
@@ -611,9 +661,9 @@ export async function activate(context: vscode.ExtensionContext) {
                 autoSaveTimers.clear();
             }
             if (event.affectsConfiguration('vsJournal.systemTags.visibility')) {
-                rebuildTree(); // No rescan required
+                rebuildTree(); // No re-scan required
             }
-            if (event.affectsConfiguration('vsJournal.virtualTags.caseSensitive')){
+            if (event.affectsConfiguration('vsJournal.virtualTags.caseSensitive')) {
                 const config = vscode.workspace.getConfiguration('vsJournal');
                 const caseSensitive = config.get<boolean>('virtualTags.caseSensitive', true);
 
@@ -639,18 +689,21 @@ export async function activate(context: vscode.ExtensionContext) {
             const panel = getCurrentPanel();
             if (!panel) { return; }
 
-            const currentFiles = getPreviewState(panel);
-            if (!currentFiles) { return; }
+            const state = getPreviewState(panel);
+            if (!state) { return; }
 
             const meta = createFileMeta(document.uri.fsPath);
-            const updatedFiles = currentFiles.map(f =>
+            const updatedFiles = state.files.map(f =>
                 f.filePath === meta.filePath ? meta : f
             );
 
             const check = checkPreviewLimits(updatedFiles);
 
-            setPreviewState(panel, check.limitedFiles);
-
+            setPreviewState(panel, {
+                files: check.limitedFiles,
+                context: state.context,
+                highlight: state.highlight
+            });
             await updatePreviewPanel(panel, check.limitedFiles, {
                 limitExceeded: check.limitExceeded,
                 message: check.message
@@ -658,10 +711,10 @@ export async function activate(context: vscode.ExtensionContext) {
         }),
 
         vscode.workspace.onDidChangeTextDocument(event => {
-            if (!isJournalFile(event.document)) {return;}
+            if (!isJournalFile(event.document)) { return; }
             scheduleAutoSave(event.document);
         }),
-    
+
         vscode.workspace.onDidCloseTextDocument(document => {
             clearCursorLine(document.uri.fsPath);
         })
@@ -740,4 +793,4 @@ async function saveDocument(document: vscode.TextDocument) {
     }
 }
 
-export function deactivate() {}
+export function deactivate() { }

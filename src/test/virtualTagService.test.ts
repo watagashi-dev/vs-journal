@@ -39,8 +39,10 @@ baz`;
 
         const files = virtualTagIndexMap.get('foo');
         assert.ok(files);
-        assert.strictEqual(files!.length, 1);
-        assert.strictEqual(files![0].filePath, 'a.md');
+        assert.strictEqual(files!.size, 1);
+
+        const file = Array.from(files!.values())[0];
+        assert.strictEqual(file.filePath, 'a.md');
     });
 
     test('multiple hits in one file (case sensitive)', () => {
@@ -55,8 +57,10 @@ foo`;
         indexVirtualTags(meta, content, true);
 
         const files = virtualTagIndexMap.get('foo')!;
-        assert.strictEqual(files.length, 1);
-        assert.strictEqual(files[0].filePath, 'a.md');
+        assert.strictEqual(files.size, 1);
+
+        const file = Array.from(files.values())[0];
+        assert.strictEqual(file.filePath, 'a.md');
     });
 
     test('multiple tags (case sensitive)', () => {
@@ -74,8 +78,8 @@ foobar`;
         const fooFiles = virtualTagIndexMap.get('foo')!;
         const barFiles = virtualTagIndexMap.get('bar')!;
 
-        assert.strictEqual(fooFiles.length, 1);
-        assert.strictEqual(barFiles.length, 1);
+        assert.strictEqual(fooFiles.size, 1);
+        assert.strictEqual(barFiles.size, 1);
     });
 
     test('no match (case sensitive)', () => {
@@ -100,8 +104,10 @@ foobar`;
         indexVirtualTags(meta2, 'no match', true);
 
         const files = virtualTagIndexMap.get('foo')!;
-        assert.strictEqual(files.length, 1);
-        assert.strictEqual(files[0].filePath, 'a.md');
+        assert.strictEqual(files.size, 1);
+
+        const file = Array.from(files.values())[0];
+        assert.strictEqual(file.filePath, 'a.md');
     });
 
     test('japanese match (case sensitive)', () => {
@@ -114,8 +120,10 @@ foobar`;
         indexVirtualTags(meta, content, true);
 
         const files = virtualTagIndexMap.get('仮想タグ')!;
-        assert.strictEqual(files.length, 1);
-        assert.strictEqual(files[0].filePath, 'a.md');
+        assert.strictEqual(files.size, 1);
+
+        const file = Array.from(files.values())[0];
+        assert.strictEqual(file.filePath, 'a.md');
     });
 
     // =========================
@@ -132,7 +140,7 @@ foobar`;
         indexVirtualTags(meta, content, false);
 
         const files = virtualTagIndexMap.get('foo')!;
-        assert.strictEqual(files.length, 1);
+        assert.strictEqual(files.size, 1);
     });
 
     test('case insensitive no match when different string', () => {
@@ -172,7 +180,7 @@ foobar`;
         const fooFiles = virtualTagIndexMap.get('foo')!;
         const barFiles = virtualTagIndexMap.get('bar')!;
 
-        assert.strictEqual(fooFiles.length, 1);
-        assert.strictEqual(barFiles.length, 1);
+        assert.strictEqual(fooFiles.size, 1);
+        assert.strictEqual(barFiles.size, 1);
     });
 });

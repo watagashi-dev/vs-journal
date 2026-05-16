@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="
@@ -12,13 +13,20 @@
     <link id="hljs-theme" rel="stylesheet" href="{{themeUrl}}">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
 </head>
-<body>
-    <div class="edit-hint">{{hintText}}</div>
 
+
+<body data-rules="{{highlightRules}}">
+    <div class="edit-hint">{{hintText}}</div>
+    <div id="vjs-nav" class="vjs-nav hidden">
+        <button id="vjs-prev">↑</button>
+        <span id="vjs-counter">0 / 0</span>
+        <button id="vjs-next">↓</button>
+    </div>
     {{content}}
 
     {{warning}}
 
     <script src="{{scriptUri}}"></script>
 </body>
+
 </html>
