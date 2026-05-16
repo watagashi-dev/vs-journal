@@ -1,4 +1,5 @@
 declare function acquireVsCodeApi(): any;
+const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
 
 (function () {
     // =========================================================
@@ -12,6 +13,13 @@ declare function acquireVsCodeApi(): any;
         | { type: 'jumpToFile'; filePath: string }
         | { type: 'closePreview' }
         | { type: 'edit' };
+
+    type VirtualMatch = {
+        filePath: string;
+        line: number;
+        start: number;
+        end: number;
+    };
 
     function postMessage(msg: VsCodeMessage): void {
         vscode.postMessage(msg);
@@ -122,6 +130,19 @@ declare function acquireVsCodeApi(): any;
     // =========================================================
     function setupKeyHandler(): void {
         window.addEventListener('keydown', (e) => {
+            // Ctrl + ↑ / ↓ → 仮想タグジャンプ
+            if (e.ctrlKey && e.key === 'ArrowDown') {
+                e.preventDefault();
+                moveNext();
+                return;
+            }
+
+            if (e.ctrlKey && e.key === 'ArrowUp') {
+                e.preventDefault();
+                movePrev();
+                return;
+            }
+
             if (e.key === 'Enter' || e.key === 'Escape') {
                 if (previewFileCount > 1) {
                     postMessage({ type: 'closePreview' });
@@ -143,6 +164,7 @@ declare function acquireVsCodeApi(): any;
     // Window
     // =========================================================
     function setupWindowHandlers(): void {
+        window.addEventListener('scroll', updateCurrentIndexFromScroll, { passive: true });
         window.addEventListener('scroll', resetHeaderTimer, { passive: true });
         window.addEventListener('wheel', resetHeaderTimer, { passive: true });
 
@@ -162,7 +184,268 @@ declare function acquireVsCodeApi(): any;
         const hljs = (window as any).hljs;
         if (!hljs) { return; }
         hljs.highlightAll();
+        applyVirtualTagHighlight();
     }
+
+    function applyVirtualTagHighlight(): void {
+        const raw = document.body.dataset.rules;
+        if (!raw) {
+            return;
+        }
+
+        let rules: Array<{
+            keyword: string;
+            className: string;
+            caseSensitive: boolean;
+        }> = [];
+
+        try {
+            rules = JSON.parse(decodeURIComponent(raw));
+        } catch {
+            return;
+        }
+
+        if (!rules || rules.length === 0) {
+            return;
+        }
+
+        const codeBlocks = document.querySelectorAll('pre code');
+
+        codeBlocks.forEach((block) => {
+            const walker = document.createTreeWalker(
+                block,
+                NodeFilter.SHOW_TEXT,
+                null
+            );
+
+            const textNodes: Text[] = [];
+            let current: Node | null;
+
+            while ((current = walker.nextNode())) {
+                textNodes.push(current as Text);
+            }
+
+            textNodes.forEach((node) => {
+                let text = node.nodeValue;
+                if (!text) {
+                    return;
+                }
+
+                let replaced = false;
+
+                rules.forEach((rule) => {
+                    const { keyword, className, caseSensitive } = rule;
+
+                    if (!keyword) {
+                        return;
+                    }
+
+                    if (caseSensitive) {
+                        if (!text!.includes(keyword)) {
+                            return;
+                        }
+
+                        const parts = text!.split(keyword);
+                        if (parts.length <= 1) {
+                            return;
+                        }
+
+                        const frag = document.createDocumentFragment();
+
+                        parts.forEach((part, i) => {
+                            if (i > 0) {
+                                const span = document.createElement('span');
+                                span.className = className;
+                                span.textContent = keyword;
+                                frag.appendChild(span);
+                            }
+                            if (part) {
+                                frag.appendChild(document.createTextNode(part));
+                            }
+                        });
+
+                        node.parentNode?.replaceChild(frag, node);
+                        replaced = true;
+                    } else {
+                        const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const regex = new RegExp(escaped, 'gi');
+
+                        if (!regex.test(text!)) {
+                            return;
+                        }
+
+                        const frag = document.createDocumentFragment();
+                        let lastIndex = 0;
+
+                        text!.replace(regex, (match, offset) => {
+                            const before = text!.slice(lastIndex, offset);
+                            if (before) {
+                                frag.appendChild(document.createTextNode(before));
+                            }
+
+                            const span = document.createElement('span');
+                            span.className = className;
+                            span.textContent = match;
+                            frag.appendChild(span);
+
+                            lastIndex = offset + match.length;
+                            return match;
+                        });
+
+                        const tail = text!.slice(lastIndex);
+                        if (tail) {
+                            frag.appendChild(document.createTextNode(tail));
+                        }
+
+                        node.parentNode?.replaceChild(frag, node);
+                        replaced = true;
+                    }
+                });
+
+                if (replaced) {
+                    // do nothing (node already replaced)
+                }
+            });
+        });
+    }
+
+    const nav = document.getElementById('vjs-nav');
+    const counter = document.getElementById('vjs-counter');
+    const prevBtn = document.getElementById('vjs-prev');
+    const nextBtn = document.getElementById('vjs-next');
+
+    let matches: VirtualMatch[] = [];
+    let currentIndex = 0;
+
+    function updateUI() {
+        if (!nav || !counter) { return; }
+
+        const m = matches.length;
+
+        if (m < 2) {
+            nav.classList.add('hidden');
+            return;
+        }
+
+        nav.classList.remove('hidden');
+        counter.textContent = `${currentIndex + 1} / ${m}`;
+    }
+
+    let lockedTargetIndex: number | null = null;
+
+    function scrollToMatch(index: number) {
+        const el = highlightElements[index];
+        if (!el) { return; }
+
+        lockedTargetIndex = index;
+
+        const rect = el.getBoundingClientRect();
+        const top = window.scrollY + rect.top - 80;
+
+        window.scrollTo({
+            top,
+            behavior: 'smooth'
+        });
+    }
+    function updateCurrentIndexFromScroll() {
+        if (!highlightElements.length) return;
+
+        if (lockedTargetIndex !== null) {
+            const el = highlightElements[lockedTargetIndex];
+            if (!el) return;
+
+            const rect = el.getBoundingClientRect();
+            const visible =
+                rect.top < window.innerHeight &&
+                rect.bottom > 0;
+
+            if (visible) {
+                currentIndex = lockedTargetIndex;
+                lockedTargetIndex = null;
+                updateUI();
+            }
+
+            return;
+        }
+
+        // ===== 通常スクロール時 =====
+
+        const currentEl = highlightElements[currentIndex];
+
+        // 今のがまだ見えてるなら何もしない
+        if (currentEl) {
+            const rect = currentEl.getBoundingClientRect();
+            const visible =
+                rect.top < window.innerHeight &&
+                rect.bottom > 0;
+
+            if (visible) return;
+        }
+
+        const center = window.innerHeight / 2;
+
+        let closestIndex = currentIndex;
+        let minDistance = Infinity;
+
+        highlightElements.forEach((el, index) => {
+            const rect = el.getBoundingClientRect();
+            const elCenter = rect.top + rect.height / 2;
+
+            const dist = Math.abs(elCenter - center);
+
+            if (dist < minDistance) {
+                minDistance = dist;
+                closestIndex = index;
+            }
+        });
+
+        if (closestIndex !== currentIndex) {
+            currentIndex = closestIndex;
+            updateUI();
+        }
+    }
+
+    function moveNext() {
+        if (matches.length === 0) { return; }
+
+        currentIndex = (currentIndex + 1) % matches.length;
+        scrollToMatch(currentIndex);
+        updateUI();
+    }
+
+    function movePrev() {
+        if (matches.length === 0) { return; }
+
+        currentIndex =
+            (currentIndex - 1 + matches.length) % matches.length;
+
+        scrollToMatch(currentIndex);
+        updateUI();
+    }
+
+    function setupNavButtons() {
+        if (nav) {
+            nav.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                movePrev();
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                moveNext();
+            });
+        }
+    }
+
+    let highlightElements: HTMLElement[] = [];
 
     // theme変更対応（旧コードで消えがちな部分）
     function setupMessageHandler(): void {
@@ -191,6 +474,15 @@ declare function acquireVsCodeApi(): any;
             if (msg.type === 'setPreviewCount') {
                 setPreviewFileCount(msg.count);
                 return;
+            }
+
+            if (msg.type === 'setMatches') {
+                matches = msg.matches || [];
+                currentIndex = 0;
+                highlightElements = Array.from(
+                    document.querySelectorAll('.vjs-virtual-tag')
+                ) as HTMLElement[];
+                updateUI();
             }
         });
     }
@@ -224,14 +516,18 @@ declare function acquireVsCodeApi(): any;
         setupKeyHandler();
         setupWindowHandlers();
         setupMessageHandler();
+        setupNavButtons();
         initWarningBehavior();
     }
 
-    init();
+    function start() {
+        init();
+        runHighlight();
+    }
 
     if (document.readyState === 'loading') {
-        window.addEventListener('DOMContentLoaded', runHighlight);
+        window.addEventListener('DOMContentLoaded', start);
     } else {
-        runHighlight();
+        start();
     }
 })();

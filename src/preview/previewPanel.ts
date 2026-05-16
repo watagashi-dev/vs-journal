@@ -8,19 +8,62 @@ let currentPanel: vscode.WebviewPanel | undefined;
 let currentDocument: vscode.TextDocument | undefined;
 let extensionContext: vscode.ExtensionContext;
 
-// ===== Preview State =====
-type PreviewState = {
-    files: FileMeta[];
-    context?: any;
+export type PreviewContext = {
+    kind: 'file' | 'tag';
+    tagType?: 'system' | 'user' | 'virtual';
+    tagName?: string;
 };
 
-const previewStateMap = new Map<vscode.WebviewPanel, PreviewState>();
+// =========================================
+// Virtual Tag Session (new unified state)
+// =========================================
+export type VirtualTagMatch = {
+    filePath: string;
+    line: number;
+    start: number;
+    end: number;
+};
 
-export function setPreviewState(panel: vscode.WebviewPanel, state: PreviewState) {
+export type VirtualTagSession = {
+    keyword: string;
+    caseSensitive: boolean;
+    matches: VirtualTagMatch[];
+    currentIndex: number;
+};
+
+const previewStateMap = new Map<
+    vscode.WebviewPanel,
+    {
+        files: FileMeta[];
+        context?: PreviewContext;
+        highlight?: {
+            keyword: string;
+            className: string;
+        }
+        virtualTagSession?: VirtualTagSession;
+    }
+>();
+
+export function setPreviewState(
+    panel: vscode.WebviewPanel,
+    state: {
+        files: FileMeta[];
+        context?: PreviewContext;
+        highlight?: { keyword: string, className: string };
+        virtualTagSession?: VirtualTagSession;
+    }
+) {
     previewStateMap.set(panel, state);
 }
 
-export function getPreviewState(panel: vscode.WebviewPanel): PreviewState | undefined {
+export function getPreviewState(
+    panel: vscode.WebviewPanel
+): {
+    files: FileMeta[];
+    context?: PreviewContext;
+    highlight?: { keyword: string, className: string };
+    virtualTagSession?: VirtualTagSession;
+} | undefined {
     return previewStateMap.get(panel);
 }
 
@@ -212,9 +255,35 @@ async function buildHtml(
     options?: {
         limitExceeded?: boolean;
         message?: string;
+        context?: PreviewContext;
+        highlight?: { keyword: string, className: string };
     }
 ): Promise<string> {
     const webview = panel.webview;
+
+    // =========================================
+    // Resolve highlight (single source of truth)
+    // =========================================
+    const highlight = options?.highlight;
+
+    const caseSensitive = vscode.workspace
+        .getConfiguration('vsJournal')
+        .get<boolean>('virtualTags.caseSensitive', true);
+
+
+    // =========================================
+    // Create Virtual Tag Session (no behavior change yet)
+    // =========================================
+    let virtualTagSession: VirtualTagSession | undefined = undefined;
+
+    if (highlight?.keyword) {
+        virtualTagSession = {
+            keyword: highlight.keyword,
+            caseSensitive,
+            matches: [],
+            currentIndex: 0
+        };
+    }
 
     let htmlContent = '';
     let warningHtml = '';
@@ -240,7 +309,81 @@ async function buildHtml(
         );
         const text = Buffer.from(fileText).toString('utf8');
 
-        htmlContent += md.render(text, { filePath: fileMeta.filePath });
+        // =========================================
+        // Collect virtual tag matches (no usage yet)
+        // =========================================
+        if (virtualTagSession) {
+            const lines = text.split('\n');
+
+            for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+                const lineText = lines[lineIndex];
+
+                if (!lineText) {
+                    continue;
+                }
+                const keyword = virtualTagSession.keyword;
+
+                if (virtualTagSession.caseSensitive) {
+                    let index = 0;
+
+                    while (true) {
+                        const found = lineText.indexOf(keyword, index);
+
+                        if (found === -1) {
+                            break;
+                        }
+
+                        virtualTagSession.matches.push({
+                            filePath: fileMeta.filePath,
+                            line: lineIndex,
+                            start: found,
+                            end: found + keyword.length
+                        });
+
+                        index = found + keyword.length;
+                    }
+                } else {
+                    const lowerLine = lineText.toLowerCase();
+                    const lowerKeyword = keyword.toLowerCase();
+
+                    let index = 0;
+
+                    while (true) {
+                        const found = lowerLine.indexOf(lowerKeyword, index);
+
+                        if (found === -1) {
+                            break;
+                        }
+
+                        virtualTagSession.matches.push({
+                            filePath: fileMeta.filePath,
+                            line: lineIndex,
+                            start: found,
+                            end: found + keyword.length
+                        });
+
+                        index = found + keyword.length;
+                    }
+                }
+            }
+            const state = getPreviewState(panel);
+            if (state) {
+                state.virtualTagSession = virtualTagSession;
+            }
+        }
+
+        htmlContent += md.render(text, {
+            filePath: fileMeta.filePath,
+            context: options?.context,
+            rules: highlight
+                ? [{
+                    keyword: highlight.keyword,
+                    className: highlight.className,
+                    caseSensitive
+                }]
+                : []
+        });
+
         htmlContent += '</div>\n';
     }
 
@@ -271,6 +414,21 @@ async function buildHtml(
         .replace(/{{hintText}}/g, hintText)
         .replace(/{{content}}/g, htmlContent)
         .replace(/{{warning}}/g, warningHtml)
+        .replace(/{{highlightRules}}/g, (() => {
+            if (!highlight) {
+                return '';
+            }
+
+            const rules = [
+                {
+                    keyword: highlight.keyword,
+                    className: highlight.className,
+                    caseSensitive
+                }
+            ];
+
+            return encodeURIComponent(JSON.stringify(rules));
+        })())
         .replace(/{{scriptUri}}/g, scriptUri.toString());
 }
 
@@ -283,8 +441,21 @@ export async function updatePreviewPanel(
     }
 ) {
     try {
-        const html = await buildHtml(panel, filesToPreview, options);
+        const state = getPreviewState(panel);
+
+        const html = await buildHtml(panel, filesToPreview, {
+            ...options,
+            context: state?.context,
+            highlight: state?.highlight
+        });
         panel.webview.html = html;
+
+        if (state?.virtualTagSession) {
+            panel.webview.postMessage({
+                type: 'setMatches',
+                matches: state.virtualTagSession.matches
+            });
+        }
         panel.webview.postMessage({
             type: 'setPreviewCount',
             count: filesToPreview.length

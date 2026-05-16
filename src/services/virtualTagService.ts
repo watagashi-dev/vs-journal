@@ -3,6 +3,7 @@ import {
     virtualTagSet,
     virtualTagIndexMap
 } from '../state';
+import { filePathToKey } from '../extension';
 
 function matchVirtualTag(
     tag: string,
@@ -15,11 +16,15 @@ function matchVirtualTag(
 }
 
 function addMetaToTagIndex(tag: string, meta: FileMeta): void {
-    const files = virtualTagIndexMap.get(tag) ?? [];
+    let fileMap = virtualTagIndexMap.get(tag);
 
-    if (!files.some(f => f.filePath === meta.filePath)) {
-        virtualTagIndexMap.set(tag, [...files, meta]);
+    if (!fileMap) {
+        fileMap = new Map<string, FileMeta>();
+        virtualTagIndexMap.set(tag, fileMap);
     }
+
+    const key = filePathToKey(meta.filePath);
+    fileMap.set(key, meta);
 }
 
 /**
@@ -30,7 +35,6 @@ export function indexVirtualTags(
     content: string,
     caseSensitive: boolean
 ): void {
-
     if (virtualTagSet.size === 0) {
         return;
     }
@@ -54,13 +58,12 @@ export function clearVirtualTagState(): void {
 }
 
 export function removeVirtualTagsForFile(filePath: string): void {
-    for (const [tag, files] of virtualTagIndexMap.entries()) {
-        const updated = files.filter(f => f.filePath !== filePath);
+    for (const [tag, fileMap] of virtualTagIndexMap.entries()) {
+        const key = filePathToKey(filePath);
+        fileMap.delete(key);
 
-        if (updated.length === 0) {
+        if (fileMap.size === 0) {
             virtualTagIndexMap.delete(tag);
-        } else {
-            virtualTagIndexMap.set(tag, updated);
         }
     }
 }
