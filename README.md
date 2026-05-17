@@ -290,6 +290,7 @@ Cmd+Option+P (macOS)
 | vsJournal.autoSave | Auto-save delay (ms) | 800 |
 | vsJournal.enableDateTime | Insert date/time on new file | true |
 | vsJournal.confirmDeleteFile | Confirm before deleting file | true |
+| vsJournal.confirmDeleteVirtualTag | Confirm before deleting virtual tag | true |
 | vsJournal.virtualTags.caseSensitive | Case-sensitive virtual tags | false |
 | vsJournal.systemTags.visibility | Control system tag visibility | { "Today": true } |
 
@@ -301,6 +302,7 @@ Example:
   "vsJournal.autoSave": 30000,
   "vsJournal.enableDateTime": false,
   "vsJournal.confirmDeleteFile": false,
+  "vsJournal.confirmDeleteVirtualTag": false,
   "vsJournal.virtualTags.caseSensitive": true,
   "vsJournal.systemTags.visibility": {
     "Today": true

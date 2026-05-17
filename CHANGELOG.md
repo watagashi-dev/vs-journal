@@ -1,6 +1,38 @@
 # Change Log
 
-## [0.3.0] - 2026-04
+## [0.3.1] - 2026-05
+
+# Changelog
+
+## Added
+
+- Added virtual tag deletion from the tag tree context menu.
+- Added optional confirmation dialog for virtual tag deletion (`vsJournal.confirmDeleteVirtualTag`).
+- Added virtual tag keyword highlighting inside code blocks.
+- Added navigation UI for virtual tag matches in preview.
+- Added keyboard navigation for virtual tag matches (`Ctrl + ↑ / ↓`).
+- Added scroll synchronization for virtual tag navigation.
+- Added user tag color highlighting in preview.
+- Added support for consistent preview context propagation between tree view and preview panel.
+
+## Changed
+
+- Refactored preview highlighting into a unified rules-based pipeline.
+- Unified virtual tag session state management.
+- Unified preview context handling between file preview and tag preview.
+- Unified tag source model and removed duplicated node source handling.
+- Improved virtual tag match synchronization between webview and extension host.
+- Improved DOM-based scrolling accuracy for virtual tag navigation.
+- Improved preview rendering architecture for future extensibility.
+
+## Fixed
+
+- Fixed duplicate `fileMetaMap` entries caused by Windows file path case mismatches.
+- Fixed virtual tag match collection inside code blocks.
+- Fixed highlight consistency across normal text and code blocks.
+- Fixed webview dataset handling for highlight rules.
+
+## [0.3.0] - 2026-04-26
 
 ### Added
 - **Virtual Tags**: Introduced a dynamic tagging system. You can now add "Virtual Tags" that automatically group files containing specific keywords without manually adding hash tags to the file content.

@@ -129,7 +129,7 @@ Markdown プレビューを拡張し、読みやすさと操作性を向上さ�
 - アルファベット順で自動ソート
 - 各タグ配下のファイルもタイトル順でソート
 
-タグツリーのコンテクストメニューからファイル削除。
+タグツリーのコンテクストメニューからファイルおよび仮想タグを削除できます。
 
 ---
 
@@ -245,6 +245,7 @@ Cmd+Option+P (Mac)
 | vsJournal.autoSave | 自動保存(ms) | 800 |
 | vsJournal.enableDateTime | 日時自動挿入 | true |
 | vsJournal.confirmDeleteFile | ファイル削除確認 | true |
+| vsJournal.confirmDeleteVirtualTag | 仮想タグ削除確認 | true |
 | vsJournal.virtualTags.caseSensitive | 仮想タグの大文字小文字区別 | false |
 | vsJournal.systemTags.visibility | システムタグ表示制御 | { "Today": true } |
 
@@ -256,6 +257,7 @@ Cmd+Option+P (Mac)
   "vsJournal.autoSave": 30000,
   "vsJournal.enableDateTime": false,
   "vsJournal.confirmDeleteFile": false,
+  "vsJournal.confirmDeleteVirtualTag": false,
   "vsJournal.virtualTags.caseSensitive": true,
   "vsJournal.systemTags.visibility": {
     "Today": true
