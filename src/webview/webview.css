@@ -397,10 +397,12 @@ body>*:first-child {
 }
 
 .vjs-user-tag {
-  color: var(--vscode-textLink-foreground);
-  background-color: rgba(100, 150, 255, 0.08);
-  border-radius: 3px;
-  padding: 0 2px;
+  color: var(--vscode-terminal-ansiMagenta);
+  background-color: rgba(200, 120, 255, 0.10);
+  border-radius: 999px;
+  padding: 0 6px;
+  font-size: 0.95em;
+  font-style: italic;
 }
 
 .vjs-virtual-tag {

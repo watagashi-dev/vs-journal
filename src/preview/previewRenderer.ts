@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import MarkdownIt from 'markdown-it';
 import taskLists from 'markdown-it-task-lists';
 
-import { getTagRanges } from '../services/tagLogic';
+import { getLineType, getTagRanges } from '../services/tagLogic';
 
 export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | undefined) {
     const md = new MarkdownIt({
@@ -202,14 +202,19 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
                 .replace(/</g, "&lt;")
                 .replace(/>/g, "&gt;");
 
-        const ranges = getTagRanges(content);
-
         const rules = env?.rules ?? [];
 
         const apply = (text: string): string => {
             const escaped = escapeHtml(text);
             return applyRules(escaped, rules);
         };
+
+        const lineType = getLineType(content);
+
+        if (lineType !== 'tag') {
+            return apply(content);
+        }
+        const ranges = getTagRanges(content);
 
         if (ranges.length === 0) {
             return apply(content);
