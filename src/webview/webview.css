@@ -405,6 +405,17 @@ body>*:first-child {
   font-style: italic;
 }
 
+.vjs-heading-tag {
+  color: var(--vscode-terminal-ansiMagenta);
+  background-color: rgba(200, 120, 255, 0.10);
+  border-radius: 999px;
+  padding: 0 6px;
+  font-style: italic;
+  font-size: 0.75em;
+  font-weight: normal;
+  opacity: 0.85;
+}
+
 .vjs-virtual-tag {
   background-color: rgba(255, 200, 0, 0.3);
 }

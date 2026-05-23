@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import MarkdownIt from 'markdown-it';
 import taskLists from 'markdown-it-task-lists';
 
-import { getLineType, getTagRanges } from '../services/tagLogic';
+import { getLineType, getTagRanges, isTagLineValid } from '../services/tagLogic';
 
 export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | undefined) {
     const md = new MarkdownIt({
@@ -150,6 +150,7 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
 
         return defaultLinkOpen(tokens, idx, options, env, self);
     };
+
     function applyRules(
         text: string,
         rules: Array<{
@@ -186,7 +187,7 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
         });
 
         return result;
-    }
+    };
 
     md.renderer.rules.text = (tokens, idx, options, env) => {
         const token = tokens[idx];
@@ -211,7 +212,20 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
 
         const lineType = getLineType(content);
 
-        if (lineType !== 'tag') {
+        if (env?.inHeading) {
+            const hashPos = content.indexOf('#');
+
+            if (hashPos === -1) {
+                return apply(content);
+            }
+
+            const tagPart = content.slice(hashPos);
+
+            if (!isTagLineValid(tagPart)) {
+                return apply(content);
+            }
+        }
+        else if (lineType !== 'tag' || !isTagLineValid(content)) {
             return apply(content);
         }
         const ranges = getTagRanges(content);
@@ -228,7 +242,12 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
             result += apply(segment);
 
             const tagText = content.slice(r.start, r.end);
-            result += `<span class="vjs-user-tag">${escapeHtml(tagText)}</span>`;
+            if (env?.inHeading) {
+                result += `<span class="vjs-heading-tag">${escapeHtml(tagText)}</span>`;
+            }
+            else {
+                result += `<span class="vjs-user-tag">${escapeHtml(tagText)}</span>`;
+            }
 
             lastIndex = r.end;
         }
@@ -239,6 +258,15 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
         return result;
     };
 
+    md.renderer.rules.heading_open = (tokens, idx, options, env, self) => {
+        env.inHeading = true;
+        return self.renderToken(tokens, idx, options);
+    };
+
+    md.renderer.rules.heading_close = (tokens, idx, options, env, self) => {
+        env.inHeading = false;
+        return self.renderToken(tokens, idx, options);
+    };
     return md;
 }
 

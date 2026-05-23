@@ -16,13 +16,13 @@ export function getLineType(line: string): 'tag' | 'heading' | 'other' | 'partia
     const trimmed = line.trim();
 
     // Single #
-    if (trimmed === '#') {return 'partial';}
+    if (trimmed === '#') { return 'partial'; }
 
     // Heading (# + space required)
-    if (/^#+\s/.test(trimmed)) {return 'heading';}
+    if (/^#+\s/.test(trimmed)) { return 'heading'; }
 
     // Tag (# + non-space). Excludes lines starting with multiple '#' (e.g., headings)
-    if (/^#\S/.test(trimmed) && !/^#{2,}\S/.test(trimmed)) {return 'tag';}
+    if (/^#\S/.test(trimmed) && !/^#{2,}\S/.test(trimmed)) { return 'tag'; }
 
     return 'other';
 }
@@ -91,7 +91,7 @@ function normalizeInlineCode(line: string): string {
 // Tag validation
 // ----------------------------
 
-function isTagLineValid(line: string, allowSingleHash = false): boolean {
+export function isTagLineValid(line: string, allowSingleHash = false): boolean {
     const safeLine = normalizeInlineCode(line);
 
     const tokens = safeLine.trim().split(/\s+/);
