@@ -11,7 +11,7 @@ https://github.com/watagashi-dev/vs-journal
 
 ## Overview
 
-VS Journal is built for developers who use VS Code daily and want a frictionless way to keep notes.
+VS Journal is built for people who use VS Code daily and want a frictionless way to keep notes.
 
 - **Fully Local**: All data is stored as local Markdown files.
 - **No Database Required**: Notes are managed on a simple file-based system.
@@ -70,6 +70,14 @@ Click a title (or filename) in the tag tree to open the preview.
 - Clicking a tag shows multiple related notes in a single combined view  
 
 ![](images/screenshot-preview.png)
+
+When a preview contains multiple matches from a virtual tag,
+a navigation bar is displayed, allowing quick jumps between matches.
+
+![](images/screenshot-navi.png)
+
+- Keyboard navigation is also available using `Ctrl+Up / Down Arrow`.
+- The current match is automatically synchronized with scrolling.
 
 ### Tag View
 
@@ -131,7 +139,13 @@ Tags can be nested using `/` (up to 4 levels):
 
 ### 4. Virtual Tags (Dynamic Tagging)
 
-Assign tags dynamically based on specific keywords without writing physical hashtags into your files. This allows you to group related notes automatically based on their content.
+Group notes dynamically without writing hashtags into files.
+Virtual tags are based on search conditions and can be used to organize related notes automatically.
+
+- Save search conditions as reusable virtual tags
+- Highlight matching content directly in preview
+- Display matching notes in a combined view
+- Navigate between matches using UI controls or keyboard shortcuts
 
 ---
 
@@ -149,18 +163,20 @@ Tags are suggested as you type based on existing tags.
 
 The Markdown preview is optimized for readability and interaction.
 
+- Highlighting for user tags and virtual tag matches
 - Syntax highlighting for code blocks
 - Improved table rendering (header emphasis, borders)
 - Better checklist visibility
 - Inline display of external images
-- Confirmation dialog when opening external links
+- Support for opening external links
 
 #### Tag-Based Combined Preview
 
 Clicking a tag shows all related notes merged into a single preview.
 
 - Useful for reviewing related entries across files
-- Internally limited to prevent performance issues
+
+Large note collections may be partially displayed to maintain performance.
 
 ---
 
@@ -169,9 +185,8 @@ Clicking a tag shows all related notes merged into a single preview.
 Organize and navigate notes through a hierarchical tag tree.
 
 - Tags displayed as a tree structure
-- Automatically sorted alphabetically
-- Files within tags are sorted by title
-- **File Management**: Delete files directly from the Tag Tree context menu.
+- Automatically sorted
+- Manage files and virtual tags directly from the Tag Tree context menu
 
 ---
 
@@ -184,6 +199,8 @@ Tags automatically assigned based on file state.
 
 These are dynamically generated and not based on file content.
 
+System tag visibility can be configured in settings.
+
 ---
 
 ### 9. Keyboard & UI Interaction
@@ -193,6 +210,7 @@ Quick access to preview while editing.
 - Open preview via shortcut or command
 - Preview can also be triggered from the side panel toolbar
 - Smooth transition between preview and editor
+- When virtual tag navigation is available, use `Ctrl+Up` / `Ctrl+Down Arrow` to jump between matches
 
 ---
 
@@ -314,10 +332,10 @@ Example:
 
 ## Directory Structure
 
-Files are stored flatly without subfolders:
+Example:
 
 ```
-VSJournal/
+Journal Directory/
   2025-03-07-10-08.md
   2025-03-08-14-30.md
   2026-01-01-18-23.md
@@ -327,8 +345,9 @@ VSJournal/
 
 ## Who It's For
 
-- Developers using VS Code daily
-- People who want to keep work logs
+- People who use VS Code regularly
+- Users who want to keep work logs or ideas
+- People who prefer Markdown-based notes
 - Users looking for a lightweight note system
 
 ---
@@ -340,7 +359,7 @@ VSJournal/
 - To build a simple tag-based system
 - To stay fast and minimal
 
-Inspired by **HOWM (Hitori Otegaru Wiki Modoki)** for Emacs.
+Inspired by HOWM's philosophy of lightweight, file-based note taking.
 
 ---
 
@@ -350,9 +369,7 @@ VS Journal will continue to evolve while staying simple and lightweight.
 
 ### Better Organization
 
-- Virtual tags (search-based dynamic tags)
-- Heading-based structure and navigation
-- Section-level combined preview
+- Improved organization and navigation features
 
 ### Writing Experience
 
@@ -366,7 +383,7 @@ VS Journal will continue to evolve while staying simple and lightweight.
 ### File Management
 
 - File renaming support
-- Optional folder-based organization
+- Enhanced storage organization options
 
 ---
 
