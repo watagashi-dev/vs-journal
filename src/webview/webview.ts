@@ -209,7 +209,7 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
             return;
         }
 
-        const codeBlocks = document.querySelectorAll('pre code');
+        const codeBlocks = document.querySelectorAll('code');
 
         codeBlocks.forEach((block) => {
             const walker = document.createTreeWalker(
