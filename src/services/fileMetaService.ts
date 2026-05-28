@@ -75,13 +75,14 @@ export function createFileMeta(
             tags.push(...extracted);
         }
     }
+    const uniqueTags = [...new Set(tags)];
 
     // --- 5. Return ---
     return {
         filePath,
         fileName,
         title,
-        tags,
+        tags: uniqueTags,
         ctime,
         mtime,
         size
