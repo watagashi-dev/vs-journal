@@ -136,6 +136,42 @@ function isHeadingTagPartValid(line: string, allowSingleHash = false): boolean {
 }
 
 // ----------------------------
+// Parsed heading tag validation
+// ----------------------------
+
+/**
+ * markdown-it parsed inline heading validation
+ *
+ * Example:
+ * raw markdown:
+ *   ## heading #tag
+ *
+ * parsed inline content:
+ *   heading #tag
+ */
+export function isParsedHeadingTagPartValid(
+    line: string
+): boolean {
+
+    const ranges = getTagRanges(line);
+
+    // no tags -> valid heading
+    if (ranges.length === 0) {
+        return true;
+    }
+
+    const first = ranges[0];
+
+    const tagPart =
+        line
+            .slice(first.start)
+            .trim();
+
+    return isTagLineValid(
+        tagPart
+    );
+}
+// ----------------------------
 // Tag extraction
 // ----------------------------
 

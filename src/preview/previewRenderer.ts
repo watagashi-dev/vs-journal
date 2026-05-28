@@ -2,7 +2,11 @@ import * as vscode from 'vscode';
 import MarkdownIt from 'markdown-it';
 import taskLists from 'markdown-it-task-lists';
 
-import { getLineType, getTagRanges, isTagLineValid } from '../services/tagLogic';
+import {
+    getTagRanges,
+    isTagLineValid,
+    isParsedHeadingTagPartValid
+} from '../services/tagLogic';
 
 export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | undefined) {
     const md = new MarkdownIt({
@@ -189,7 +193,13 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
         return result;
     };
 
-    md.renderer.rules.text = (tokens, idx, options, env) => {
+    md.renderer.rules.text = (
+        tokens,
+        idx,
+        options,
+        env
+    ) => {
+
         const token = tokens[idx];
         const content: string = token.content;
 
@@ -205,68 +215,191 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
 
         const rules = env?.rules ?? [];
 
-        const apply = (text: string): string => {
-            const escaped = escapeHtml(text);
-            return applyRules(escaped, rules);
-        };
+        const escaped =
+            escapeHtml(content);
 
-        const lineType = getLineType(content);
-
-        if (env?.inHeading) {
-            const hashPos = content.indexOf('#');
-
-            if (hashPos === -1) {
-                return apply(content);
-            }
-
-            const tagPart = content.slice(hashPos);
-
-            if (!isTagLineValid(tagPart)) {
-                return apply(content);
-            }
-        }
-        else if (lineType !== 'tag' || !isTagLineValid(content)) {
-            return apply(content);
-        }
-        const ranges = getTagRanges(content);
-
-        if (ranges.length === 0) {
-            return apply(content);
-        }
-
-        let result = '';
-        let lastIndex = 0;
-
-        for (const r of ranges) {
-            const segment = content.slice(lastIndex, r.start);
-            result += apply(segment);
-
-            const tagText = content.slice(r.start, r.end);
-            if (env?.inHeading) {
-                result += `<span class="vjs-heading-tag">${escapeHtml(tagText)}</span>`;
-            }
-            else {
-                result += `<span class="vjs-user-tag">${escapeHtml(tagText)}</span>`;
-            }
-
-            lastIndex = r.end;
-        }
-
-        const tail = content.slice(lastIndex);
-        result += apply(tail);
-
-        return result;
+        return applyRules(
+            escaped,
+            rules
+        );
     };
 
-    md.renderer.rules.heading_open = (tokens, idx, options, env, self) => {
-        env.inHeading = true;
-        return self.renderToken(tokens, idx, options);
+    md.renderer.rules.vjs_tag = (
+        tokens,
+        idx
+    ) => {
+        const token = tokens[idx];
+
+        const className =
+            token.meta?.heading
+                ? 'vjs-heading-tag'
+                : 'vjs-user-tag';
+        return `
+<span class="${className}">
+${token.content}
+</span>
+`;
     };
 
-    md.renderer.rules.heading_close = (tokens, idx, options, env, self) => {
-        env.inHeading = false;
-        return self.renderToken(tokens, idx, options);
-    };
+    md.core.ruler.after(
+        'inline',
+        'vjs-tag-mark',
+        (state) => {
+
+            state.tokens.forEach((token, index) => {
+
+                if (token.type !== 'inline') {
+                    return;
+                }
+                const prevType = state.tokens[index - 1]?.type;
+                const isHeading =
+                    prevType === 'heading_open';
+
+                // table除外
+                if (
+                    prevType === 'td_open' ||
+                    prevType === 'th_open'
+                ) {
+                    return;
+                }
+
+                // list除外
+                if (
+                    prevType === 'paragraph_open' &&
+                    state.tokens[index - 2]?.type === 'list_item_open'
+                ) {
+                    return;
+                }
+
+                if (!token.content.includes('#')) {
+                    return;
+                }
+
+                token.children?.forEach((child, childIndex) => {
+                    if (!child.content) {
+                        return;
+                    }
+
+                    // 除外系（重要）
+                    if (child.type !== 'text') {
+                        return;
+                    }
+                    const prev =
+                        token.children?.[childIndex - 1];
+
+                    const next =
+                        token.children?.[childIndex + 1];
+                    if (
+                        prev?.type === 'strong_open' ||
+                        prev?.type === 'em_open' ||
+                        prev?.type === 's_open'
+                    ) {
+                        return;
+                    }
+
+                    if (
+                        next?.type === 'strong_close' ||
+                        next?.type === 'em_close' ||
+                        next?.type === 's_close'
+                    ) {
+                        return;
+                    }
+
+                    const valid =
+                        isHeading
+                            ? isParsedHeadingTagPartValid(
+                                child.content
+                            )
+                            : isTagLineValid(
+                                child.content
+                            );
+
+                    if (!valid) {
+                        return;
+                    }
+                    const ranges = getTagRanges(child.content);
+
+                    if (ranges.length === 0) {
+                        return;
+                    }
+                    const newTokens: any[] = [];
+
+                    let lastIndex = 0;
+
+                    for (const range of ranges) {
+
+                        const before =
+                            child.content.slice(
+                                lastIndex,
+                                range.start
+                            );
+
+                        if (before) {
+                            const beforeToken =
+                                new state.Token(
+                                    'text',
+                                    '',
+                                    0
+                                );
+
+                            beforeToken.content = before;
+
+                            newTokens.push(beforeToken);
+                        }
+
+                        const tagText =
+                            child.content.slice(
+                                range.start,
+                                range.end
+                            );
+
+                        const tagToken =
+                            new state.Token(
+                                'vjs_tag',
+                                '',
+                                0
+                            );
+
+                        tagToken.content = tagText;
+
+                        tagToken.meta = {
+                            userTag: true,
+                            heading: isHeading
+                        };
+
+                        newTokens.push(tagToken);
+
+                        lastIndex = range.end;
+                    }
+
+                    const tail =
+                        child.content.slice(lastIndex);
+
+                    if (tail) {
+                        const tailToken =
+                            new state.Token(
+                                'text',
+                                '',
+                                0
+                            );
+
+                        tailToken.content = tail;
+
+                        newTokens.push(tailToken);
+                    }
+                    const index =
+                        token.children!.indexOf(child);
+
+                    token.children!.splice(
+                        index,
+                        1,
+                        ...newTokens
+                    );
+                });
+            });
+        }
+    );
+
     return md;
 }
 
