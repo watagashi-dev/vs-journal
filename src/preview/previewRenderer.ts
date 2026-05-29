@@ -280,7 +280,7 @@ ${token.content}
                         return;
                     }
 
-                    // 除外系（重要）
+                    // Process text tokens only
                     if (child.type !== 'text') {
                         return;
                     }
@@ -289,6 +289,22 @@ ${token.content}
 
                     const next =
                         token.children?.[childIndex + 1];
+
+                    const hasUnsafeTail =
+                        token.children
+                            ?.slice(childIndex + 1)
+                            .some((tailChild) => {
+
+                                return (
+                                    tailChild.type === 'code_inline' ||
+                                    tailChild.type === 'html_inline'
+                                );
+                            }) ?? false;
+
+                    if (hasUnsafeTail) {
+                        return;
+                    }
+
                     if (
                         prev?.type === 'strong_open' ||
                         prev?.type === 'em_open' ||
@@ -297,6 +313,7 @@ ${token.content}
                         return;
                     }
 
+                    // Skip formatted text fragments
                     if (
                         next?.type === 'strong_close' ||
                         next?.type === 'em_close' ||
@@ -305,6 +322,7 @@ ${token.content}
                         return;
                     }
 
+                    // Skip fragmented inline structures
                     const valid =
                         isHeading
                             ? isParsedHeadingTagPartValid(
