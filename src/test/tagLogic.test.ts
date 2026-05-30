@@ -1,5 +1,11 @@
 import * as assert from 'assert';
-import { shouldShowCompletionMultiLine, extractTags, isTagToken } from '../services/tagLogic';
+import {
+    shouldShowCompletionMultiLine,
+    getTagRangesForDisplay,
+    extractTags,
+    isTagToken,
+    isTaggableTextToken
+} from '../services/tagLogic';
 
 function assertEqual(actual: any, expected: any, input: string) {
     const pass = JSON.stringify(actual) === JSON.stringify(expected);
@@ -52,6 +58,50 @@ function runExtractTest(line: string, expected: string[]) {
 function runValidationTest(line: string, expected: boolean) {
     const result = isTagToken(line);
     assert.strictEqual(result, expected);
+}
+
+function runTaggableTest(
+    content: string,
+    isHeading: boolean,
+    expected: boolean
+) {
+    const actual = isTaggableTextToken(
+        content,
+        {
+            isHeading,
+        }
+    );
+
+    assert.strictEqual(
+        actual,
+        expected,
+        `
+CONTENT : ${content}
+HEADING : ${isHeading}
+EXPECTED: ${expected}
+ACTUAL  : ${actual}
+`
+    );
+}
+
+function runDisplayExtractTest(
+    line: string,
+    expected: string[]
+) {
+    const ranges =
+        getTagRangesForDisplay(line);
+
+    const actual =
+        ranges.map((r) =>
+            line
+                .slice(r.start + 1, r.end)
+        );
+
+    assertEqual(
+        actual,
+        expected,
+        line
+    );
 }
 
 suite('Tag Logic Tests', () => {
@@ -122,7 +172,7 @@ suite('Tag Logic Tests', () => {
             "#endif",
             "```"
         ], false); // No completion inside code blocks
-   });
+    });
 
     test('extract', () => {
         runExtractTest('#tag1 #tag2', ['tag1', 'tag2']);
@@ -144,5 +194,83 @@ suite('Tag Logic Tests', () => {
         // Unicode
         runExtractTest('#tag1　#tag2', ['tag1', 'tag2']);
         runExtractTest('#リリース', ['リリース']);
+        runExtractTest(
+            '## 見出し2 ` #NG-tag3000 ` #OK-tag4000',
+            ['OK-tag4000']
+        );
+
+        runExtractTest(
+            '## 見出し3 #NG-tag5000 ` #NG-tag6000 `',
+            []
+        );
+
+        runExtractTest(
+            '#NG-tag1000 ` #NG-tag2000 `',
+            []
+        );
+    });
+
+    test('taggable text token', () => {
+
+        // normal tag line
+        runTaggableTest(
+            '#tag1 #tag2',
+            false,
+            true
+        );
+
+        // mixed content -> invalid
+        runTaggableTest(
+            '#tag1 text #tag2',
+            false,
+            false
+        );
+
+        // heading with tag
+        runTaggableTest(
+            'heading #tag1',
+            true,
+            true
+        );
+
+        runTaggableTest(
+            'heading #tag1 #tag2',
+            true,
+            true
+        );
+
+        // heading without tag
+        runTaggableTest(
+            'heading text',
+            true,
+            true
+        );
+
+        // heading with invalid tag section
+        runTaggableTest(
+            'heading # tag1',
+            true,
+            true
+        );
+
+        // inline code already normalized by validator
+        runTaggableTest(
+            'heading ` #tag1 ` #tag2',
+            true,
+            true
+        );
+    });
+
+    test('display tag extraction', () => {
+
+        runDisplayExtractTest(
+            '## 見出し2 ` #NG-tag3000 ` #OK-tag4000',
+            ['OK-tag4000']
+        );
+
+        runDisplayExtractTest(
+            '` #NG-tag1 `',
+            []
+        );
     });
 });

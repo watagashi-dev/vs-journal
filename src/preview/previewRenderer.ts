@@ -3,9 +3,8 @@ import MarkdownIt from 'markdown-it';
 import taskLists from 'markdown-it-task-lists';
 
 import {
-    getTagRanges,
-    isTagLineValid,
-    isParsedHeadingTagPartValid
+    getTagRangesForDisplay,
+    isTaggableTextToken,
 } from '../services/tagLogic';
 
 export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | undefined) {
@@ -274,146 +273,96 @@ ${token.content}
                 if (!token.content.includes('#')) {
                     return;
                 }
+                // -----------------------------
+                // B FULL MODEL: AST-aware inline processing
+                // -----------------------------
 
-                token.children?.forEach((child, childIndex) => {
-                    if (!child.content) {
-                        return;
-                    }
+                const content = token.content;
 
-                    // Process text tokens only
-                    if (child.type !== 'text') {
-                        return;
-                    }
-                    const prev =
-                        token.children?.[childIndex - 1];
+                const context = {
+                    isHeading: isHeading
+                };
 
-                    const next =
-                        token.children?.[childIndex + 1];
+                // NOTE:
+                // unsafe structure detection is now delegated to tagLogic
+                const valid = isTaggableTextToken(
+                    content,
+                    context
+                );
 
-                    const hasUnsafeTail =
-                        token.children
-                            ?.slice(childIndex + 1)
-                            .some((tailChild) => {
+                if (!valid) {
+                    return;
+                }
 
-                                return (
-                                    tailChild.type === 'code_inline' ||
-                                    tailChild.type === 'html_inline'
-                                );
-                            }) ?? false;
+                const ranges = getTagRangesForDisplay(content);
 
-                    if (hasUnsafeTail) {
-                        return;
-                    }
+                if (ranges.length === 0) {
+                    return;
+                }
 
-                    if (
-                        prev?.type === 'strong_open' ||
-                        prev?.type === 'em_open' ||
-                        prev?.type === 's_open'
-                    ) {
-                        return;
-                    }
+                const newTokens: any[] = [];
 
-                    // Skip formatted text fragments
-                    if (
-                        next?.type === 'strong_close' ||
-                        next?.type === 'em_close' ||
-                        next?.type === 's_close'
-                    ) {
-                        return;
-                    }
+                let lastIndex = 0;
 
-                    // Skip fragmented inline structures
-                    const valid =
-                        isHeading
-                            ? isParsedHeadingTagPartValid(
-                                child.content
-                            )
-                            : isTagLineValid(
-                                child.content
-                            );
+                for (const range of ranges) {
 
-                    if (!valid) {
-                        return;
-                    }
-                    const ranges = getTagRanges(child.content);
+                    const before = content.slice(
+                        lastIndex,
+                        range.start
+                    );
 
-                    if (ranges.length === 0) {
-                        return;
-                    }
-                    const newTokens: any[] = [];
-
-                    let lastIndex = 0;
-
-                    for (const range of ranges) {
-
-                        const before =
-                            child.content.slice(
-                                lastIndex,
-                                range.start
-                            );
-
-                        if (before) {
-                            const beforeToken =
-                                new state.Token(
-                                    'text',
-                                    '',
-                                    0
-                                );
-
-                            beforeToken.content = before;
-
-                            newTokens.push(beforeToken);
-                        }
-
-                        const tagText =
-                            child.content.slice(
-                                range.start,
-                                range.end
-                            );
-
-                        const tagToken =
-                            new state.Token(
-                                'vjs_tag',
-                                '',
-                                0
-                            );
-
-                        tagToken.content = tagText;
-
-                        tagToken.meta = {
-                            userTag: true,
-                            heading: isHeading
-                        };
-
-                        newTokens.push(tagToken);
-
-                        lastIndex = range.end;
-                    }
-
-                    const tail =
-                        child.content.slice(lastIndex);
-
-                    if (tail) {
-                        const tailToken =
+                    if (before) {
+                        const beforeToken =
                             new state.Token(
                                 'text',
                                 '',
                                 0
                             );
 
-                        tailToken.content = tail;
-
-                        newTokens.push(tailToken);
+                        beforeToken.content = before;
+                        newTokens.push(beforeToken);
                     }
-                    const index =
-                        token.children!.indexOf(child);
 
-                    token.children!.splice(
-                        index,
-                        1,
-                        ...newTokens
+                    const tagText = content.slice(
+                        range.start,
+                        range.end
                     );
-                });
+
+                    const tagToken =
+                        new state.Token(
+                            'vjs_tag',
+                            '',
+                            0
+                        );
+
+                    tagToken.content = tagText;
+
+                    tagToken.meta = {
+                        userTag: true,
+                        heading: isHeading
+                    };
+
+                    newTokens.push(tagToken);
+
+                    lastIndex = range.end;
+                }
+
+                const tail = content.slice(lastIndex);
+
+                if (tail) {
+                    const tailToken =
+                        new state.Token(
+                            'text',
+                            '',
+                            0
+                        );
+
+                    tailToken.content = tail;
+                    newTokens.push(tailToken);
+                }
+
+                // FULL REPLACE MODE (no cildren mutation)
+                token.children = newTokens;
             });
         }
     );

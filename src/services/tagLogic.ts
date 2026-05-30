@@ -3,6 +3,10 @@
 // ============================
 import { FileMeta } from '../models/FileMeta';
 
+export type TagContext = {
+    isHeading: boolean;
+};
+
 // Regex for tag token (unchanged to preserve current behavior)
 const TAG_REGEX = /#([\p{L}\p{N}_\-/ー]+)$/u;
 
@@ -192,6 +196,14 @@ export function getTagRanges(line: string): { start: number; end: number }[] {
     return ranges;
 }
 
+export function getTagRangesForDisplay(
+    line: string
+): { start: number; end: number }[] {
+    return getTagRanges(
+        normalizeInlineCode(line)
+    );
+}
+
 // ----------------------------
 // Tag extraction (main API)
 // ----------------------------
@@ -268,4 +280,22 @@ export function shouldShowCompletionMultiLine(
     }
 
     return false;
+}
+
+export function isTaggableTextToken(
+    content: string,
+    context: TagContext
+): boolean {
+    // Reject if empty
+    if (!content) {
+        return false;
+    }
+
+    // Reject heading rules if needed
+    if (context.isHeading) {
+        return isParsedHeadingTagPartValid(content);
+    }
+
+    // Normal line validation
+    return isTagLineValid(content);
 }
