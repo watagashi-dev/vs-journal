@@ -348,11 +348,15 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
         });
     }
     function updateCurrentIndexFromScroll() {
-        if (!highlightElements.length) return;
+        if (!highlightElements.length) {
+            return;
+        }
 
         if (lockedTargetIndex !== null) {
             const el = highlightElements[lockedTargetIndex];
-            if (!el) return;
+            if (!el) {
+                return;
+            }
 
             const rect = el.getBoundingClientRect();
             const visible =
@@ -379,7 +383,9 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
                 rect.top < window.innerHeight &&
                 rect.bottom > 0;
 
-            if (visible) return;
+            if (visible) {
+                return;
+            }
         }
 
         const center = window.innerHeight / 2;
