@@ -1,10 +1,9 @@
 import * as assert from 'assert';
 import {
     shouldShowCompletionMultiLine,
-    getTagRangesForDisplay,
+    getTagRanges,
     extractTags,
     isTagToken,
-    isTaggableTextToken
 } from '../services/tagLogic';
 
 function assertEqual(actual: any, expected: any, input: string) {
@@ -60,36 +59,11 @@ function runValidationTest(line: string, expected: boolean) {
     assert.strictEqual(result, expected);
 }
 
-function runTaggableTest(
-    content: string,
-    isHeading: boolean,
-    expected: boolean
-) {
-    const actual = isTaggableTextToken(
-        content,
-        {
-            isHeading,
-        }
-    );
-
-    assert.strictEqual(
-        actual,
-        expected,
-        `
-CONTENT : ${content}
-HEADING : ${isHeading}
-EXPECTED: ${expected}
-ACTUAL  : ${actual}
-`
-    );
-}
-
 function runDisplayExtractTest(
     line: string,
     expected: string[]
 ) {
-    const ranges =
-        getTagRangesForDisplay(line);
+    const ranges = getTagRanges(line);
 
     const actual =
         ranges.map((r) =>
@@ -208,56 +182,89 @@ suite('Tag Logic Tests', () => {
             '#NG-tag1000 ` #NG-tag2000 `',
             []
         );
-    });
 
-    test('taggable text token', () => {
-
-        // normal tag line
-        runTaggableTest(
-            '#tag1 #tag2',
-            false,
-            true
+        runExtractTest(
+            '> #tag1',
+            []
         );
 
-        // mixed content -> invalid
-        runTaggableTest(
-            '#tag1 text #tag2',
-            false,
-            false
+        runExtractTest(
+            '> quote text #tag1',
+            []
+        );
+        runExtractTest(
+            '- #tag1',
+            []
         );
 
-        // heading with tag
-        runTaggableTest(
-            'heading #tag1',
-            true,
-            true
+        runExtractTest(
+            '1. #tag1',
+            []
         );
 
-        runTaggableTest(
-            'heading #tag1 #tag2',
-            true,
-            true
+        runExtractTest(
+            '- item\n  - #tag1',
+            []
         );
 
-        // heading without tag
-        runTaggableTest(
-            'heading text',
-            true,
-            true
+        runExtractTest(
+            '| #tag1 |',
+            []
         );
 
-        // heading with invalid tag section
-        runTaggableTest(
-            'heading # tag1',
-            true,
-            true
+        runExtractTest(
+            '| col1 | #tag1 |',
+            []
         );
 
-        // inline code already normalized by validator
-        runTaggableTest(
-            'heading ` #tag1 ` #tag2',
-            true,
-            true
+        runExtractTest(
+            '**#tag1**',
+            []
+        );
+
+        runExtractTest(
+            '*#tag1*',
+            []
+        );
+
+        runExtractTest(
+            '***#tag1***',
+            []
+        );
+
+        runExtractTest(
+            '`#tag1`',
+            []
+        );
+
+        runExtractTest(
+            'text `#tag1` text',
+            []
+        );
+
+        runExtractTest(
+            '#tag1 # #tag2',
+            []
+        );
+
+        runExtractTest(
+            '#tag1 foo #tag2',
+            []
+        );
+
+        runExtractTest(
+            '#tag1 #tag2 foo',
+            []
+        );
+
+        runExtractTest(
+            '#タグ1 #タグ2',
+            ['タグ1', 'タグ2']
+        );
+
+        runExtractTest(
+            '#リリース #バージョン2',
+            ['リリース', 'バージョン2']
         );
     });
 

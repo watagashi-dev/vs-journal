@@ -3,8 +3,9 @@ import MarkdownIt from 'markdown-it';
 import taskLists from 'markdown-it-task-lists';
 
 import {
-    getTagRangesForDisplay,
-    isTaggableTextToken,
+    getTagRanges,
+    getTagNodeContext,
+    isTaggableTextToken
 } from '../services/tagLogic';
 
 export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | undefined) {
@@ -244,58 +245,30 @@ ${token.content}
         'inline',
         'vjs-tag-mark',
         (state) => {
-
             state.tokens.forEach((token, index) => {
-
                 if (token.type !== 'inline') {
                     return;
                 }
-                const prevType = state.tokens[index - 1]?.type;
-                const isHeading =
-                    prevType === 'heading_open';
 
-                // table除外
-                if (
-                    prevType === 'td_open' ||
-                    prevType === 'th_open'
-                ) {
+                const context = getTagNodeContext(state.tokens, index);
+                if (!context.isTarget) {
                     return;
                 }
 
-                // list除外
-                if (
-                    prevType === 'paragraph_open' &&
-                    state.tokens[index - 2]?.type === 'list_item_open'
-                ) {
-                    return;
-                }
-
+                const isHeading = context.isHeading;
                 if (!token.content.includes('#')) {
                     return;
                 }
-                // -----------------------------
-                // B FULL MODEL: AST-aware inline processing
-                // -----------------------------
 
+                // -----------------------------
+                // AST-aware inline processing
+                // -----------------------------
                 const content = token.content;
-
-                const context = {
-                    isHeading: isHeading
-                };
-
-                // NOTE:
-                // unsafe structure detection is now delegated to tagLogic
-                const valid = isTaggableTextToken(
-                    content,
-                    context
-                );
-
-                if (!valid) {
+                if (!isTaggableTextToken(content, context)) {
                     return;
                 }
 
-                const ranges = getTagRangesForDisplay(content);
-
+                const ranges = getTagRanges(content);
                 if (ranges.length === 0) {
                     return;
                 }
@@ -305,11 +278,7 @@ ${token.content}
                 let lastIndex = 0;
 
                 for (const range of ranges) {
-
-                    const before = content.slice(
-                        lastIndex,
-                        range.start
-                    );
+                    const before = content.slice(lastIndex, range.start);
 
                     if (before) {
                         const beforeToken =
@@ -323,11 +292,7 @@ ${token.content}
                         newTokens.push(beforeToken);
                     }
 
-                    const tagText = content.slice(
-                        range.start,
-                        range.end
-                    );
-
+                    const tagText = content.slice(range.start, range.end);
                     const tagToken =
                         new state.Token(
                             'vjs_tag',
@@ -361,7 +326,7 @@ ${token.content}
                     newTokens.push(tailToken);
                 }
 
-                // FULL REPLACE MODE (no cildren mutation)
+                // FULL REPLACE MODE (no children mutation)
                 token.children = newTokens;
             });
         }
