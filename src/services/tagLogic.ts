@@ -3,10 +3,6 @@
 // ============================
 import { FileMeta } from '../models/FileMeta';
 
-export type TagContext = {
-    isHeading: boolean;
-};
-
 // Regex for tag token (unchanged to preserve current behavior)
 const TAG_REGEX = /#([\p{L}\p{N}_\-/ー]+)$/u;
 
@@ -196,14 +192,6 @@ export function getTagRanges(line: string): { start: number; end: number }[] {
     return ranges;
 }
 
-export function getTagRangesForDisplay(
-    line: string
-): { start: number; end: number }[] {
-    return getTagRanges(
-        normalizeInlineCode(line)
-    );
-}
-
 // ----------------------------
 // Tag extraction (main API)
 // ----------------------------
@@ -254,7 +242,6 @@ export function shouldShowCompletionMultiLine(
     lines: string[],
     lineIndex: number
 ): boolean {
-
     // Code block guard (realtime check)
     if (isInCodeBlock(lines, lineIndex)) {
         return false;
@@ -284,18 +271,69 @@ export function shouldShowCompletionMultiLine(
 
 export function isTaggableTextToken(
     content: string,
-    context: TagContext
+    context: TagNodeContext
 ): boolean {
-    // Reject if empty
+
     if (!content) {
         return false;
     }
 
-    // Reject heading rules if needed
     if (context.isHeading) {
         return isParsedHeadingTagPartValid(content);
     }
 
-    // Normal line validation
     return isTagLineValid(content);
+}
+
+export type TagNodeContext = {
+    isTarget: boolean;
+    isHeading: boolean;
+};
+
+function hasAncestorType(
+    tokens: any[],
+    index: number,
+    targetType: string,
+    stopType?: string
+): boolean {
+    for (let i = index - 1; i >= 0; i--) {
+        if (stopType && tokens[i].type === stopType) {
+            break;
+        }
+
+        if (tokens[i].type === targetType) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+export function getTagNodeContext(
+    tokens: any[],
+    index: number
+): TagNodeContext {
+    const token = tokens[index];
+    const prevType = tokens[index - 1]?.type;
+
+    const inTable = prevType === 'td_open' || prevType === 'th_open';
+    const inList = prevType === 'paragraph_open' && tokens[index - 2]?.type === 'list_item_open';
+
+    const inBlockQuote =
+        hasAncestorType(
+            tokens,
+            index,
+            'blockquote_open',
+            'blockquote_close'
+        );
+
+    return {
+        isTarget:
+            !inTable &&
+            !inList &&
+            !inBlockQuote,
+
+        isHeading:
+            prevType === 'heading_open'
+    };
 }
