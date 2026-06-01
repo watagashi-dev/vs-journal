@@ -41,9 +41,15 @@ let tagProvider: TagTreeProvider;
 const fileMetaMap = new Map<string, FileMeta>();
 const sessionTagUsage = new Map<string, number>();
 
-type VSJournalConfig = {
+export type FolderStructure =
+    | 'flat'
+    | 'yyyy'
+    | 'yyyy-mm'
+    | 'yyyy-mm-dd';
+
+export type VSJournalConfig = {
     fileNameStyle: FileNameStyle;
-    // folderStyleはまだなくてOK
+    folderStructure: FolderStructure;
 };
 
 function getJournalDir(): string {
@@ -78,17 +84,35 @@ function getConfig(): VSJournalConfig {
     const config = vscode.workspace.getConfiguration('vsJournal');
 
     return {
-        fileNameStyle: config.get('fileNameStyle') ?? 'datetime-minute'
+        fileNameStyle: config.get('fileNameStyle') ?? 'datetime-minute',
+        folderStructure: config.get('folderStructure') ?? 'flat'
     };
 }
 
-function generateFolderPath(
-    _date: Date,
-    _config: VSJournalConfig,
+export function generateFolderPath(
+    date: Date,
+    config: VSJournalConfig,
     baseDir: string
 ): string {
-    // 今はフラット固定
-    return baseDir;
+    const pad = (n: number) => n.toString().padStart(2, '0');
+
+    const YYYY = String(date.getFullYear());
+    const MM = pad(date.getMonth() + 1);
+    const DD = pad(date.getDate());
+
+    switch (config.folderStructure) {
+        case 'flat':
+            return baseDir;
+
+        case 'yyyy':
+            return path.join(baseDir, YYYY);
+
+        case 'yyyy-mm':
+            return path.join(baseDir, YYYY, MM);
+
+        case 'yyyy-mm-dd':
+            return path.join(baseDir, YYYY, MM, DD);
+    }
 }
 
 function generateFileName(
@@ -98,7 +122,7 @@ function generateFileName(
     return formatFileNameDate(date, style);
 }
 
-function generateFullPath(date: Date, config: VSJournalConfig): string {
+export function generateFullPath(date: Date, config: VSJournalConfig): string {
     const baseDir = getAbsoluteJournalDir(getJournalDir());
     if (!baseDir) {
         throw new Error('Journal directory not found');
@@ -198,6 +222,24 @@ export function readFileEntry(filePath: string): { content: string; stats: fs.St
     return { content, stats };
 }
 
+function getAllMarkdownFiles(dir: string): string[] {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+    return entries.flatMap(entry => {
+        const fullPath = path.join(dir, entry.name);
+
+        if (entry.isDirectory()) {
+            return getAllMarkdownFiles(fullPath);
+        }
+
+        if (entry.isFile() && entry.name.toLowerCase().endsWith('.md')) {
+            return [fullPath];
+        }
+
+        return [];
+    });
+}
+
 async function refreshAllData() {
     const journalDir = getJournalDir();
     const fullDir = getAbsoluteJournalDir(journalDir);
@@ -213,18 +255,17 @@ async function refreshAllData() {
         return;
     }
 
-    const files = fs.readdirSync(fullDir).filter(f => f.endsWith('.md'));
+    const files = getAllMarkdownFiles(fullDir);
 
     const fileCache = new Map<string, { content: string; stats: fs.Stats }>();
 
     for (const file of files) {
-        const filePath = path.join(fullDir, file);
 
-        const entry = readFileEntry(filePath);
-        const key = filePathToKey(filePath);
+        const entry = readFileEntry(file);
+        const key = filePathToKey(file);
         fileCache.set(key, entry);
 
-        const meta = createFileMeta(filePath, entry.content, entry.stats);
+        const meta = createFileMeta(file, entry.content, entry.stats);
         fileMetaMap.set(key, meta);
 
         addUserTagsFromMeta(meta);
@@ -371,8 +412,12 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // --- File Watcher ---
     let fileWatcher: vscode.FileSystemWatcher | undefined;
-    const setupWatcher = () => {
-        if (fileWatcher) { fileWatcher.dispose(); }
+
+    const setupWatcher = (context: vscode.ExtensionContext) => {
+        if (fileWatcher) {
+            fileWatcher.dispose();
+            fileWatcher = undefined;
+        }
 
         const absDir = getAbsoluteJournalDir(getJournalDir());
         if (!absDir) { return; }
@@ -380,23 +425,30 @@ export async function activate(context: vscode.ExtensionContext) {
         const pattern = new vscode.RelativePattern(absDir, '**/*.md');
         fileWatcher = vscode.workspace.createFileSystemWatcher(pattern);
 
-        fileWatcher.onDidCreate(uri => {
+        const onCreate = fileWatcher.onDidCreate(uri => {
             updateSingleFile(uri.fsPath);
             rebuildTree();
         });
-        fileWatcher.onDidChange(uri => {
-            const doc = vscode.workspace.textDocuments.find(d => d.uri.fsPath === uri.fsPath);
 
+        const onChange = fileWatcher.onDidChange(uri => {
+            const doc = vscode.workspace.textDocuments.find(d => d.uri.fsPath === uri.fsPath);
             if (doc) { return; }
+
             updateSingleFile(uri.fsPath);
             rebuildTree();
         });
-        fileWatcher.onDidDelete(() => {
+
+        const onDelete = fileWatcher.onDidDelete(() => {
             refreshAllData();
             rebuildTree();
         });
 
-        context.subscriptions.push(fileWatcher);
+        context.subscriptions.push(
+            fileWatcher,
+            onCreate,
+            onChange,
+            onDelete
+        );
     };
 
     // --- Tag Tree ---
@@ -695,7 +747,7 @@ export async function activate(context: vscode.ExtensionContext) {
             if (event.affectsConfiguration('vsJournal.journalDir')) {
                 resetVirtualTags();
                 await performScan();
-                setupWatcher();
+                setupWatcher(context);
                 disposePreviewPanel();
             }
             if (event.affectsConfiguration('vsJournal.autoSave')) {
@@ -794,7 +846,7 @@ export async function activate(context: vscode.ExtensionContext) {
     };
 
     await performScan();
-    setupWatcher();
+    setupWatcher(context);
 }
 
 export function isJournalFile(document: vscode.TextDocument, absJournalDir?: string): boolean {

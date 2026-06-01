@@ -4,9 +4,12 @@ import * as vscode from 'vscode';
 import * as workspaceUtils from '../utils/workspace';
 import { FileMeta } from '../models/FileMeta';
 import {
+	VSJournalConfig,
+	generateFolderPath, generateFullPath,
 	getAbsoluteJournalDir,
 	isJournalFile
 } from '../extension';
+
 
 suite('VS Journal Logic Tests', () => {
 
@@ -50,6 +53,52 @@ suite('VS Journal Logic Tests', () => {
 			isJournalFile(document, '/workspace/root/journal'),
 			false
 		);
+	});
+
+});
+
+suite('Path Generation Tests', () => {
+
+	const baseDir = '/workspace/root/journal';
+	const date = new Date(2026, 4, 5, 3, 7); // 2026-05-05 03:07
+
+	function createConfig(folderStructure: VSJournalConfig['folderStructure']): VSJournalConfig {
+		return {
+			fileNameStyle: 'datetime-minute',
+			folderStructure
+		};
+	}
+
+	test('generateFolderPath: flat returns baseDir', () => {
+		const result = generateFolderPath(date, createConfig('flat'), baseDir);
+		assert.strictEqual(result, baseDir);
+	});
+
+	test('generateFolderPath: yyyy creates year folder', () => {
+		const result = generateFolderPath(date, createConfig('yyyy'), baseDir);
+		assert.strictEqual(result, path.join(baseDir, '2026'));
+	});
+
+	test('generateFolderPath: yyyy-mm creates year/month folder', () => {
+		const result = generateFolderPath(date, createConfig('yyyy-mm'), baseDir);
+		assert.strictEqual(result, path.join(baseDir, '2026', '05'));
+	});
+
+	test('generateFolderPath: yyyy-mm-dd creates full date folder', () => {
+		const result = generateFolderPath(date, createConfig('yyyy-mm-dd'), baseDir);
+		assert.strictEqual(result, path.join(baseDir, '2026', '05', '05'));
+	});
+
+	test('generateFullPath: includes folder and file name', () => {
+		const config: VSJournalConfig = {
+			fileNameStyle: 'datetime-minute',
+			folderStructure: 'yyyy-mm-dd'
+		};
+
+		const fullPath = generateFullPath(date, config);
+
+		assert.ok(fullPath.includes(path.join('2026', '05', '05')));
+		assert.ok(fullPath.endsWith('.md'));
 	});
 
 });

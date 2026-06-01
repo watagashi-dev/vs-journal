@@ -130,6 +130,24 @@
           "default": "datetime-minute",
           "description": "%config.fileNameStyle.description%",
           "markdownDescription": "%config.fileNameStyle.markdownDescription%"
+        },
+        "vsJournal.folderStructure": {
+          "type": "string",
+          "enum": [
+            "flat",
+            "yyyy",
+            "yyyy-mm",
+            "yyyy-mm-dd"
+          ],
+          "enumDescriptions": [
+            "Save files directly in the base directory.",
+            "Group files by year (e.g. 2026/).",
+            "Group files by year and month (e.g. 2026/05/).",
+            "Group files by year, month, and day (e.g. 2026/05/05/)."
+          ],
+          "default": "flat",
+          "description": "%config.folderStructure.description%",
+          "markdownDescription": "%config.folderStructure.markdownDescription%"
         }
       }
     },
