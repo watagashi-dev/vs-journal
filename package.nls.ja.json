@@ -14,6 +14,8 @@
   "config.confirmDeleteVirtualTag.markdownDescription": "有効にすると、タグツリーから仮想タグを削除する前に確認ダイアログが表示されます。無効にすると確認なしで削除されます。",
   "config.virtualTags.caseSensitive.description": "仮想タグの一致時に大文字・小文字を区別します。",
   "config.virtualTags.caseSensitive.markdownDescription": "仮想タグの一致で**大文字・小文字を区別するか**を設定します。\n\n- **有効**: `foo` は `foo` のみ一致\n- **無効**: `foo` は `foo`, `Foo`, `FOO` に一致",
+  "config.fileNameStyle.description": "新規ノートのファイル名形式を指定します。",
+  "config.fileNameStyle.markdownDescription": "新規ノート作成時のファイル名の形式を指定します。\n\n**例:**\n- `datetime-minute`: `2026-05-05-13-45`\n- `datetime-hour`: `2026-05-05-13`\n- `date-only`: `2026-05-05`\n- `compact-datetime`: `20260505-1345`\n\nこの設定は新しく作成されるファイルにのみ適用されます。既存のファイルには影響しません。",
   "view.vsJournal.tags.empty": "エントリーがありません",
   "command.newEntry": "VS Journal: 新規メモ作成",
   "command.previewEntry": "VS Journal: メモプレビュー",

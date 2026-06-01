@@ -9,7 +9,10 @@ import { measure } from './perf';
 import { TagHierarchyBuilder, TagHierarchyNode } from './services/TagHierarchyBuilder';
 import { createFileMeta } from './services/fileMetaService';
 import { TagTreeProvider } from './sidebar/TagTreeProvider';
-import { formatFileNameDate, formatDateString, formatTimeString } from './utils/date';
+import {
+    FileNameStyle,
+    formatFileNameDate, formatDateString, formatTimeString
+} from './utils/date';
 import { getWorkspaceRoot } from './utils/workspace';
 import {
     PreviewContext,
@@ -38,6 +41,11 @@ let tagProvider: TagTreeProvider;
 const fileMetaMap = new Map<string, FileMeta>();
 const sessionTagUsage = new Map<string, number>();
 
+type VSJournalConfig = {
+    fileNameStyle: FileNameStyle;
+    // folderStyleはまだなくてOK
+};
+
 function getJournalDir(): string {
     const config = vscode.workspace.getConfiguration('vsJournal');
     const setting = config.inspect<string>('journalDir');
@@ -64,6 +72,42 @@ export function getJournalRelativePath(filePath: string): string {
         return filePath;
     }
     return path.relative(journalDir, filePath).replace(/\\/g, '/');
+}
+
+function getConfig(): VSJournalConfig {
+    const config = vscode.workspace.getConfiguration('vsJournal');
+
+    return {
+        fileNameStyle: config.get('fileNameStyle') ?? 'datetime-minute'
+    };
+}
+
+function generateFolderPath(
+    _date: Date,
+    _config: VSJournalConfig,
+    baseDir: string
+): string {
+    // 今はフラット固定
+    return baseDir;
+}
+
+function generateFileName(
+    date: Date,
+    style: FileNameStyle
+): string {
+    return formatFileNameDate(date, style);
+}
+
+function generateFullPath(date: Date, config: VSJournalConfig): string {
+    const baseDir = getAbsoluteJournalDir(getJournalDir());
+    if (!baseDir) {
+        throw new Error('Journal directory not found');
+    }
+
+    const folder = generateFolderPath(date, config, baseDir);
+    const fileName = generateFileName(date, config.fileNameStyle);
+
+    return path.join(folder, fileName + '.md');
 }
 
 // --- centralized key normalization ---
@@ -367,13 +411,11 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('vs-journal.newEntry', async () => {
             let doc: vscode.TextDocument;
             let position: vscode.Position;
+            const config = getConfig();
 
-            const fullDir = getAbsoluteJournalDir(getJournalDir());
-            if (!fullDir) { return; }
+            const fullPath = generateFullPath(new Date(), config);
 
-            const filename = `${formatFileNameDate(new Date())}.md`;
-            const fullPath = path.join(fullDir, filename);
-            fs.mkdirSync(fullDir, { recursive: true });
+            fs.mkdirSync(path.dirname(fullPath), { recursive: true });
 
             if (!fs.existsSync(fullPath)) {
                 const config = vscode.workspace.getConfiguration('vsJournal');
