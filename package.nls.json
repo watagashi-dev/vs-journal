@@ -18,11 +18,20 @@
   "config.fileNameStyle.markdownDescription": "Controls how file names are generated for new notes.\n\nExamples:\n- `datetime-minute`: `2026-05-05-13-45`\n- `datetime-hour`: `2026-05-05-13`\n- `date-only`: `2026-05-05`\n- `compact-datetime`: `20260505-1345`\n\nOnly applies to newly created files. Existing files are not affected.",
   "config.folderStructure.description": "Folder structure for storing new notes.",
   "config.folderStructure.markdownDescription": "Controls how folders are created for new notes.\n\n**Examples:**\n- `flat`: `note.md`\n- `yyyy`: `2026/note.md`\n- `yyyy-mm`: `2026/05/note.md`\n- `yyyy-mm-dd`: `2026/05/05/note.md`\n\nOnly applies to newly created files. Existing files are not affected.",
+  "config.folderStructure.flat": "Save files directly in the base directory.",
+  "config.folderStructure.year": "Group files by year (e.g. 2026/).",
+  "config.folderStructure.yearMonth": "Group files by year and month (e.g. 2026/05/).",
+  "config.folderStructure.yearMonthDay": "Group files by year, month, and day (e.g. 2026/05/05/).",
+  "config.paste.saveLocation.description": "Controls where pasted files and images are stored.",
+  "config.paste.saveLocation.markdownDescription": "Determines the storage location for pasted files and images.\n\n- `flat`: Files are saved in the same directory as the note.\n- `structured`: Files are saved in a hierarchical folder using the configured folder structure and note file name.\n\nExample (`structured`): `2026/05/07/2026-05-07-13-45/image01.png`\n\nOnly applies to newly pasted content.",
+  "config.paste.saveLocation.flat": "Save pasted files in the same directory as the note.",
+  "config.paste.saveLocation.structured": "Save pasted files in a hierarchical folder (based on folderStructure and note file name).",
   "view.vsJournal.tags.empty": "No entries",
   "command.newEntry": "VS Journal: New Entry",
   "command.previewEntry": "VS Journal: Preview Entry",
   "command.selectJournalDir": "VS Journal: Select Journal Directory",
   "command.addVirtualTag": "VS Journal: Add Virtual Tag",
   "command.deleteFile.title": "Delete File",
-  "command.deleteVirtualTag.title": "Delete Virtual Tag"
+  "command.deleteVirtualTag.title": "Delete Virtual Tag",
+  "command.paste": "Paste into VS Journal"
 }
