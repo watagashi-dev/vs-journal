@@ -1,5 +1,21 @@
 # Change Log
 
+## [0.3.2] - 2026-06-xx
+
+## Fixed
+
+- Fixed numerous user tag highlighting issues in Markdown preview.
+- Fixed tags being incorrectly detected inside code blocks, inline code, blockquotes, lists, and tables.
+- Fixed heading tag rendering and validation edge cases.
+- Fixed inconsistencies between tag extraction and displayed tag highlights.
+
+## Changed
+
+- Reimplemented tag highlighting using markdown-it AST-aware processing.
+- Deduplicated extracted tags in file metadata.
+- Expanded test coverage for tag parsing and rendering behavior.
+- Improved virtual tag highlight visibility.
+
 ## [0.3.1] - 2026-05-24
 
 # Changelog
