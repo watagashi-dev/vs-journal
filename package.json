@@ -240,6 +240,13 @@
           "command": "vsJournal.deleteVirtualTag",
           "when": "view == VSJournal.TagTree && viewItem =~ /tag:virtual/"
         }
+      ],
+      "editor/context": [
+        {
+          "command": "vsJournal.paste",
+          "when": "editorTextFocus && resourceExtname == .md",
+          "group": "9_cutcopypaste"
+        }
       ]
     },
     "keybindings": [

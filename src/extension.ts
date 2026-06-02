@@ -535,22 +535,6 @@ function updateSingleFile(filePath: string) {
     rebuildSystemTags();
 }
 
-function buildPreviewContext(params: {
-    kind: 'file' | 'tag';
-    sectionKey?: 'system' | 'user' | 'virtual';
-    tagName?: string;
-}): PreviewContext {
-    if (params.kind === 'file') {
-        return { kind: 'file' };
-    }
-
-    return {
-        kind: 'tag',
-        tagType: params.sectionKey ?? 'user',
-        tagName: params.tagName
-    };
-}
-
 function checkPreviewLimits(files: FileMeta[]): {
     limitedFiles: FileMeta[];
     limitExceeded: boolean;
