@@ -896,9 +896,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 const target =
                     createPasteImageTarget(editor);
 
-                // 動作確認中なので一旦コメントアウト
-                // console.log
-                // fs.writeFileSync(target.filePath, buf);
+                fs.writeFileSync(target.filePath, buf);
 
                 await insertImageMarkdown(
                     editor,
