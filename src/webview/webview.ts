@@ -63,12 +63,6 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
             .find((el) => el.getAttribute('data-file') === filePath);
     }
 
-    function getLineElement(fileBlock: Element, line: number): HTMLElement | null {
-        return fileBlock.querySelector<HTMLElement>(
-            `.vjs-line[data-line="${line}"]`
-        );
-    }
-
     // =========================================================
     // Header
     // =========================================================
@@ -103,17 +97,20 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
             return;
         }
 
-        const lineEl = target.closest('.vjs-line');
-        if (lineEl) {
-            const lineStr = lineEl.getAttribute('data-line');
-            const file = lineEl.closest('[data-file]');
+        const blockEl = target.closest('[data-start-line]');
+        if (blockEl) {
+            const file = blockEl.closest('[data-file]');
             const filePath = file?.getAttribute('data-file');
 
-            if (lineStr && filePath) {
+            const start = Number(blockEl.getAttribute('data-start-line'));
+            const end = Number(blockEl.getAttribute('data-end-line') ?? start);
+
+            if (filePath && Number.isFinite(start)) {
                 postMessage({
                     type: 'jumpToLine',
                     filePath,
-                    line: parseInt(lineStr, 10)
+                    line: start
+                    // NOTE: range-based system (end currently unused for click)
                 });
             }
             return;
@@ -464,12 +461,36 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
         line: number
     ): void {
         const fileBlock = getFileBlock(filePath);
-        const target = fileBlock && getLineElement(fileBlock, line);
+
+        if (!fileBlock) {
+            return;
+        }
+
+        const elements = Array.from(
+            fileBlock.querySelectorAll<HTMLElement>(
+                "[data-start-line]"
+            )
+        );
+
+        let target: HTMLElement | null = null;
+
+        for (const el of elements) {
+            //            const start = Number(el.dataset.startLine);
+            //            const end = Number(el.dataset.endLine ?? el.dataset.startLine);
+            const start = Number(el.getAttribute("data-start-line"));
+            const end = Number(
+                el.getAttribute("data-end-line") ?? el.getAttribute("data-start-line")
+            );
+
+            if (line >= start && line <= end) {
+                target = el;
+                break;
+            }
+        }
 
         if (!target) {
             return;
         }
-
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
                 target.scrollIntoView({
