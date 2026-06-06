@@ -697,7 +697,12 @@ export async function activate(context: vscode.ExtensionContext) {
                 const editor = vscode.window.activeTextEditor;
                 if (editor && isJournalFile(editor.document)) {
                     filePath = editor.document.uri.fsPath;
+                    const lineCount = editor.selection.active.line;
+                    setCursorLine(filePath, lineCount);
                 }
+            }
+            else {
+                setCursorLine(filePath, 0);
             }
 
             if (!filePath) {
@@ -705,10 +710,6 @@ export async function activate(context: vscode.ExtensionContext) {
             }
 
             document = await vscode.workspace.openTextDocument(filePath);
-
-            // Initialize cursor (safe)
-            const lineCount = document.lineCount;
-            setCursorLine(filePath, lineCount > 0 ? 0 : 0);
 
             setCurrentDocument(document);
             const column = vscode.ViewColumn.Active;
@@ -881,26 +882,22 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand(
             'vsJournal.paste',
             async () => {
-                console.log('vsJournal.paste start');
                 const editor = vscode.window.activeTextEditor;
 
                 if (!editor || !isJournalFile(editor.document)) {
                     return;
                 }
 
-                console.log('vsJournal.paste');
                 const buf = getImageFromClipboard();
-                console.log('buf', buf);
-
                 if (!buf) {
                     return;
                 }
 
                 const target =
                     createPasteImageTarget(editor);
-                console.log('filePath', target.filePath);
 
                 // 動作確認中なので一旦コメントアウト
+                // console.log
                 // fs.writeFileSync(target.filePath, buf);
 
                 await insertImageMarkdown(

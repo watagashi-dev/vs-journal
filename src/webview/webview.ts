@@ -31,11 +31,18 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
     type State = {
         hideTimer: ReturnType<typeof setTimeout> | null;
         lastMouseMove: number;
+        domReady: boolean;
+        pendingScroll: {
+            filePath: string;
+            line: number;
+        } | null;
     };
 
     const state: State = {
         hideTimer: null,
-        lastMouseMove: 0
+        lastMouseMove: 0,
+        domReady: false,
+        pendingScroll: null
     };
 
     const HIDE_DELAY = 1500;
@@ -347,6 +354,7 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
             behavior: 'smooth'
         });
     }
+
     function updateCurrentIndexFromScroll() {
         if (!highlightElements.length) {
             return;
@@ -451,6 +459,27 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
         }
     }
 
+    function executeScrollToLine(
+        filePath: string,
+        line: number
+    ): void {
+        const fileBlock = getFileBlock(filePath);
+        const target = fileBlock && getLineElement(fileBlock, line);
+
+        if (!target) {
+            return;
+        }
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                target.scrollIntoView({
+                    block: 'center',
+                    behavior: 'auto'
+                });
+            });
+        });
+    }
+
     let highlightElements: HTMLElement[] = [];
 
     // theme変更対応（旧コードで消えがちな部分）
@@ -471,10 +500,18 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
             }
 
             if (msg?.type === 'scrollToLine') {
-                const fileBlock = getFileBlock(msg.filePath);
-                const target = fileBlock && getLineElement(fileBlock, msg.line);
+                if (!state.domReady) {
+                    state.pendingScroll = {
+                        filePath: msg.filePath,
+                        line: msg.line
+                    };
+                    return;
+                }
 
-                target?.scrollIntoView({ block: 'center' });
+                executeScrollToLine(
+                    msg.filePath,
+                    msg.line
+                );
             }
 
             if (msg.type === 'setPreviewCount') {
@@ -529,6 +566,20 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
     function start() {
         init();
         runHighlight();
+
+        state.domReady = true;
+
+        if (state.pendingScroll) {
+            const scroll = state.pendingScroll;
+            state.pendingScroll = null;
+
+            setTimeout(() => {
+                executeScrollToLine(
+                    scroll.filePath,
+                    scroll.line
+                );
+            }, 100);
+        }
     }
 
     if (document.readyState === 'loading') {
