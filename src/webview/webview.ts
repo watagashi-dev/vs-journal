@@ -473,6 +473,8 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
         );
 
         let target: HTMLElement | null = null;
+        let nearest: HTMLElement | null = null;
+        let nearestDistance = Number.MAX_SAFE_INTEGER;
 
         for (const el of elements) {
             //            const start = Number(el.dataset.startLine);
@@ -486,11 +488,26 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
                 target = el;
                 break;
             }
+
+            const distance =
+                line < start
+                    ? start - line
+                    : line - end;
+
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearest = el;
+            }
+        }
+
+        if (!target) {
+            target = nearest;
         }
 
         if (!target) {
             return;
         }
+
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
                 target.scrollIntoView({
