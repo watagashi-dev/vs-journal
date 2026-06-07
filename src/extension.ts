@@ -729,10 +729,6 @@ export async function activate(context: vscode.ExtensionContext) {
                     limitExceeded: check.limitExceeded,
                     message: check.message
                 });
-
-                panel.webview.postMessage({
-                    type: 'scrollToTop'
-                });
             });
         }),
 
@@ -764,6 +760,7 @@ export async function activate(context: vscode.ExtensionContext) {
             await measure("preview multi entry generation", async () => {
                 const check = checkPreviewLimits(filesToPreview);
 
+                setCursorLine(filesToPreview[0].filePath, 0);
                 setPreviewState(panel, {
                     files: check.limitedFiles,
                     context,

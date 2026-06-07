@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { FileMeta } from '../models/FileMeta';
 import { createMarkdownIt, getHljsThemeUrl } from './previewRenderer';
-import { getCursorLine } from '../state';
+import { getCursorLine, getLastActiveFilePath } from '../state';
 
 let currentPanel: vscode.WebviewPanel | undefined;
 let currentDocument: vscode.TextDocument | undefined;
@@ -120,11 +120,14 @@ function getLocalResourceRoots(): vscode.Uri[] {
 function syncScrollToCursor(panel: vscode.WebviewPanel) {
     const state = getPreviewState(panel);
 
-    if (!state || state.files.length !== 1) {
+    if (!state) {
         return;
     }
 
-    const filePath = state.files[0].filePath;
+    const filePath = getLastActiveFilePath();
+    if (!filePath) { return; }
+    if (!state.files.some(f => f.filePath === filePath)) { return; }
+
     const line = getCursorLine(filePath);
 
     if (line === undefined) {
@@ -137,7 +140,6 @@ function syncScrollToCursor(panel: vscode.WebviewPanel) {
         line
     });
 }
-
 
 export function ensurePreviewPanel(
     column: vscode.ViewColumn,
