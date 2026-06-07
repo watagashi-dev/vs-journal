@@ -61,6 +61,10 @@
       {
         "command": "vsJournal.paste",
         "title": "%command.paste%"
+      },
+      {
+        "command": "vsJournal.insertFileDir",
+        "title": "%command.insertFileDir%"
       }
     ],
     "configuration": {
@@ -245,7 +249,12 @@
         {
           "command": "vsJournal.paste",
           "when": "editorTextFocus && resourceExtname == .md",
-          "group": "9_cutcopypaste"
+          "group": "z_vsjournal@1"
+        },
+        {
+          "command": "vsJournal.insertFileDir",
+          "when": "editorTextFocus && resourceExtname == .md",
+          "group": "z_vsjournal@2"
         }
       ]
     },
@@ -266,6 +275,12 @@
         "when": "editorTextFocus && resourceExtname == .md",
         "key": "ctrl+alt+v",
         "mac": "cmd+option+v"
+      },
+      {
+        "command": "vsJournal.insertFileDir",
+        "when": "editorTextFocus && resourceExtname == .md",
+        "key": "ctrl+alt+i",
+        "mac": "cmd+option+i"
       }
     ]
   },

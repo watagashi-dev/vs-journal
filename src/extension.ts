@@ -316,23 +316,29 @@ export function getNextImageFileName(
     return `img_${next.toString().padStart(2, '0')}.png`;
 }
 
-export async function insertImageMarkdown(
+export async function insertLinkMarkdown(
     editor: vscode.TextEditor,
-    relativePath: string,
-    fileName: string
-) {
+    pathName: string,
+    fileName: string,
+    isImage = false
+): Promise<boolean> {
 
-    const markdown =
-        `![${fileName}](${relativePath})`;
+    const selectedText =
+        editor.document.getText(editor.selection);
 
-    await editor.edit(editBuilder => {
-        editBuilder.insert(
-            editor.selection.active,
+    const linkText = selectedText || fileName;
+
+    const markdown = isImage
+        ? `![${linkText}](${pathName})`
+        : `[${linkText}](${pathName})`;
+
+    return editor.edit(editBuilder => {
+        editBuilder.replace(
+            editor.selection,
             markdown
         );
     });
 }
-
 
 // --- centralized key normalization ---
 export function filePathToKey(filePath: string): string {
@@ -898,13 +904,45 @@ export async function activate(context: vscode.ExtensionContext) {
 
                 fs.writeFileSync(target.filePath, buf);
 
-                await insertImageMarkdown(
+                await insertLinkMarkdown(
                     editor,
                     target.relativePath,
-                    target.fileName
+                    target.fileName,
+                    true
                 );
             }
         ),
+
+        vscode.commands.registerCommand(
+            'vsJournal.insertFileDir',
+            async () => {
+                const editor = vscode.window.activeTextEditor;
+
+                if (!editor || !isJournalFile(editor.document)) {
+                    return;
+                }
+                const result = await vscode.window.showOpenDialog({
+                    canSelectFiles: true,
+                    canSelectFolders: true,
+                    canSelectMany: false,
+                    openLabel: vscode.l10n.t('Insert')
+                });
+
+                if (!result || result.length === 0) {
+                    // Cancel
+                    return;
+                }
+
+                const fileUri = result[0];
+                const baseName = path.basename(fileUri.fsPath);
+                await insertLinkMarkdown(
+                    editor,
+                    fileUri.fsPath,
+                    baseName
+                );
+            }
+        ),
+
         // Command to increment tag usage count
         vscode.commands.registerCommand('vsJournal.incrementTagUsage', (tag: string) => {
             sessionTagUsage.set(tag, (sessionTagUsage.get(tag) ?? 0) + 1);
