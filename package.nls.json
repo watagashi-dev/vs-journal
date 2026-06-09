@@ -33,6 +33,7 @@
   "command.addVirtualTag": "VS Journal: Add Virtual Tag",
   "command.deleteFile.title": "Delete File",
   "command.deleteVirtualTag.title": "Delete Virtual Tag",
-  "command.insertFileDir": "VSJ: Insert link",
+  "command.insertFile": "VSJ: Insert File link",
+  "command.insertFolder": "VSJ: Insert Folder link",
   "command.paste": "VSJ: Paste Image"
 }

@@ -322,15 +322,14 @@ export async function insertLinkMarkdown(
     fileName: string,
     isImage = false
 ): Promise<boolean> {
-
     const selectedText =
         editor.document.getText(editor.selection);
 
     const linkText = selectedText || fileName;
 
     const markdown = isImage
-        ? `![${linkText}](${pathName})`
-        : `[${linkText}](${pathName})`;
+        ? `![${linkText}](<${pathName}>)`
+        : `[${linkText}](<${pathName}>)`;
 
     return editor.edit(editBuilder => {
         editBuilder.replace(
@@ -579,6 +578,49 @@ function checkPreviewLimits(files: FileMeta[]): {
         limitedFiles: result,
         limitExceeded: false
     };
+}
+
+async function insertFromUri(editor: vscode.TextEditor, uri: vscode.Uri) {
+    const baseName = path.basename(uri.fsPath);
+    //    const rawPath = uri.fsPath.replace(/\\/g, '/');
+
+    await insertLinkMarkdown(
+        editor,
+        //       rawPath,
+        uri.fsPath,
+        baseName
+    );
+}
+
+async function pickUri(options: vscode.OpenDialogOptions) {
+    const result = await vscode.window.showOpenDialog(options);
+
+    if (!result || result.length === 0) {
+        return undefined;
+    }
+
+    return result[0];
+}
+
+async function handleInsertFileOrDir(canSelectFolders: boolean) {
+    const editor = vscode.window.activeTextEditor;
+
+    if (!editor || !isJournalFile(editor.document)) {
+        return;
+    }
+
+    const uri = await pickUri({
+        canSelectFiles: true,
+        canSelectFolders,
+        canSelectMany: false,
+        openLabel: vscode.l10n.t('Insert')
+    });
+
+    if (!uri) {
+        return;
+    }
+
+    await insertFromUri(editor, uri);
 }
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -914,33 +956,13 @@ export async function activate(context: vscode.ExtensionContext) {
         ),
 
         vscode.commands.registerCommand(
-            'vsJournal.insertFileDir',
-            async () => {
-                const editor = vscode.window.activeTextEditor;
+            'vsJournal.insertFile',
+            () => handleInsertFileOrDir(false)
+        ),
 
-                if (!editor || !isJournalFile(editor.document)) {
-                    return;
-                }
-                const result = await vscode.window.showOpenDialog({
-                    canSelectFiles: true,
-                    canSelectFolders: true,
-                    canSelectMany: false,
-                    openLabel: vscode.l10n.t('Insert')
-                });
-
-                if (!result || result.length === 0) {
-                    // Cancel
-                    return;
-                }
-
-                const fileUri = result[0];
-                const baseName = path.basename(fileUri.fsPath);
-                await insertLinkMarkdown(
-                    editor,
-                    fileUri.fsPath,
-                    baseName
-                );
-            }
+        vscode.commands.registerCommand(
+            'vsJournal.insertFolder',
+            () => handleInsertFileOrDir(true)
         ),
 
         // Command to increment tag usage count

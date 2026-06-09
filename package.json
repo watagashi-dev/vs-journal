@@ -63,8 +63,12 @@
         "title": "%command.paste%"
       },
       {
-        "command": "vsJournal.insertFileDir",
-        "title": "%command.insertFileDir%"
+        "command": "vsJournal.insertFile",
+        "title": "%command.insertFile%"
+      },
+      {
+        "command": "vsJournal.insertFolder",
+        "title": "%command.insertFolder%"
       }
     ],
     "configuration": {
@@ -252,9 +256,14 @@
           "group": "z_vsjournal@1"
         },
         {
-          "command": "vsJournal.insertFileDir",
+          "command": "vsJournal.insertFile",
           "when": "editorTextFocus && resourceExtname == .md",
           "group": "z_vsjournal@2"
+        },
+        {
+          "command": "vsJournal.insertFolder",
+          "when": "editorTextFocus && resourceExtname == .md",
+          "group": "z_vsjournal@3"
         }
       ]
     },
@@ -277,10 +286,16 @@
         "mac": "cmd+option+v"
       },
       {
-        "command": "vsJournal.insertFileDir",
+        "command": "vsJournal.insertFile",
         "when": "editorTextFocus && resourceExtname == .md",
         "key": "ctrl+alt+i",
         "mac": "cmd+option+i"
+      },
+      {
+        "command": "vsJournal.insertFolder",
+        "when": "editorTextFocus && resourceExtname == .md",
+        "key": "ctrl+alt+shift+i",
+        "mac": "cmd+option+shift+i"
       }
     ]
   },

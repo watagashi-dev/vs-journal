@@ -33,6 +33,7 @@
   "command.addVirtualTag": "VS Journal: 仮想タグを追加",
   "command.deleteFile.title": "ファイルを削除",
   "command.deleteVirtualTag.title": "仮想タグを削除",
-  "command.insertFileDir": "VSJ: リンクを挿入",
+  "command.insertFile": "VSJ: ファイルへのリンクを挿入",
+  "command.insertFolder": "VSJ: フォルダーへのリンクを挿入",
   "command.paste": "VSJ: 画像を貼り付け"
 }
