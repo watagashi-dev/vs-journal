@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
+import open from 'open';
 import { FileMeta } from '../models/FileMeta';
 import { createMarkdownIt, getHljsThemeUrl } from './previewRenderer';
 import { getCursorLine } from '../state';
@@ -138,7 +140,6 @@ function syncScrollToCursor(panel: vscode.WebviewPanel) {
     });
 }
 
-
 export function ensurePreviewPanel(
     column: vscode.ViewColumn,
     preserveFocus: boolean = false
@@ -185,6 +186,68 @@ async function handleWebviewMessage(message: any) {
 
     if (message.type === 'openExternal') {
         await vscode.env.openExternal(vscode.Uri.parse(message.url));
+        return;
+    }
+
+    if (message.type === 'openLocalLink' && message.path) {
+        const decodedPath = decodeURIComponent(message.path);
+        const uri = vscode.Uri.file(decodedPath);
+        const exists = fs.existsSync(decodedPath);
+
+        if (exists) {
+            const stat = fs.statSync(decodedPath);
+
+            const config = vscode.workspace.getConfiguration('vsJournal');
+            const internalExts: string[] = config.get('internalOpenExtensions', ['.md']);
+
+            if (stat.isDirectory()) {
+                try {
+                    await open(decodedPath);
+                } catch (error) {
+                    vscode.window.showWarningMessage(
+                        vscode.l10n.t('Failed to open directory.')
+                    );
+                }
+            }
+
+            else if (stat.isFile()) {
+                const ext = path.extname(decodedPath);
+                const shouldOpenInternally = internalExts.includes(ext);
+
+                if (shouldOpenInternally) {
+                    try {
+                        await vscode.commands.executeCommand(
+                            'vscode.open',
+                            uri
+                        );
+                    } catch (error) {
+                        vscode.window.showWarningMessage(
+                            vscode.l10n.t('Failed to open file.')
+                        );
+                    }
+                }
+                else {
+                    try {
+                        await open(decodedPath);
+                    } catch (error) {
+                        vscode.window.showWarningMessage(
+                            vscode.l10n.t('Failed to open file.')
+                        );
+                    }
+                }
+            }
+            else {
+                vscode.window.showWarningMessage(
+                    vscode.l10n.t('Unsupported path type.')
+                );
+            }
+        }
+        else {
+            vscode.window.showWarningMessage(
+                vscode.l10n.t('File or directory not found.')
+            );
+        }
+
         return;
     }
 

@@ -18,5 +18,9 @@
   "Delete": "削除",
   "Insert": "挿入",
   "No virtual tags yet": "仮想タグはありません",
-  "No tags found": "タグが見つかりません"
+  "No tags found": "タグが見つかりません",
+  "Failed to open directory.": "フォルダーを開けませんでした。",
+  "Failed to open file.": "ファイルを開けませんでした。",
+  "Unsupported path type.": "サポートされていないパスです。",
+  "File or directory not found.": "ファイルまたはフォルダーが見つかりません。"
 }

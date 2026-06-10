@@ -26,6 +26,8 @@
   "config.paste.saveLocation.markdownDescription": "Determines the storage location for pasted files and images.\n\n- `flat`: Files are saved in the same directory as the note.\n- `structured`: Files are saved in a hierarchical folder using the configured folder structure and note file name.\n\nExample (`structured`): `2026/05/07/2026-05-07-13-45/image01.png`\n\nOnly applies to newly pasted content.",
   "config.paste.saveLocation.flat": "Save pasted files in the same directory as the note.",
   "config.paste.saveLocation.structured": "Save pasted files in a hierarchical folder (based on folderStructure and note file name).",
+  "config.internalOpenExtensions.description": "File extensions that should be opened inside VS Code editor.",
+  "config.internalOpenExtensions.markdownDescription": "List of file extensions (e.g. .md, .txt) that will be opened inside VS Code instead of external applications.",
   "view.vsJournal.tags.empty": "No entries",
   "command.newEntry": "VS Journal: New Entry",
   "command.previewEntry": "VS Journal: Preview Entry",

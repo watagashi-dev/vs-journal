@@ -142,13 +142,9 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
             if (hrefIndex >= 0) {
                 const href = token.attrs[hrefIndex][1];
 
-                if (/^https?:\/\//.test(href)) {
-                    // Remove href
-                    token.attrs.splice(hrefIndex, 1);
-
-                    // Replace with data-href
-                    token.attrPush(["data-href", href]);
-                }
+                // Convert ALL links to data-href
+                token.attrs.splice(hrefIndex, 1);
+                token.attrPush(["data-href", href]);
             }
         }
 

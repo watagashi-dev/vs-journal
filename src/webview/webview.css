@@ -432,3 +432,8 @@ body>*:first-child {
 .vjs-nav.hidden {
   display: none;
 }
+
+a[data-href] {
+  cursor: pointer;
+  text-decoration: underline;
+}

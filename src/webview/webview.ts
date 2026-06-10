@@ -9,6 +9,7 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
 
     type VsCodeMessage =
         | { type: 'openExternal'; url: string }
+        | { type: 'openLocalLink'; path: string }
         | { type: 'jumpToLine'; filePath: string; line: number }
         | { type: 'jumpToFile'; filePath: string }
         | { type: 'closePreview' }
@@ -96,9 +97,23 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
         const link = target.closest('a');
         if (link) {
             const href = link.getAttribute('data-href');
-            if (href?.startsWith('http')) {
+            if (href) {
                 e.preventDefault();
-                postMessage({ type: 'openExternal', url: href });
+
+                if (
+                    href.startsWith('http://') ||
+                    href.startsWith('https://')
+                ) {
+                    postMessage({
+                        type: 'openExternal',
+                        url: href
+                    });
+                } else {
+                    postMessage({
+                        type: 'openLocalLink',
+                        path: href
+                    });
+                }
             }
             return;
         }
