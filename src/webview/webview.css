@@ -3,6 +3,10 @@
    Optimized for reading notes
    ========================================================= */
 
+/* =========================================================
+   BASE
+   ========================================================= */
+
 body {
   margin: 0;
   padding: 18px 18px;
@@ -121,7 +125,6 @@ input[type="checkbox"] {
   height: 14px;
   margin-right: 6px;
 
-  /* Border emphasis */
   border: 2.3px solid var(--vscode-checkbox-border);
   border-radius: 3px;
   background: var(--vscode-checkbox-background);
@@ -130,10 +133,7 @@ input[type="checkbox"] {
   display: inline-block;
   position: relative;
 
-  /* Baseline correction for Japanese text */
   vertical-align: text-bottom;
-  margin-top: 0px;
-  /* Fine adjustment */
 }
 
 input[type="checkbox"]:checked {
@@ -168,7 +168,7 @@ blockquote {
 }
 
 /* =========================================================
-   CODE (inline)
+   CODE
    ========================================================= */
 
 code {
@@ -181,24 +181,7 @@ code {
   background-color: var(--vscode-textCodeBlock-background);
 }
 
-/* =========================================================
-   CODE BLOCK
-   ========================================================= */
-
-pre,
-code {
-  font-family: var(--vscode-editor-font-family);
-  font-size: 0.9em;
-  color: var(--vscode-editor-foreground);
-  /* Match editor theme */
-}
-
-code {
-  padding: 0.2em 0.4em;
-  border-radius: 4px;
-  background-color: var(--vscode-textCodeBlock-background) !important;
-}
-
+/* block code */
 pre {
   margin: 0.3em 0;
   overflow-x: auto;
@@ -228,6 +211,11 @@ a:hover {
   text-decoration: underline;
 }
 
+a[data-href] {
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 /* =========================================================
    HORIZONTAL RULE
    ========================================================= */
@@ -241,7 +229,6 @@ hr {
 
 /* =========================================================
    TABLES
-
    ========================================================= */
 
 table {
@@ -251,9 +238,6 @@ table {
   max-width: 100%;
 }
 
-/* =========================================================
-   TABLES
-   ========================================================= */
 table.vjs-md-table {
   border-collapse: collapse;
 }
@@ -273,12 +257,12 @@ table.vjs-md-table td {
   border-left: 1px solid color-mix(in srgb,
       var(--vscode-editor-foreground) 15%,
       transparent);
+
   border-right: 1px solid color-mix(in srgb,
       var(--vscode-editor-foreground) 15%,
       transparent);
 }
 
-/* Emphasize header row underline */
 table.vjs-md-table th {
   border-bottom: 2px solid color-mix(in srgb,
       var(--vscode-editor-foreground) 80%,
@@ -302,7 +286,6 @@ table[border] td {
   padding: 4px 14px;
 }
 
-
 /* =========================================================
    IMAGES
    ========================================================= */
@@ -312,7 +295,6 @@ img {
   height: auto;
 }
 
-/* Prevent inline image overflow */
 p img {
   max-width: 80%;
 }
@@ -348,6 +330,10 @@ body>*:first-child {
   opacity: 0;
   pointer-events: none;
 }
+
+/* =========================================================
+   VJS COMPONENTS
+   ========================================================= */
 
 .vjs-line {
   position: relative;
@@ -431,9 +417,4 @@ body>*:first-child {
 
 .vjs-nav.hidden {
   display: none;
-}
-
-a[data-href] {
-  cursor: pointer;
-  text-decoration: underline;
 }
