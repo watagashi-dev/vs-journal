@@ -858,8 +858,12 @@ export async function activate(context: vscode.ExtensionContext) {
         }),
 
         vscode.commands.registerCommand('vsJournal.deleteVirtualTag',
-            async (item: { node?: TagHierarchyNode; nodeSource?: 'system' | 'user' | 'generated'; }) => {
-                if (!item || item.nodeSource !== 'generated') {
+            async (
+                item: vscode.TreeItem & {
+                    node?: TagHierarchyNode;
+                }
+            ) => {
+                if (!item || item.contextValue !== 'tag:virtual') {
                     return;
                 }
                 const node = item.node;
