@@ -64,12 +64,6 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
             .find((el) => el.getAttribute('data-file') === filePath);
     }
 
-    function getLineElement(fileBlock: Element, line: number): HTMLElement | null {
-        return fileBlock.querySelector<HTMLElement>(
-            `.vjs-line[data-line="${line}"]`
-        );
-    }
-
     // =========================================================
     // Header
     // =========================================================
@@ -118,17 +112,20 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
             return;
         }
 
-        const lineEl = target.closest('.vjs-line');
-        if (lineEl) {
-            const lineStr = lineEl.getAttribute('data-line');
-            const file = lineEl.closest('[data-file]');
+        const blockEl = target.closest('[data-start-line]');
+        if (blockEl) {
+            const file = blockEl.closest('[data-file]');
             const filePath = file?.getAttribute('data-file');
 
-            if (lineStr && filePath) {
+            const start = Number(blockEl.getAttribute('data-start-line'));
+            const end = Number(blockEl.getAttribute('data-end-line') ?? start);
+
+            if (filePath && Number.isFinite(start)) {
                 postMessage({
                     type: 'jumpToLine',
                     filePath,
-                    line: parseInt(lineStr, 10)
+                    line: start
+                    // NOTE: range-based system (end currently unused for click)
                 });
             }
             return;
@@ -479,7 +476,58 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
         line: number
     ): void {
         const fileBlock = getFileBlock(filePath);
-        const target = fileBlock && getLineElement(fileBlock, line);
+
+        if (!fileBlock) {
+            return;
+        }
+
+        const elements = Array.from(
+            fileBlock.querySelectorAll<HTMLElement>(
+                "[data-start-line]"
+            )
+        );
+
+        let target: HTMLElement | null = null;
+        let targetStart = 0;
+        let targetEnd = 0;
+
+        let nearest: HTMLElement | null = null;
+        let nearestStart = 0;
+        let nearestEnd = 0;
+        let nearestDistance = Number.MAX_SAFE_INTEGER;
+
+        for (const el of elements) {
+            const start = Number(el.getAttribute("data-start-line"));
+            const end = Number(
+                el.getAttribute("data-end-line")
+                ?? el.getAttribute("data-start-line")
+            );
+
+            if (line >= start && line <= end) {
+                target = el;
+                targetStart = start;
+                targetEnd = end;
+                break;
+            }
+
+            const distance =
+                line < start
+                    ? start - line
+                    : line - end;
+
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearest = el;
+                nearestStart = start;
+                nearestEnd = end;
+            }
+        }
+
+        if (!target) {
+            target = nearest;
+            targetStart = nearestStart;
+            targetEnd = nearestEnd;
+        }
 
         if (!target) {
             return;
@@ -487,8 +535,40 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
 
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
-                target.scrollIntoView({
-                    block: 'center',
+                const range =
+                    Math.max(
+                        1,
+                        targetEnd - targetStart
+                    );
+
+                const ratio =
+                    Math.max(
+                        0,
+                        Math.min(
+                            1,
+                            (line - targetStart) / range
+                        )
+                    );
+
+                const container =
+                    document.scrollingElement
+                    ?? document.documentElement;
+
+                const rect =
+                    target.getBoundingClientRect();
+
+                const targetTop =
+                    rect.top +
+                    container.scrollTop;
+
+                const offset =
+                    target.offsetHeight * ratio;
+
+                container.scrollTo({
+                    top:
+                        targetTop +
+                        offset -
+                        (window.innerHeight / 2),
                     behavior: 'auto'
                 });
             });

@@ -331,14 +331,6 @@ body>*:first-child {
   pointer-events: none;
 }
 
-/* =========================================================
-   VJS COMPONENTS
-   ========================================================= */
-
-.vjs-line {
-  position: relative;
-}
-
 .file-separator {
   border-top: 1px solid var(--vscode-editorWidget-border);
   margin: 24px 0;

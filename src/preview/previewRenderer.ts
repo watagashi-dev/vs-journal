@@ -21,6 +21,20 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
 
     const defaultRender = md.renderer.renderToken.bind(md.renderer);
 
+    function applyLineAttrs(token: any) {
+        const map = token.map;
+        if (!map) { return; }
+
+        const start = map[0];
+        const end = map[1];
+
+        token.attrSet("data-start-line", String(start));
+
+        if (typeof end === "number") {
+            token.attrSet("data-end-line", String(end));
+        }
+    }
+
     md.renderer.renderToken = (
         tokens: any[],
         idx: number,
@@ -34,9 +48,7 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
         }
 
         if (token.map && token.nesting === 1) {
-            const startLine = token.map[0];
-            token.attrSet("data-line", String(startLine));
-            token.attrJoin("class", "vjs-line");
+            applyLineAttrs(token);
         }
 
         return defaultRender(tokens, idx, options);
@@ -65,23 +77,11 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
         return defaultImageRule ? defaultImageRule(tokens, idx, options, env, self) : self.renderToken(tokens, idx, options);
     };
 
-    const addLineAttr = (tokens: any[], idx: number, env: any) => {
-        const token = tokens[idx];
-        if (!token.map) {
-            return;
-        }
-        const line = token.map[0];
-        if (!token.attrGet("data-line")) {
-            token.attrSet("data-line", String(line));
-        }
-        token.attrJoin("class", "vjs-line");
-    };
-
     md.renderer.rules.table_open = (tokens, idx, options, env, self) => {
         const token = tokens[idx];
 
         // Existing processing (adding line numbers, etc.)
-        addLineAttr(tokens, idx, env);
+        applyLineAttrs(token);
 
         // Treat Markdown tables as border less
         const existingClass = tokens[idx].attrGet('class');
@@ -95,11 +95,12 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
     };
 
     md.renderer.rules.thead_open = (tokens, idx, options, env, self) => {
-        addLineAttr(tokens, idx, env);
+        applyLineAttrs(tokens[idx]);
         return self.renderToken(tokens, idx, options);
     };
+
     md.renderer.rules.tbody_open = (tokens, idx, options, env, self) => {
-        addLineAttr(tokens, idx, env);
+        applyLineAttrs(tokens[idx]);
         return self.renderToken(tokens, idx, options);
     };
 
@@ -107,8 +108,7 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
     md.renderer.rules.fence = (tokens, idx, options, env, self) => {
         const token = tokens[idx];
         if (token.map) {
-            token.attrSet("data-line", String(token.map[0]));
-            token.attrJoin("class", "vjs-line");
+            applyLineAttrs(token);
         }
         if (token.info) {
             const lang = token.info.trim().split(/\s+/g)[0];
@@ -122,9 +122,16 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
         const token = tokens[idx];
         let html = token.content;
         if (token.map && html.trimStart().startsWith('<table')) {
-            const line = token.map[0];
-            let attr = `data-line="${line}" class="vjs-line"`;
+            const start = token.map[0];
+            const end = token.map[1];
+
+            let attr = `data-start-line="${start}"`;
+            if (typeof end === "number") {
+                attr += ` data-end-line="${end}"`;
+            }
+
             html = html.replace(/^<table/, `<table ${attr}`);
+
             return html;
         }
         return defaultHtmlBlock ? defaultHtmlBlock(tokens, idx, options, env, self) : html;
