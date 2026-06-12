@@ -103,6 +103,7 @@ All notes are stored as standard `.md` files.
 - Use full VS Code editing features
 - Easy backup and migration
 - High portability
+- Supports organization using folder hierarchies
 
 ---
 
@@ -180,7 +181,17 @@ Large note collections may be partially displayed to maintain performance.
 
 ---
 
-### 7. Tag View
+### 7. Images & File Links
+
+Insert images and links directly while editing Markdown.
+
+- Save and paste clipboard images
+- Insert file and folder links
+- Open local files and folders from preview
+
+---
+
+### 8. Tag View
 
 Organize and navigate notes through a hierarchical tag tree.
 
@@ -190,7 +201,7 @@ Organize and navigate notes through a hierarchical tag tree.
 
 ---
 
-### 8. System Tags
+### 9. System Tags
 
 Tags automatically assigned based on file state.
 
@@ -203,7 +214,7 @@ System tag visibility can be configured in settings.
 
 ---
 
-### 9. Keyboard & UI Interaction
+### 10. Keyboard & UI Interaction
 
 Quick access to preview while editing.
 
@@ -255,6 +266,27 @@ When creating a new file:
 
 - A heading is inserted on the first line
 - Current date/time is inserted on the second line (can be disabled)
+- File naming format and folder structure can be customized in settings
+
+---
+
+### Insert Images and Links
+
+While editing a Markdown file, the following actions are available from the editor context menu:
+
+- VSJ: Paste Image
+- VSJ: Insert File Link
+- VSJ: Insert Folder Link
+
+Shortcuts:
+
+| Action | Windows / Linux | macOS |
+| :--- | :--- | :--- |
+| Paste Image | Ctrl+Alt+V | Cmd+Option+V |
+| Insert File Link | Ctrl+Alt+I | Cmd+Option+I |
+| Insert Folder Link | Ctrl+Alt+Shift+I | Cmd+Option+Shift+I |
+
+When pasting an image, the clipboard image is saved automatically and a Markdown image link is inserted.
 
 ---
 
@@ -297,6 +329,9 @@ Cmd+Option+P (macOS)
 | :--- | :--- | :--- |
 | New Entry | Ctrl+Alt+N | Cmd+Option+N |
 | Preview | Ctrl+Alt+P | Cmd+Option+P |
+| Paste Image | Ctrl+Alt+V | Cmd+Option+V |
+| Insert File Link | Ctrl+Alt+I | Cmd+Option+I |
+| Insert Folder Link | Ctrl+Alt+Shift+I | Cmd+Option+Shift+I |
 
 ---
 
@@ -311,6 +346,10 @@ Cmd+Option+P (macOS)
 | vsJournal.confirmDeleteVirtualTag | Confirm before deleting virtual tag | true |
 | vsJournal.virtualTags.caseSensitive | Case-sensitive virtual tags | false |
 | vsJournal.systemTags.visibility | Control system tag visibility | { "Today": true } |
+| vsJournal.fileNameStyle | File naming format for new entries | datetime-minute |
+| vsJournal.folderStructure | Folder structure for new entries | flat |
+| vsJournal.paste.saveLocation | Location for pasted images | structured |
+| vsJournal.internalOpenExtensions | Extensions opened inside VS Code | [".md"] |
 
 Example:
 
@@ -324,7 +363,14 @@ Example:
   "vsJournal.virtualTags.caseSensitive": true,
   "vsJournal.systemTags.visibility": {
     "Today": true
-  }
+  },
+  "vsJournal.fileNameStyle": "datetime-minute",
+  "vsJournal.folderStructure": "yyyy-mm-dd",
+  "vsJournal.paste.saveLocation": "structured",
+  "vsJournal.internalOpenExtensions": [
+    ".md",
+    ".txt"
+  ]
 }
 ```
 
@@ -332,7 +378,7 @@ Example:
 
 ## Directory Structure
 
-Example:
+Example (flat):
 
 ```
 Journal Directory/
@@ -340,6 +386,18 @@ Journal Directory/
   2025-03-08-14-30.md
   2026-01-01-18-23.md
 ```
+
+Example (yyyy-mm-dd):
+
+```
+Journal Directory/
+  2026/
+    05/
+      07/
+        2026-05-07-13-45.md
+```
+
+When using image pasting, an image directory associated with the note is created automatically.
 
 ---
 
@@ -375,15 +433,6 @@ VS Journal will continue to evolve while staying simple and lightweight.
 
 - Enhanced Markdown editing support
 - Basic math expression support
-
-### Media Handling
-
-- Paste images with automatic saving and insertion
-
-### File Management
-
-- File renaming support
-- Enhanced storage organization options
 
 ---
 

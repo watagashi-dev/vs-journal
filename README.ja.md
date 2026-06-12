@@ -67,6 +67,7 @@ VS Journal は高速に動作することを最優先に設計されています
 
 - VS Code の強力な編集機能をそのまま活用できます
 - データのポータビリティが高く、他ツールへの移行やバックアップも容易です
+- フォルダ階層による管理にも対応しています
 
 ---
 
@@ -139,7 +140,17 @@ Markdown プレビューを拡張し、読みやすさと操作性を向上さ�
 
 ---
 
-### 7. タグビュー
+### 7. 画像・ファイルリンク管理
+
+Markdown編集中に画像やファイルへのリンクを簡単に挿入できます。
+
+- クリップボード画像の保存と貼り付け
+- ファイル・フォルダーリンクの挿入
+- プレビューからローカルファイルやフォルダーをオープン
+
+---
+
+### 8. タグビュー
 
 タグツリーでメモを整理・閲覧できます。
 
@@ -153,7 +164,7 @@ Markdown プレビューを拡張し、読みやすさと操作性を向上さ�
 
 ---
 
-### 8. システムタグ
+### 9. システムタグ
 
 ユーザーが付与しなくても自動的に分類されるタグです。
 
@@ -166,7 +177,7 @@ Markdown プレビューを拡張し、読みやすさと操作性を向上さ�
 
 ---
 
-### 9. キーボード操作
+### 10. キーボード操作
 
 編集中でも素早くプレビューできます。
 
@@ -215,8 +226,27 @@ _2026年03月05日_ _10:15_
 
 - 1行目に見出しを自動生成
 - 2行目に日時を自動挿入（設定で無効化可能）
+- ファイル名形式や保存先フォルダ構造は設定で変更可能
 
 ---
+
+### 画像やファイルリンクを挿入する
+
+Markdown編集中は、エディターのコンテクストメニューから以下の機能を利用できます。
+
+- VSJ: 画像を貼り付け
+- VSJ: ファイルへのリンクを挿入
+- VSJ: フォルダーへのリンクを挿入
+
+ショートカット:
+
+| 操作 | Windows/Linux | macOS |
+|--------|--------|--------|
+| 画像貼り付け | Ctrl+Alt+V | Cmd+Option+V |
+| ファイルリンク挿入 | Ctrl+Alt+I | Cmd+Option+I |
+| フォルダーリンク挿入 | Ctrl+Alt+Shift+I | Cmd+Option+Shift+I |
+
+画像貼り付けでは、クリップボード上の画像を保存し、Markdown画像リンクを挿入します。
 
 ### メモをプレビュー
 
@@ -257,6 +287,9 @@ Cmd+Option+P (Mac)
 |------|-----------------|-------|
 | 新しいメモ | Ctrl+Alt+N | Cmd+Option+N |
 | プレビュー | Ctrl+Alt+P | Cmd+Option+P |
+| 画像貼り付け | Ctrl+Alt+V | Cmd+Option+V |
+| ファイルリンク挿入 | Ctrl+Alt+I | Cmd+Option+I |
+| フォルダーリンク挿入 | Ctrl+Alt+Shift+I | Cmd+Option+Shift+I |
 
 ---
 
@@ -271,6 +304,10 @@ Cmd+Option+P (Mac)
 | vsJournal.confirmDeleteVirtualTag | 仮想タグ削除確認 | true |
 | vsJournal.virtualTags.caseSensitive | 仮想タグの大文字小文字区別 | false |
 | vsJournal.systemTags.visibility | システムタグ表示制御 | { "Today": true } |
+| vsJournal.fileNameStyle | 新規メモのファイル名形式 | datetime-minute |
+| vsJournal.folderStructure | 新規メモの保存フォルダ構造 | flat |
+| vsJournal.paste.saveLocation | 貼り付け画像保存先 | structured |
+| vsJournal.internalOpenExtensions | VS Code内部で開く拡張子 | [".md"] |
 
 `confirmDeleteVirtualTag` を有効にすると、
 仮想タグ削除時に確認ダイアログが表示されます。
@@ -287,7 +324,14 @@ Cmd+Option+P (Mac)
   "vsJournal.virtualTags.caseSensitive": true,
   "vsJournal.systemTags.visibility": {
     "Today": true
-  }
+  },
+  "vsJournal.fileNameStyle": "datetime-minute",
+  "vsJournal.folderStructure": "yyyy-mm-dd",
+  "vsJournal.paste.saveLocation": "structured",
+  "vsJournal.internalOpenExtensions": [
+    ".md",
+    ".txt"
+  ]
 }
 ```
 
@@ -295,12 +339,26 @@ Cmd+Option+P (Mac)
 
 ## データ保存構造
 
+例（flat）
+
 ```
 Journal Directory/
   2025-03-07-10-08.md
   2025-03-08-14-30.md
   2026-01-01-18-23.md
 ```
+
+例（yyyy-mm-dd）
+
+```
+Journal Directory/
+  2026/
+    05/
+      07/
+        2026-05-07-13-45.md
+```
+
+画像貼り付け機能を使用した場合は、ノートに関連付けられた画像保存フォルダが作成されます。
 
 ---
 
@@ -328,19 +386,12 @@ Journal Directory/
 VS Journal は、シンプルさを維持しながら、より柔軟で強力なメモ環境へ進化していきます。
 
 ### タグと情報整理の強化
-- 見出しを活用した情報生理機能
+- 見出しを活用した情報整理機能
 - より柔軟なメモ表示機能
 
 ### ライティング体験の向上
 - Markdown 編集サポートの強化
 - 簡単な数式記法のサポート
-
-### メディア対応
-- 画像のペーストによる自動保存・挿入
-
-### ファイル管理の改善
-- ファイル名の変更機能
-- 保存先の階層化対応
 
 ---
 
