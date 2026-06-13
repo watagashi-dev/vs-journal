@@ -121,7 +121,6 @@ function getLocalResourceRoots(): vscode.Uri[] {
 
 function syncScrollToCursor(panel: vscode.WebviewPanel) {
     const state = getPreviewState(panel);
-
     if (!state) {
         return;
     }
@@ -141,6 +140,18 @@ function syncScrollToCursor(panel: vscode.WebviewPanel) {
         filePath,
         line
     });
+}
+
+let syncScheduled = false;
+export function requestSyncScroll(panel: vscode.WebviewPanel) {
+    if (syncScheduled) { return; }
+
+    syncScheduled = true;
+
+    setTimeout(() => {
+        syncScheduled = false;
+        syncScrollToCursor(panel);
+    }, 0);
 }
 
 export function ensurePreviewPanel(
@@ -176,7 +187,7 @@ export function ensurePreviewPanel(
             return;
         }
 
-        syncScrollToCursor(e.webviewPanel);
+        requestSyncScroll(e.webviewPanel);
     });
 
     currentPanel.webview.onDidReceiveMessage(handleWebviewMessage);

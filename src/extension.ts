@@ -21,7 +21,8 @@ import {
     ensurePreviewPanel, updatePreviewPanel,
     setExtensionContext, setCurrentDocument,
     getCurrentPanel,
-    notifyThemeChanged, disposePreviewPanel
+    notifyThemeChanged, disposePreviewPanel,
+    requestSyncScroll
 } from './preview/previewPanel';
 import { shouldShowCompletionMultiLine, getCurrentTagAtCursor } from './services/tagLogic';
 import {
@@ -767,7 +768,6 @@ export async function activate(context: vscode.ExtensionContext) {
             await measure("preview generation", async () => {
                 const meta = createFileMeta(filePath);
                 const check = checkPreviewLimits([meta]);
-
                 setPreviewState(panel, {
                     files: check.limitedFiles,
                     context,
@@ -777,6 +777,7 @@ export async function activate(context: vscode.ExtensionContext) {
                     limitExceeded: check.limitExceeded,
                     message: check.message
                 });
+                requestSyncScroll(panel);
             });
         }),
 
