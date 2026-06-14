@@ -3,7 +3,7 @@
   "displayName": "VS Journal",
   "publisher": "watagashi-dev",
   "description": "%extension.description%",
-  "version": "0.4.0-preview",
+  "version": "0.4.0",
   "engines": {
     "vscode": "^1.109.0"
   },
