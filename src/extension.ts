@@ -819,6 +819,7 @@ export async function activate(context: vscode.ExtensionContext) {
                     limitExceeded: check.limitExceeded,
                     message: check.message
                 });
+                requestSyncScroll(panel);
             });
         }),
 
