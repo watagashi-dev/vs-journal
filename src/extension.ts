@@ -655,15 +655,21 @@ export async function activate(context: vscode.ExtensionContext) {
         const absDir = getAbsoluteJournalDir(getJournalDir());
         if (!absDir) { return; }
 
-        const pattern = new vscode.RelativePattern(absDir, '**/*.md');
+        const pattern = new vscode.RelativePattern(absDir, '**');
         fileWatcher = vscode.workspace.createFileSystemWatcher(pattern);
 
         const onCreate = fileWatcher.onDidCreate(uri => {
+            if (!uri.fsPath.endsWith('.md')) {
+                return;
+            }
             updateSingleFile(uri.fsPath);
             rebuildTree();
         });
 
         const onChange = fileWatcher.onDidChange(uri => {
+            if (!uri.fsPath.endsWith('.md')) {
+                return;
+            }
             const doc = vscode.workspace.textDocuments.find(d => d.uri.fsPath === uri.fsPath);
             if (doc) { return; }
 
