@@ -7,8 +7,19 @@ import {
     getTagNodeContext,
     isTaggableTextToken
 } from '../services/tagLogic';
+import {
+    matchesPreviewVirtualTag,
+    buildTagSegments
+} from '../services/virtualTagService';
 
-export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | undefined) {
+export function createMarkdownIt(
+    webview: vscode.Webview,
+    baseUri: vscode.Uri | undefined,
+    options?: {
+        caseSensitive: boolean;
+        highlightKeyword: string | undefined;
+    }
+) {
     const md = new MarkdownIt({
         html: true,
         linkify: true,
@@ -174,6 +185,10 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
 
         rules.forEach((rule) => {
             const { keyword, className, caseSensitive } = rule;
+            // DEBUG: tag系は将来的に削除対象
+            if (className.includes('vjs-')) {
+                console.log('[applyRules TAG DETECTED]', keyword, className);
+            }
 
             if (!keyword) {
                 return;
@@ -221,10 +236,8 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
         const escaped =
             escapeHtml(content);
 
-        return applyRules(
-            escaped,
-            rules
-        );
+        const result = applyRules(escaped, rules);
+        return result;
     };
 
     md.renderer.rules.vjs_tag = (
@@ -233,21 +246,57 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
     ) => {
         const token = tokens[idx];
 
-        const className =
-            token.meta?.heading
-                ? 'vjs-heading-tag'
-                : 'vjs-user-tag';
-        return `
-<span class="${className}">
+        const meta = token.meta || {};
+
+        const baseClassName = meta.heading
+            ? 'vjs-heading-tag'
+            : 'vjs-user-tag';
+
+        const segments = meta.segments;
+
+        if (!segments) {
+            return `
+<span class="${baseClassName}">
 ${token.content}
 </span>
 `;
+        }
+
+        const innerHtml = segments
+            .map((segment: {
+                text: string;
+                virtualTag: boolean;
+            }) => {
+                if (segment.virtualTag) {
+                    return `<span class="vjs-virtual-tag">${segment.text}</span>`;
+                }
+
+                return segment.text;
+            })
+            .join('');
+
+        const html = `
+<span class="${baseClassName}">
+${innerHtml}
+</span>
+`;
+
+        return html;
     };
 
     md.core.ruler.after(
         'inline',
         'vjs-tag-mark',
         (state) => {
+            //            state.tokens.forEach((t) => {
+            //                if (t.type === 'inline') {
+            //                    console.log(
+            //                        t.content,
+            //                        t.children?.map(c => c.type + ':' + c.content)
+            //                    );
+            //                }
+            //            });
+
             state.tokens.forEach((token, index) => {
                 if (token.type !== 'inline') {
                     return;
@@ -304,12 +353,20 @@ ${token.content}
                         );
 
                     tagToken.content = tagText;
-
                     tagToken.meta = {
                         userTag: true,
+                        virtualTag: matchesPreviewVirtualTag(
+                            tagText.slice(1),
+                            options?.highlightKeyword,
+                            options?.caseSensitive ?? false
+                        ),
+                        segments: buildTagSegments(
+                            tagText,
+                            options?.highlightKeyword,
+                            options?.caseSensitive ?? false
+                        ),
                         heading: isHeading
                     };
-
                     newTokens.push(tagToken);
 
                     lastIndex = range.end;

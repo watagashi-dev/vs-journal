@@ -88,3 +88,89 @@ export function rebuildVirtualTagIndex(
         indexVirtualTags(meta, content, caseSensitive);
     }
 }
+
+export function matchesPreviewVirtualTag(
+    content: string,
+    keyword: string | undefined,
+    caseSensitive: boolean
+): boolean {
+
+    if (!keyword) {
+        return false;
+    }
+
+    return matchVirtualTag(
+        keyword,
+        content,
+        caseSensitive
+    );
+}
+
+export interface TagSegment {
+    text: string;
+    virtualTag: boolean;
+}
+
+export function buildTagSegments(
+    content: string,
+    keyword: string | undefined,
+    caseSensitive: boolean
+): TagSegment[] {
+
+    if (!keyword) {
+        return [
+            {
+                text: content,
+                virtualTag: false
+            }
+        ];
+    }
+
+    const source = caseSensitive
+        ? content
+        : content.toLowerCase();
+
+    const target = caseSensitive
+        ? keyword
+        : keyword.toLowerCase();
+
+    const index = source.indexOf(target);
+
+    if (index === -1) {
+        return [
+            {
+                text: content,
+                virtualTag: false
+            }
+        ];
+    }
+
+    const segments: TagSegment[] = [];
+
+    if (index > 0) {
+        segments.push({
+            text: content.slice(0, index),
+            virtualTag: false
+        });
+    }
+
+    segments.push({
+        text: content.slice(
+            index,
+            index + keyword.length
+        ),
+        virtualTag: true
+    });
+
+    const remain =
+        content.slice(index + keyword.length);
+
+    if (remain.length > 0) {
+        segments.push({
+            text: remain,
+            virtualTag: false
+        });
+    }
+
+    return segments;
+}

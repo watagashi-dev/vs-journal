@@ -372,7 +372,13 @@ async function buildHtml(
     let index = 0;
     for (const fileMeta of filesToPreview) {
         const baseUri = vscode.Uri.file(fileMeta.filePath);
-        const md = createMarkdownIt(webview, baseUri);
+        const md = createMarkdownIt(
+            webview,
+            baseUri,
+            {
+                caseSensitive,
+                highlightKeyword: highlight?.keyword
+            });
 
         if (index > 0) {
             htmlContent += `<div class="file-separator"></div>\n`;

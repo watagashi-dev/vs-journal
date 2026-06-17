@@ -1,5 +1,8 @@
 import * as assert from 'assert';
-import { indexVirtualTags } from '../services/virtualTagService';
+import {
+    indexVirtualTags,
+    buildTagSegments
+} from '../services/virtualTagService';
 import { FileMeta } from '../models/FileMeta';
 
 import {
@@ -183,4 +186,164 @@ foobar`;
         assert.strictEqual(fooFiles.size, 1);
         assert.strictEqual(barFiles.size, 1);
     });
+});
+
+// =========================
+// buildTagSegments tests
+// =========================
+
+test('buildTagSegments no keyword', () => {
+
+    const result = buildTagSegments(
+        '#virtualTag',
+        undefined,
+        false
+    );
+
+    assert.deepStrictEqual(result, [
+        {
+            text: '#virtualTag',
+            virtualTag: false
+        }
+    ]);
+});
+
+test('buildTagSegments no match', () => {
+
+    const result = buildTagSegments(
+        '#test1',
+        'virtual',
+        false
+    );
+
+    assert.deepStrictEqual(result, [
+        {
+            text: '#test1',
+            virtualTag: false
+        }
+    ]);
+});
+
+test('buildTagSegments match in middle', () => {
+
+    const result = buildTagSegments(
+        '#virtualTag',
+        'virtual',
+        false
+    );
+
+    assert.deepStrictEqual(result, [
+        {
+            text: '#',
+            virtualTag: false
+        },
+        {
+            text: 'virtual',
+            virtualTag: true
+        },
+        {
+            text: 'Tag',
+            virtualTag: false
+        }
+    ]);
+});
+
+test('buildTagSegments full match', () => {
+
+    const result = buildTagSegments(
+        'virtual',
+        'virtual',
+        false
+    );
+
+    assert.deepStrictEqual(result, [
+        {
+            text: 'virtual',
+            virtualTag: true
+        }
+    ]);
+});
+
+test('buildTagSegments match at end', () => {
+
+    const result = buildTagSegments(
+        '#myvirtual',
+        'virtual',
+        false
+    );
+
+    assert.deepStrictEqual(result, [
+        {
+            text: '#my',
+            virtualTag: false
+        },
+        {
+            text: 'virtual',
+            virtualTag: true
+        }
+    ]);
+});
+
+test('buildTagSegments case insensitive', () => {
+
+    const result = buildTagSegments(
+        '#VirtualTag',
+        'virtual',
+        false
+    );
+
+    assert.deepStrictEqual(result, [
+        {
+            text: '#',
+            virtualTag: false
+        },
+        {
+            text: 'Virtual',
+            virtualTag: true
+        },
+        {
+            text: 'Tag',
+            virtualTag: false
+        }
+    ]);
+});
+
+test('buildTagSegments case sensitive no match', () => {
+
+    const result = buildTagSegments(
+        '#VirtualTag',
+        'virtual',
+        true
+    );
+
+    assert.deepStrictEqual(result, [
+        {
+            text: '#VirtualTag',
+            virtualTag: false
+        }
+    ]);
+});
+
+test('buildTagSegments japanese match', () => {
+
+    const result = buildTagSegments(
+        '#仮想タグテスト',
+        '仮想タグ',
+        true
+    );
+
+    assert.deepStrictEqual(result, [
+        {
+            text: '#',
+            virtualTag: false
+        },
+        {
+            text: '仮想タグ',
+            virtualTag: true
+        },
+        {
+            text: 'テスト',
+            virtualTag: false
+        }
+    ]);
 });
