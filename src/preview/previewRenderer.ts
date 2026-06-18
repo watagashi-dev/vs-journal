@@ -147,10 +147,18 @@ export function createMarkdownIt(webview: vscode.Webview, baseUri: vscode.Uri | 
         if (token.attrs) {
             const hrefIndex = token.attrIndex("href");
             if (hrefIndex >= 0) {
-                const href = token.attrs[hrefIndex][1];
+                let href = token.attrs[hrefIndex][1];
+                href = decodeURIComponent(href);
+                console.log('MARKDOWN HREF:', href);
 
-                // Convert ALL links to data-href
-                token.attrs.splice(hrefIndex, 1);
+                // LOCAL / UNC / relative は VS Journal管理
+
+                const isUNC = href.startsWith('\\') && !href.startsWith('\\\\');
+                if (isUNC) {
+                    href = '\\' + href;
+                }
+
+                // data-hrefのみ保持
                 token.attrPush(["data-href", href]);
             }
         }
