@@ -84,9 +84,9 @@ export function createMarkdownIt(
     const defaultImageRule = md.renderer.rules.image;
     md.renderer.rules.image = (tokens, idx, options, env, self) => {
         const token = tokens[idx];
-        const meta = token.meta || {};
+        const hit = token.meta?.hit;
 
-        if (meta.virtualHit) {
+        if (hit?.virtual) {
             token.attrJoin("class", "vjs-virtual-image-hit");
         }
 
@@ -173,8 +173,8 @@ export function createMarkdownIt(
             }
         }
 
-        const meta = token.meta || {};
-        if (meta.virtualHit) {
+        const hit = token.meta?.hit;
+        if (hit?.virtual) {
             token.attrJoin("class", "vjs-virtual-link-hit");
         }
 
@@ -197,10 +197,6 @@ export function createMarkdownIt(
 
         rules.forEach((rule) => {
             const { keyword, className, caseSensitive } = rule;
-            // DEBUG: tag系は将来的に削除対象
-            if (className.includes('vjs-')) {
-                console.log('[applyRules TAG DETECTED]', keyword, className);
-            }
 
             if (!keyword) {
                 return;
@@ -244,12 +240,12 @@ export function createMarkdownIt(
                 .replace(/>/g, "&gt;");
 
         const rules = env?.rules ?? [];
-
         const escaped =
             escapeHtml(content);
 
         const result = applyRules(escaped, rules);
         return result;
+        //        return escapeHtml(content);
     };
 
     md.renderer.rules.vjs_tag = (
@@ -316,14 +312,15 @@ ${innerHtml}
                             hrefIndex >= 0
                                 ? (child.attrs?.[hrefIndex]?.[1] ?? '')
                                 : '';
-
                         child.meta = {
                             ...(child.meta || {}),
-                            virtualHit: matchesPreviewVirtualTag(
-                                href,
-                                options?.highlightKeyword,
-                                options?.caseSensitive ?? false
-                            )
+                            hit: {
+                                virtual: matchesPreviewVirtualTag(
+                                    href,
+                                    options?.highlightKeyword,
+                                    options?.caseSensitive ?? false
+                                )
+                            }
                         };
                     }
 
@@ -333,17 +330,13 @@ ${innerHtml}
 
                         child.meta = {
                             ...(child.meta || {}),
-                            virtualHit:
-                                matchesPreviewVirtualTag(
-                                    src,
-                                    options?.highlightKeyword,
-                                    options?.caseSensitive ?? false
-                                ) ||
-                                matchesPreviewVirtualTag(
-                                    alt,
+                            hit: {
+                                virtual: matchesPreviewVirtualTag(
+                                    [src, alt],
                                     options?.highlightKeyword,
                                     options?.caseSensitive ?? false
                                 )
+                            }
                         };
                     }
                 }
@@ -384,11 +377,13 @@ ${innerHtml}
                     tagToken.content = tagText;
                     tagToken.meta = {
                         userTag: true,
-                        virtualTag: matchesPreviewVirtualTag(
-                            tagText.slice(1),
-                            options?.highlightKeyword,
-                            options?.caseSensitive ?? false
-                        ),
+                        hit: {
+                            virtual: matchesPreviewVirtualTag(
+                                tagText.slice(1),
+                                options?.highlightKeyword,
+                                options?.caseSensitive ?? false
+                            )
+                        },
                         segments: buildTagSegments(
                             tagText,
                             options?.highlightKeyword,

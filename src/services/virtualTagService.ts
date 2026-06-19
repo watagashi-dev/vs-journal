@@ -90,7 +90,7 @@ export function rebuildVirtualTagIndex(
 }
 
 export function matchesPreviewVirtualTag(
-    content: string,
+    content: string | string[],
     keyword: string | undefined,
     caseSensitive: boolean
 ): boolean {
@@ -99,10 +99,17 @@ export function matchesPreviewVirtualTag(
         return false;
     }
 
-    return matchVirtualTag(
-        keyword,
-        content,
-        caseSensitive
+    const contents =
+        Array.isArray(content)
+            ? content
+            : [content];
+
+    return contents.some(c =>
+        matchVirtualTag(
+            keyword,
+            c,
+            caseSensitive
+        )
     );
 }
 
