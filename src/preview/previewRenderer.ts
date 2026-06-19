@@ -3,14 +3,24 @@ import MarkdownIt from 'markdown-it';
 import taskLists from 'markdown-it-task-lists';
 
 import {
-    getTagRanges,
-    getTagNodeContext,
-    isTaggableTextToken
+    getTagRanges
 } from '../services/tagLogic';
 import {
     matchesPreviewVirtualTag,
     buildTagSegments
 } from '../services/virtualTagService';
+
+export type InlineVirtualHit = {
+    virtualTag: boolean;
+    keyword?: string;
+};
+
+export type TagNodeContext = {
+    isTarget: boolean;
+    isHeading: boolean;
+    linkHref?: string;
+    imageSrc?: string;
+};
 
 export function createMarkdownIt(
     webview: vscode.Webview,
@@ -74,45 +84,15 @@ export function createMarkdownIt(
     const defaultImageRule = md.renderer.rules.image;
     md.renderer.rules.image = (tokens, idx, options, env, self) => {
         const token = tokens[idx];
-        const src = token.attrGet("src");
-        const alt = token.content ?? '';
+        const meta = token.meta || {};
 
-        const hit =
-            matchesPreviewVirtualTag(
-                src ?? '',
-                highlightKeyword,
-                caseSensitive
-            )
-            ||
-            matchesPreviewVirtualTag(
-                alt,
-                highlightKeyword,
-                caseSensitive
-            );
+        if (meta.virtualHit) {
+            token.attrJoin("class", "vjs-virtual-image-hit");
+        }
 
-        if (hit) {
-            token.attrJoin(
-                'class',
-                'vjs-virtual-image-hit'
-            );
-        }
-        if (!src) {
-            return defaultImageRule ? defaultImageRule(tokens, idx, options, env, self) : "";
-        }
-        // Keep as is if it's an external URL
-        if (src.startsWith("http://") || src.startsWith("https://")) {
-            return defaultImageRule ? defaultImageRule(tokens, idx, options, env, self) : self.renderToken(tokens, idx, options);
-        }
-        if (baseUri) {
-            try {
-                const imageUri = vscode.Uri.joinPath(baseUri, "..", src);
-                const webviewUri = webview.asWebviewUri(imageUri);
-                token.attrSet("src", webviewUri.toString());
-            } catch {
-                return "";
-            }
-        }
-        return defaultImageRule ? defaultImageRule(tokens, idx, options, env, self) : self.renderToken(tokens, idx, options);
+        return defaultImageRule
+            ? defaultImageRule(tokens, idx, options, env, self)
+            : self.renderToken(tokens, idx, options);
     };
 
     md.renderer.rules.table_open = (tokens, idx, options, env, self) => {
@@ -184,24 +164,18 @@ export function createMarkdownIt(
 
         if (token.attrs) {
             const hrefIndex = token.attrIndex("href");
+
             if (hrefIndex >= 0) {
                 const href = token.attrs[hrefIndex][1];
-                if (
-                    matchesPreviewVirtualTag(
-                        href,
-                        highlightKeyword,
-                        caseSensitive
-                    )
-                ) {
-                    token.attrJoin(
-                        "class",
-                        "vjs-virtual-link-hit"
-                    );
-                }
-                // Convert ALL links to data-href
+
                 token.attrs.splice(hrefIndex, 1);
                 token.attrPush(["data-href", href]);
             }
+        }
+
+        const meta = token.meta || {};
+        if (meta.virtualHit) {
+            token.attrJoin("class", "vjs-virtual-link-hit");
         }
 
         return defaultLinkOpen(tokens, idx, options, env, self);
@@ -330,25 +304,51 @@ ${innerHtml}
                 if (token.type !== 'inline') {
                     return;
                 }
-
-                const context = getTagNodeContext(state.tokens, index);
-                if (!context.isTarget) {
+                if (!token.children) {
                     return;
                 }
 
-                const isHeading = context.isHeading;
-                if (!token.content.includes('#')) {
-                    return;
+                for (const child of token.children) {
+
+                    if (child.type === 'link_open') {
+                        const hrefIndex = child.attrIndex("href");
+                        const href =
+                            hrefIndex >= 0
+                                ? (child.attrs?.[hrefIndex]?.[1] ?? '')
+                                : '';
+
+                        child.meta = {
+                            ...(child.meta || {}),
+                            virtualHit: matchesPreviewVirtualTag(
+                                href,
+                                options?.highlightKeyword,
+                                options?.caseSensitive ?? false
+                            )
+                        };
+                    }
+
+                    if (child.type === 'image') {
+                        const src = child.attrGet("src") ?? '';
+                        const alt = child.content ?? '';
+
+                        child.meta = {
+                            ...(child.meta || {}),
+                            virtualHit:
+                                matchesPreviewVirtualTag(
+                                    src,
+                                    options?.highlightKeyword,
+                                    options?.caseSensitive ?? false
+                                ) ||
+                                matchesPreviewVirtualTag(
+                                    alt,
+                                    options?.highlightKeyword,
+                                    options?.caseSensitive ?? false
+                                )
+                        };
+                    }
                 }
 
-                // -----------------------------
-                // AST-aware inline processing
-                // -----------------------------
                 const content = token.content;
-                if (!isTaggableTextToken(content, context)) {
-                    return;
-                }
-
                 const ranges = getTagRanges(content);
                 if (ranges.length === 0) {
                     return;
@@ -394,7 +394,7 @@ ${innerHtml}
                             options?.highlightKeyword,
                             options?.caseSensitive ?? false
                         ),
-                        heading: isHeading
+                        heading: false
                     };
                     newTokens.push(tagToken);
 
