@@ -20,6 +20,12 @@ export function createMarkdownIt(
         highlightKeyword: string | undefined;
     }
 ) {
+    const highlightKeyword =
+        options?.highlightKeyword;
+
+    const caseSensitive =
+        options?.caseSensitive ?? false;
+
     const md = new MarkdownIt({
         html: true,
         linkify: true,
@@ -69,6 +75,27 @@ export function createMarkdownIt(
     md.renderer.rules.image = (tokens, idx, options, env, self) => {
         const token = tokens[idx];
         const src = token.attrGet("src");
+        const alt = token.content ?? '';
+
+        const hit =
+            matchesPreviewVirtualTag(
+                src ?? '',
+                highlightKeyword,
+                caseSensitive
+            )
+            ||
+            matchesPreviewVirtualTag(
+                alt,
+                highlightKeyword,
+                caseSensitive
+            );
+
+        if (hit) {
+            token.attrJoin(
+                'class',
+                'vjs-virtual-image-hit'
+            );
+        }
         if (!src) {
             return defaultImageRule ? defaultImageRule(tokens, idx, options, env, self) : "";
         }
@@ -159,7 +186,18 @@ export function createMarkdownIt(
             const hrefIndex = token.attrIndex("href");
             if (hrefIndex >= 0) {
                 const href = token.attrs[hrefIndex][1];
-
+                if (
+                    matchesPreviewVirtualTag(
+                        href,
+                        highlightKeyword,
+                        caseSensitive
+                    )
+                ) {
+                    token.attrJoin(
+                        "class",
+                        "vjs-virtual-link-hit"
+                    );
+                }
                 // Convert ALL links to data-href
                 token.attrs.splice(hrefIndex, 1);
                 token.attrPush(["data-href", href]);
@@ -288,15 +326,6 @@ ${innerHtml}
         'inline',
         'vjs-tag-mark',
         (state) => {
-            //            state.tokens.forEach((t) => {
-            //                if (t.type === 'inline') {
-            //                    console.log(
-            //                        t.content,
-            //                        t.children?.map(c => c.type + ':' + c.content)
-            //                    );
-            //                }
-            //            });
-
             state.tokens.forEach((token, index) => {
                 if (token.type !== 'inline') {
                     return;

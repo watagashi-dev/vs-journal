@@ -420,8 +420,21 @@ body>*:first-child {
   opacity: 0.85;
 }
 
+:root {
+  --vjs-virtual-color: rgba(255, 238, 128, 0.35);
+}
+
 .vjs-virtual-tag {
-  background-color: rgba(255, 238, 128, 0.3);
+  background-color: var(--vjs-virtual-color);
+}
+
+.vjs-virtual-link-hit {
+  border-bottom: 2px solid var(--vjs-virtual-color);
+}
+
+.vjs-virtual-image-hit {
+  outline: 2px solid var(--vjs-virtual-color);
+  outline-offset: 2px;
 }
 
 .vjs-nav {
