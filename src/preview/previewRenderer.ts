@@ -181,71 +181,10 @@ export function createMarkdownIt(
         return defaultLinkOpen(tokens, idx, options, env, self);
     };
 
-    function applyRules(
-        text: string,
-        rules: Array<{
-            keyword: string;
-            className: string;
-            caseSensitive: boolean;
-        }>
-    ): string {
-        if (!rules || rules.length === 0) {
-            return text;
-        }
-
-        let result = text;
-
-        rules.forEach((rule) => {
-            const { keyword, className, caseSensitive } = rule;
-
-            if (!keyword) {
-                return;
-            }
-
-            const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-            if (caseSensitive) {
-                result = result.split(keyword).join(
-                    `<span class="${className}">${keyword}</span>`
-                );
-            } else {
-                const regex = new RegExp(escapedKeyword, 'gi');
-                result = result.replace(regex, (match) =>
-                    `<span class="${className}">${match}</span>`
-                );
-            }
-        });
-
-        return result;
-    };
-
-    md.renderer.rules.text = (
-        tokens,
-        idx,
-        options,
-        env
-    ) => {
-
+    md.renderer.rules.vjs_text_span = (tokens, idx) => {
         const token = tokens[idx];
-        const content: string = token.content;
-
-        if (!content) {
-            return '';
-        }
-
-        const escapeHtml = (str: string) =>
-            str
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;");
-
-        const rules = env?.rules ?? [];
-        const escaped =
-            escapeHtml(content);
-
-        const result = applyRules(escaped, rules);
-        return result;
-        //        return escapeHtml(content);
+        const cls = token.meta?.className ?? '';
+        return `<span class="${cls}">${token.content}</span>`;
     };
 
     md.renderer.rules.vjs_tag = (
@@ -304,8 +243,18 @@ ${innerHtml}
                     return;
                 }
 
-                for (const child of token.children) {
+                // ==============================
+                // TEXT AST HIGHLIGHT（NEW）
+                // ==============================
+                const rules = state.env?.rules ?? [];
 
+                if (!rules || rules.length === 0) {
+                    return;
+                }
+
+                const newChildren: any[] = [];
+
+                for (const child of token.children) {
                     if (child.type === 'link_open') {
                         const hrefIndex = child.attrIndex("href");
                         const href =
@@ -339,83 +288,67 @@ ${innerHtml}
                             }
                         };
                     }
-                }
-
-                const content = token.content;
-                const ranges = getTagRanges(content);
-                if (ranges.length === 0) {
-                    return;
-                }
-
-                const newTokens: any[] = [];
-
-                let lastIndex = 0;
-
-                for (const range of ranges) {
-                    const before = content.slice(lastIndex, range.start);
-
-                    if (before) {
-                        const beforeToken =
-                            new state.Token(
-                                'text',
-                                '',
-                                0
-                            );
-
-                        beforeToken.content = before;
-                        newTokens.push(beforeToken);
+                    // -----------------------
+                    // 非textはそのまま
+                    // -----------------------
+                    if (child.type !== 'text') {
+                        newChildren.push(child);
+                        continue;
                     }
 
-                    const tagText = content.slice(range.start, range.end);
-                    const tagToken =
-                        new state.Token(
-                            'vjs_tag',
-                            '',
-                            0
-                        );
+                    const text = child.content;
+                    const segments: any[] = [];
+                    let lastIndex = 0;
 
-                    tagToken.content = tagText;
-                    tagToken.meta = {
-                        userTag: true,
-                        hit: {
-                            virtual: matchesPreviewVirtualTag(
-                                tagText.slice(1),
-                                options?.highlightKeyword,
-                                options?.caseSensitive ?? false
-                            )
-                        },
-                        segments: buildTagSegments(
-                            tagText,
-                            options?.highlightKeyword,
-                            options?.caseSensitive ?? false
-                        ),
-                        heading: false
-                    };
-                    newTokens.push(tagToken);
+                    for (const rule of rules) {
+                        const { keyword, className, caseSensitive } = rule;
+                        if (!keyword) {
+                            continue;
+                        }
 
-                    lastIndex = range.end;
+                        const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        const regex = caseSensitive
+                            ? new RegExp(escaped, 'g')
+                            : new RegExp(escaped, 'gi');
+
+                        let match;
+
+                        while ((match = regex.exec(text)) !== null) {
+
+                            // 前の通常テキスト
+                            const before = text.slice(lastIndex, match.index);
+                            if (before) {
+                                const t = new state.Token('text', '', 0);
+                                t.content = before;
+                                segments.push(t);
+                            }
+
+                            // ハイライト部分
+                            const span = new state.Token('vjs_text_span', '', 0);
+                            span.content = match[0];
+                            span.meta = { className };
+                            segments.push(span);
+
+                            lastIndex = match.index + match[0].length;
+                        }
+                    }
+
+                    // 残り
+                    const tail = text.slice(lastIndex);
+                    if (tail) {
+                        const t = new state.Token('text', '', 0);
+                        t.content = tail;
+                        segments.push(t);
+                    }
+
+                    // ★ここが重要：childではなく差し替え結果を入れる
+                    newChildren.push(...segments);
                 }
 
-                const tail = content.slice(lastIndex);
-
-                if (tail) {
-                    const tailToken =
-                        new state.Token(
-                            'text',
-                            '',
-                            0
-                        );
-
-                    tailToken.content = tail;
-                    newTokens.push(tailToken);
-                }
-
-                // FULL REPLACE MODE (no children mutation)
-                token.children = newTokens;
+                token.children = newChildren;
             });
         }
     );
-
     return md;
 }
 
