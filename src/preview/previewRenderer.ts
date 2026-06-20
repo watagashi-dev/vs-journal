@@ -3,7 +3,8 @@ import MarkdownIt from 'markdown-it';
 import taskLists from 'markdown-it-task-lists';
 
 import {
-    getTagRanges
+    getTagRanges,
+    getTagNodeContext
 } from '../services/tagLogic';
 import {
     matchesPreviewVirtualTag,
@@ -13,13 +14,6 @@ import {
 export type InlineVirtualHit = {
     virtualTag: boolean;
     keyword?: string;
-};
-
-export type TagNodeContext = {
-    isTarget: boolean;
-    isHeading: boolean;
-    linkHref?: string;
-    imageSrc?: string;
 };
 
 export function createMarkdownIt(
@@ -236,31 +230,30 @@ ${innerHtml}
         'vjs-tag-mark',
         (state) => {
             state.tokens.forEach((token, index) => {
-                if (token.type !== 'inline') {
-                    return;
-                }
-                if (!token.children) {
+                if (token.type !== 'inline' || !token.children) {
                     return;
                 }
 
-                // ==============================
-                // TEXT AST HIGHLIGHT（NEW）
-                // ==============================
+                const context = getTagNodeContext(state.tokens, index);
+                if (!context.isTarget) {
+                    return;
+                }
+
+                const isHeading = context.isHeading;
                 const rules = state.env?.rules ?? [];
-
-                if (!rules || rules.length === 0) {
-                    return;
-                }
-
                 const newChildren: any[] = [];
 
                 for (const child of token.children) {
+                    // ======================================================
+                    // ① LINK / IMAGE META
+                    // ======================================================
                     if (child.type === 'link_open') {
                         const hrefIndex = child.attrIndex("href");
                         const href =
                             hrefIndex >= 0
                                 ? (child.attrs?.[hrefIndex]?.[1] ?? '')
                                 : '';
+
                         child.meta = {
                             ...(child.meta || {}),
                             hit: {
@@ -271,6 +264,9 @@ ${innerHtml}
                                 )
                             }
                         };
+
+                        newChildren.push(child);
+                        continue;
                     }
 
                     if (child.type === 'image') {
@@ -287,68 +283,123 @@ ${innerHtml}
                                 )
                             }
                         };
-                    }
-                    // -----------------------
-                    // 非textはそのまま
-                    // -----------------------
-                    if (child.type !== 'text') {
+
                         newChildren.push(child);
                         continue;
                     }
 
-                    const text = child.content;
-                    const segments: any[] = [];
-                    let lastIndex = 0;
+                    // ======================================================
+                    // ② TAG生成（構造変換）
+                    // ======================================================
+                    if (child.type === 'text') {
+                        const content = child.content;
+                        const ranges = getTagRanges(content);
 
-                    for (const rule of rules) {
-                        const { keyword, className, caseSensitive } = rule;
-                        if (!keyword) {
-                            continue;
-                        }
+                        if (ranges.length > 0) {
+                            let lastIndex = 0;
+                            for (const range of ranges) {
+                                const before = content.slice(lastIndex, range.start);
+                                if (before) {
+                                    const t = new state.Token('text', '', 0);
+                                    t.content = before;
+                                    newChildren.push(t);
+                                }
 
-                        const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        const regex = caseSensitive
-                            ? new RegExp(escaped, 'g')
-                            : new RegExp(escaped, 'gi');
+                                const tagText = content.slice(range.start, range.end);
+                                const tagToken = new state.Token('vjs_tag', '', 0);
+                                tagToken.content = tagText;
 
-                        let match;
+                                tagToken.meta = {
+                                    userTag: true,
+                                    heading: isHeading,
 
-                        while ((match = regex.exec(text)) !== null) {
+                                    virtualTag: matchesPreviewVirtualTag(
+                                        tagText.slice(1),
+                                        options?.highlightKeyword,
+                                        options?.caseSensitive ?? false
+                                    ),
 
-                            // 前の通常テキスト
-                            const before = text.slice(lastIndex, match.index);
-                            if (before) {
-                                const t = new state.Token('text', '', 0);
-                                t.content = before;
-                                segments.push(t);
+                                    segments: buildTagSegments(
+                                        tagText,
+                                        options?.highlightKeyword,
+                                        options?.caseSensitive ?? false
+                                    )
+                                };
+
+                                newChildren.push(tagToken);
+                                lastIndex = range.end;
                             }
 
-                            // ハイライト部分
-                            const span = new state.Token('vjs_text_span', '', 0);
-                            span.content = match[0];
-                            span.meta = { className };
-                            segments.push(span);
+                            const tail = content.slice(lastIndex);
+                            if (tail) {
+                                const t = new state.Token('text', '', 0);
+                                t.content = tail;
+                                newChildren.push(t);
+                            }
 
-                            lastIndex = match.index + match[0].length;
+                            continue;
                         }
                     }
 
-                    // 残り
-                    const tail = text.slice(lastIndex);
-                    if (tail) {
-                        const t = new state.Token('text', '', 0);
-                        t.content = tail;
-                        segments.push(t);
+                    // ======================================================
+                    // ③ TEXT HIGHLIGHT
+                    // ======================================================
+                    if (child.type === 'text') {
+                        const text = child.content;
+                        let lastIndex = 0;
+                        const segments: any[] = [];
+
+                        for (const rule of rules) {
+                            const { keyword, className, caseSensitive } = rule;
+                            if (!keyword) {
+                                continue;
+                            }
+
+                            const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            const regex = caseSensitive
+                                ? new RegExp(escaped, 'g')
+                                : new RegExp(escaped, 'gi');
+
+                            let match;
+                            while ((match = regex.exec(text)) !== null) {
+                                const before = text.slice(lastIndex, match.index);
+                                if (before) {
+                                    const t = new state.Token('text', '', 0);
+                                    t.content = before;
+                                    segments.push(t);
+                                }
+                                const span = new state.Token('vjs_text_span', '', 0);
+                                span.content = match[0];
+                                span.meta = { className };
+                                segments.push(span);
+
+                                lastIndex = match.index + match[0].length;
+                            }
+                        }
+
+                        const tail = text.slice(lastIndex);
+
+                        if (tail) {
+                            const t = new state.Token('text', '', 0);
+                            t.content = tail;
+                            segments.push(t);
+                        }
+
+                        newChildren.push(...segments);
+                        continue;
                     }
 
-                    // ★ここが重要：childではなく差し替え結果を入れる
-                    newChildren.push(...segments);
+                    // ======================================================
+                    // ④ その他
+                    // ======================================================
+                    newChildren.push(child);
                 }
 
                 token.children = newChildren;
             });
         }
     );
+
     return md;
 }
 
