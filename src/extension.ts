@@ -581,16 +581,33 @@ function checkPreviewLimits(files: FileMeta[]): {
     };
 }
 
-async function insertFromUri(editor: vscode.TextEditor, uri: vscode.Uri) {
+async function insertFromUri(
+    editor: vscode.TextEditor,
+    uri: vscode.Uri
+) {
     const baseName = path.basename(uri.fsPath);
-    //    const rawPath = uri.fsPath.replace(/\\/g, '/');
+    const journalDir = getJournalDir();
+    const targetPath = uri.fsPath;
 
-    await insertLinkMarkdown(
-        editor,
-        //       rawPath,
-        uri.fsPath,
-        baseName
-    );
+    let linkPath: string;
+    const relativeToJournal = path.relative(journalDir, targetPath);
+
+    const isInsideJournal =
+        !relativeToJournal.startsWith('..') &&
+        !path.isAbsolute(relativeToJournal);
+
+    if (isInsideJournal) {
+        const currentDir = path.dirname(editor.document.uri.fsPath);
+        linkPath = path.relative(currentDir, targetPath);
+        if (!linkPath.startsWith('.')) {
+            linkPath = './' + linkPath;
+        }
+    }
+    else {
+        linkPath = targetPath;
+    }
+
+    await insertLinkMarkdown(editor, linkPath, baseName);
 }
 
 async function pickUri(options: vscode.OpenDialogOptions) {
