@@ -208,7 +208,12 @@ async function handleWebviewMessage(message: any) {
 
         const isUNC = /^\\\\/.test(targetPath);
 
-        if (!isUNC && !path.isAbsolute(targetPath)) {
+        // -----------------------------
+        // Relative path resolution
+        // -----------------------------
+        const isAbsolutePath = path.isAbsolute(targetPath);
+
+        if (!isUNC && !isAbsolutePath) {
             if (!currentDocument) {
                 vscode.window.showWarningMessage(
                     vscode.l10n.t('Unable to resolve relative path.')
@@ -216,12 +221,10 @@ async function handleWebviewMessage(message: any) {
                 return;
             }
 
-            targetPath = path.resolve(
-                path.dirname(currentDocument.uri.fsPath),
-                targetPath
-            );
-        }
+            const baseDir = path.dirname(currentDocument.uri.fsPath);
 
+            targetPath = path.resolve(baseDir, targetPath);
+        }
         const uri = vscode.Uri.file(targetPath);
 
         if (!isUNC && !fs.existsSync(targetPath)) {
@@ -232,12 +235,12 @@ async function handleWebviewMessage(message: any) {
         }
 
         const config = vscode.workspace.getConfiguration('vsJournal');
-        const internalExts: string[] =
-            config.get('internalOpenExtensions', ['.md']);
-
+        const normalizedExts = new Set(
+            (config.get<string[]>('internalOpenExtensions', []))
+                .map(e => e.toLowerCase().startsWith('.') ? e.toLowerCase() : '.' + e.toLowerCase())
+        );
         const ext = path.extname(targetPath).toLowerCase();
-        const shouldOpenInternally =
-            internalExts.includes(ext);
+        const shouldOpenInternally = normalizedExts.has(ext);
 
         try {
             if (shouldOpenInternally) {
