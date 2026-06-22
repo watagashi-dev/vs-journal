@@ -253,12 +253,13 @@ ${innerHtml}
                             hrefIndex >= 0
                                 ? (child.attrs?.[hrefIndex]?.[1] ?? '')
                                 : '';
+                        const title = child.attrGet('title') ?? '';
 
                         child.meta = {
                             ...(child.meta || {}),
                             hit: {
                                 virtual: matchesPreviewVirtualTag(
-                                    href,
+                                    [href, title],
                                     options?.highlightKeyword,
                                     options?.caseSensitive ?? false
                                 )
@@ -272,12 +273,13 @@ ${innerHtml}
                     if (child.type === 'image') {
                         const src = child.attrGet("src") ?? '';
                         const alt = child.content ?? '';
+                        const title = child.attrGet("title") ?? '';
 
                         child.meta = {
                             ...(child.meta || {}),
                             hit: {
                                 virtual: matchesPreviewVirtualTag(
-                                    [src, alt],
+                                    [src, alt, title],
                                     options?.highlightKeyword,
                                     options?.caseSensitive ?? false
                                 )
