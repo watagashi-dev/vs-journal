@@ -204,64 +204,64 @@ async function handleWebviewMessage(message: any) {
     }
 
     if (message.type === 'openLocalLink' && message.path) {
-        const decodedPath = decodeURIComponent(message.path);
-        const uri = vscode.Uri.file(decodedPath);
-        const exists = fs.existsSync(decodedPath);
+        let targetPath = decodeURIComponent(message.path);
 
-        if (exists) {
-            const stat = fs.statSync(decodedPath);
+        const isUNC = /^\\\\/.test(targetPath);
 
-            const config = vscode.workspace.getConfiguration('vsJournal');
-            const internalExts: string[] = config.get('internalOpenExtensions', ['.md']);
+        // -----------------------------
+        // Relative path resolution
+        // -----------------------------
+        const isAbsolutePath = path.isAbsolute(targetPath);
 
-            if (stat.isDirectory()) {
-                try {
-                    await open(decodedPath);
-                } catch (error) {
-                    vscode.window.showWarningMessage(
-                        vscode.l10n.t('Failed to open directory.')
-                    );
-                }
-            }
-
-            else if (stat.isFile()) {
-                const ext = path.extname(decodedPath);
-                const shouldOpenInternally = internalExts.includes(ext);
-
-                if (shouldOpenInternally) {
-                    try {
-                        await vscode.commands.executeCommand(
-                            'vscode.open',
-                            uri
-                        );
-                    } catch (error) {
-                        vscode.window.showWarningMessage(
-                            vscode.l10n.t('Failed to open file.')
-                        );
-                    }
-                }
-                else {
-                    try {
-                        await open(decodedPath);
-                    } catch (error) {
-                        vscode.window.showWarningMessage(
-                            vscode.l10n.t('Failed to open file.')
-                        );
-                    }
-                }
-            }
-            else {
+        if (!isUNC && !isAbsolutePath) {
+            if (!currentDocument) {
                 vscode.window.showWarningMessage(
-                    vscode.l10n.t('Unsupported path type.')
+                    vscode.l10n.t('Unable to resolve relative path.')
                 );
+                return;
             }
+
+            const baseDir = path.dirname(currentDocument.uri.fsPath);
+
+            targetPath = path.resolve(baseDir, targetPath);
         }
-        else {
+        const uri = vscode.Uri.file(targetPath);
+
+        if (!isUNC && !fs.existsSync(targetPath)) {
             vscode.window.showWarningMessage(
                 vscode.l10n.t('File or directory not found.')
             );
+            return;
         }
 
+        const config = vscode.workspace.getConfiguration('vsJournal');
+        const normalizedExts = new Set(
+            (config.get<string[]>('internalOpenExtensions', []))
+                .map(e => e.toLowerCase().startsWith('.') ? e.toLowerCase() : '.' + e.toLowerCase())
+        );
+        const ext = path.extname(targetPath).toLowerCase();
+        const shouldOpenInternally = normalizedExts.has(ext);
+
+        try {
+            if (shouldOpenInternally) {
+                await vscode.commands.executeCommand(
+                    'vscode.open',
+                    uri
+                );
+            } else {
+                await open(targetPath);
+            }
+        } catch {
+            vscode.window.showWarningMessage(
+                isUNC
+                    ? vscode.l10n.t(
+                        'Failed to access network path. The server may be unavailable or authentication may be required.'
+                    )
+                    : vscode.l10n.t(
+                        'Failed to open file or directory.'
+                    )
+            );
+        }
         return;
     }
 

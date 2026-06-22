@@ -160,8 +160,16 @@ export function createMarkdownIt(
             const hrefIndex = token.attrIndex("href");
 
             if (hrefIndex >= 0) {
-                const href = token.attrs[hrefIndex][1];
+                let href = token.attrs[hrefIndex][1];
+                href = decodeURIComponent(href);
 
+                // LOCAL / UNC / relative は VS Journal管理
+                const isUNC = href.startsWith('\\') && !href.startsWith('\\\\');
+                if (isUNC) {
+                    href = '\\' + href;
+                }
+
+                // data-hrefのみ保持
                 token.attrs.splice(hrefIndex, 1);
                 token.attrPush(["data-href", href]);
             }
