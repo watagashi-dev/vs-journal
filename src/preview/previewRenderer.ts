@@ -82,6 +82,7 @@ export function createMarkdownIt(
 
         if (hit?.virtual) {
             token.attrJoin("class", "vjs-virtual-image-hit");
+            token.attrSet("data-virtual", "true");
         }
 
         return defaultImageRule
@@ -178,6 +179,7 @@ export function createMarkdownIt(
         const hit = token.meta?.hit;
         if (hit?.virtual) {
             token.attrJoin("class", "vjs-virtual-link-hit");
+            token.attrSet("data-virtual", "true");
         }
 
         return defaultLinkOpen(tokens, idx, options, env, self);
@@ -186,7 +188,7 @@ export function createMarkdownIt(
     md.renderer.rules.vjs_text_span = (tokens, idx) => {
         const token = tokens[idx];
         const cls = token.meta?.className ?? '';
-        return `<span class="${cls}">${token.content}</span>`;
+        return `<span class="${cls}" data-virtual="true">${token.content}</span>`;
     };
 
     md.renderer.rules.vjs_tag = (
@@ -205,7 +207,7 @@ export function createMarkdownIt(
 
         if (!segments) {
             return `
-<span class="${baseClassName}">
+<span class="${baseClassName} data-virtual="true">
 ${token.content}
 </span>
 `;
@@ -217,7 +219,7 @@ ${token.content}
                 virtualTag: boolean;
             }) => {
                 if (segment.virtualTag) {
-                    return `<span class="vjs-virtual-tag">${segment.text}</span>`;
+                    return `<span class="vjs-virtual-tag" data-virtual="true">${segment.text}</span>`;
                 }
 
                 return segment.text;
@@ -225,7 +227,7 @@ ${token.content}
             .join('');
 
         const html = `
-<span class="${baseClassName}">
+<span class="${baseClassName} data-virtual="true">
 ${innerHtml}
 </span>
 `;

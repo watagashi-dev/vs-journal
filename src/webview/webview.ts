@@ -275,6 +275,7 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
                             if (i > 0) {
                                 const span = document.createElement('span');
                                 span.className = className;
+                                span.dataset.virtual = 'true';
                                 span.textContent = keyword;
                                 frag.appendChild(span);
                             }
@@ -304,6 +305,7 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
 
                             const span = document.createElement('span');
                             span.className = className;
+                            span.dataset.virtual = 'true';
                             span.textContent = match;
                             frag.appendChild(span);
 
@@ -618,7 +620,8 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
                 matches = msg.matches || [];
                 currentIndex = 0;
                 highlightElements = Array.from(
-                    document.querySelectorAll('.vjs-virtual-tag')
+                    // document.querySelectorAll('.vjs-virtual-tag')
+                    document.querySelectorAll('[data-virtual="true"]')
                 ) as HTMLElement[];
                 updateUI();
             }
