@@ -347,3 +347,31 @@ test('buildTagSegments japanese match', () => {
         }
     ]);
 });
+
+test('buildTagSegments multi match', () => {
+
+    const result = buildTagSegments(
+        '#virtualTagvirtual',
+        'virtual',
+        true
+    );
+
+    assert.deepStrictEqual(result, [
+        {
+            text: '#',
+            virtualTag: false
+        },
+        {
+            text: 'virtual',
+            virtualTag: true
+        },
+        {
+            text: 'Tag',
+            virtualTag: false
+        },
+        {
+            text: 'virtual',
+            virtualTag: true
+        }
+    ]);
+});

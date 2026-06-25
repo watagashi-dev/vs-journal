@@ -141,42 +141,59 @@ export function buildTagSegments(
         ? keyword
         : keyword.toLowerCase();
 
-    const index = source.indexOf(target);
+    const segments: TagSegment[] = [];
 
-    if (index === -1) {
+    let searchStart = 0;
+
+    while (true) {
+        const index = source.indexOf(
+            target,
+            searchStart
+        );
+
+        if (index === -1) {
+            break;
+        }
+
+        // ヒット前
+        if (index > searchStart) {
+            segments.push({
+                text: content.slice(
+                    searchStart,
+                    index
+                ),
+                virtualTag: false
+            });
+        }
+
+        // ヒット部分
+        segments.push({
+            text: content.slice(
+                index,
+                index + keyword.length
+            ),
+            virtualTag: true
+        });
+
+        searchStart =
+            index + keyword.length;
+    }
+
+    // 残り
+    if (searchStart < content.length) {
+        segments.push({
+            text: content.slice(searchStart),
+            virtualTag: false
+        });
+    }
+
+    if (segments.length === 0) {
         return [
             {
                 text: content,
                 virtualTag: false
             }
         ];
-    }
-
-    const segments: TagSegment[] = [];
-
-    if (index > 0) {
-        segments.push({
-            text: content.slice(0, index),
-            virtualTag: false
-        });
-    }
-
-    segments.push({
-        text: content.slice(
-            index,
-            index + keyword.length
-        ),
-        virtualTag: true
-    });
-
-    const remain =
-        content.slice(index + keyword.length);
-
-    if (remain.length > 0) {
-        segments.push({
-            text: remain,
-            virtualTag: false
-        });
     }
 
     return segments;

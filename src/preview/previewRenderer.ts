@@ -204,15 +204,6 @@ export function createMarkdownIt(
             : 'vjs-user-tag';
 
         const segments = meta.segments;
-
-        if (!segments) {
-            return `
-<span class="${baseClassName} data-virtual="true">
-${token.content}
-</span>
-`;
-        }
-
         const innerHtml = segments
             .map((segment: {
                 text: string;
@@ -226,12 +217,7 @@ ${token.content}
             })
             .join('');
 
-        const html = `
-<span class="${baseClassName} data-virtual="true">
-${innerHtml}
-</span>
-`;
-
+        const html = `<span class="${baseClassName}">${innerHtml}</span>`;
         return html;
     };
 
