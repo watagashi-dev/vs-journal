@@ -208,12 +208,8 @@ async function handleWebviewMessage(message: any) {
 
         const isUNC = /^\\\\/.test(targetPath);
 
-        // -----------------------------
         // Relative path resolution
-        // -----------------------------
-        const isAbsolutePath = path.isAbsolute(targetPath);
-
-        if (!isUNC && !isAbsolutePath) {
+        if (!isUNC && !path.isAbsolute(targetPath)) {
             if (!currentDocument) {
                 vscode.window.showWarningMessage(
                     vscode.l10n.t('Unable to resolve relative path.')
@@ -221,26 +217,53 @@ async function handleWebviewMessage(message: any) {
                 return;
             }
 
-            const baseDir = path.dirname(currentDocument.uri.fsPath);
-
-            targetPath = path.resolve(baseDir, targetPath);
+            targetPath = path.resolve(
+                path.dirname(currentDocument.uri.fsPath),
+                targetPath
+            );
         }
+
         const uri = vscode.Uri.file(targetPath);
 
-        if (!isUNC && !fs.existsSync(targetPath)) {
+        const config = vscode.workspace.getConfiguration('vsJournal');
+
+        const normalizedExts = new Set(
+            (config.get<string[]>('internalOpenExtensions', []))
+                .map(ext => {
+                    ext = ext.trim().toLowerCase();
+                    return ext.startsWith('.') ? ext : '.' + ext;
+                })
+        );
+
+        const ext = path.extname(targetPath).toLowerCase();
+
+        const shouldOpenInternally =
+            normalizedExts.has(ext);
+
+        //
+        // Existence check
+        //
+        try {
+            if (!isUNC) {
+                if (!fs.existsSync(targetPath)) {
+                    vscode.window.showWarningMessage(
+                        vscode.l10n.t('File or directory not found.')
+                    );
+                    return;
+                }
+            }
+            else if (shouldOpenInternally) {
+                await vscode.workspace.fs.stat(uri);
+            }
+        }
+        catch {
             vscode.window.showWarningMessage(
-                vscode.l10n.t('File or directory not found.')
+                vscode.l10n.t(
+                    'Failed to access network path. The server may be unavailable, authentication may be required, or the host may not be allowed by VS Code.'
+                )
             );
             return;
         }
-
-        const config = vscode.workspace.getConfiguration('vsJournal');
-        const normalizedExts = new Set(
-            (config.get<string[]>('internalOpenExtensions', []))
-                .map(e => e.toLowerCase().startsWith('.') ? e.toLowerCase() : '.' + e.toLowerCase())
-        );
-        const ext = path.extname(targetPath).toLowerCase();
-        const shouldOpenInternally = normalizedExts.has(ext);
 
         try {
             if (shouldOpenInternally) {
@@ -248,10 +271,12 @@ async function handleWebviewMessage(message: any) {
                     'vscode.open',
                     uri
                 );
-            } else {
+            }
+            else {
                 await open(targetPath);
             }
-        } catch {
+        }
+        catch {
             vscode.window.showWarningMessage(
                 isUNC
                     ? vscode.l10n.t(
@@ -262,6 +287,7 @@ async function handleWebviewMessage(message: any) {
                     )
             );
         }
+
         return;
     }
 
