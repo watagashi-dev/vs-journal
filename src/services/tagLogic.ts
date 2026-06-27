@@ -337,3 +337,46 @@ export function getTagNodeContext(
             prevType === 'heading_open'
     };
 }
+
+export function isValidTagLineStructure(
+    children: { type: string }[],
+    start: number,
+    end: number
+): boolean {
+
+    return children
+        .slice(start, end)
+        .every(
+            c =>
+                c.type === 'text' ||
+                c.type === 'softbreak'
+        );
+}
+
+export function hasValidHeadingTagStructure(
+    children: { type: string; content?: string }[]
+): boolean {
+
+    let tagStarted = false;
+
+    for (const child of children) {
+
+        if (!tagStarted) {
+
+            if (
+                child.type === 'text' &&
+                getTagRanges(child.content ?? '').length > 0
+            ) {
+                tagStarted = true;
+            }
+
+            continue;
+        }
+
+        if (child.type !== 'text') {
+            return false;
+        }
+    }
+
+    return true;
+}

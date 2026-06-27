@@ -4,7 +4,11 @@ import taskLists from 'markdown-it-task-lists';
 
 import {
     getTagRanges,
-    getTagNodeContext
+    getTagNodeContext,
+    isTagLineValid,
+    isParsedHeadingTagPartValid,
+    isValidTagLineStructure,
+    hasValidHeadingTagStructure
 } from '../services/tagLogic';
 import {
     matchesPreviewVirtualTag,
@@ -39,7 +43,6 @@ export function createMarkdownIt(
         label: false,
         labelAfter: false
     });
-
     const defaultRender = md.renderer.renderToken.bind(md.renderer);
 
     function applyLineAttrs(token: any) {
@@ -217,7 +220,10 @@ export function createMarkdownIt(
             })
             .join('');
 
-        const html = `<span class="${baseClassName}">${innerHtml}</span>`;
+        let html = `<span class="${baseClassName}">${innerHtml}</span>`;
+        if (meta.hasSoftbreak) {
+            html = `<div class="vjs-tag-line">${html}</div>`;
+        }
         return html;
     };
 
@@ -229,17 +235,45 @@ export function createMarkdownIt(
                 if (token.type !== 'inline' || !token.children) {
                     return;
                 }
-
+                const hasSoftbreak = token.children.some(c => c.type === 'softbreak');
                 const context = getTagNodeContext(state.tokens, index);
                 if (!context.isTarget) {
                     return;
                 }
+                // =========================================
+                // Split inline token into logical lines
+                // =========================================
+                const logicalLines: {
+                    start: number;
+                    end: number;
+                }[] = [];
 
+                let lineStart = 0;
+
+                for (let i = 0; i < token.children.length; i++) {
+                    if (token.children[i].type === 'softbreak') {
+                        logicalLines.push({
+                            start: lineStart,
+                            end: i
+                        });
+
+                        lineStart = i + 1;
+                    }
+                }
+
+                logicalLines.push({
+                    start: lineStart,
+                    end: token.children.length
+                });
                 const isHeading = context.isHeading;
                 const rules = state.env?.rules ?? [];
                 const newChildren: any[] = [];
 
-                for (const child of token.children) {
+                const headingStructureValid =
+                    !isHeading ||
+                    hasValidHeadingTagStructure(token.children);
+                for (let childIndex = 0; childIndex < token.children.length; childIndex++) {
+                    const child = token.children[childIndex];
                     // ======================================================
                     // ① LINK / IMAGE META
                     // ======================================================
@@ -291,51 +325,80 @@ export function createMarkdownIt(
                     // ======================================================
                     if (child.type === 'text') {
                         const content = child.content;
-                        const ranges = getTagRanges(content);
+                        // ======================================================
+                        // TAG LINE VALIDATION FILTER
+                        // text / softbreak 以外が混ざっている行はタグ対象外
+                        // ======================================================
+                        const currentLine = logicalLines.find(
+                            line =>
+                                childIndex >= line.start &&
+                                childIndex < line.end
+                        );
 
-                        if (ranges.length > 0) {
-                            let lastIndex = 0;
-                            for (const range of ranges) {
-                                const before = content.slice(lastIndex, range.start);
-                                if (before) {
+                        const isValidStructure =
+                            currentLine
+                                ? isValidTagLineStructure(
+                                    token.children,
+                                    currentLine.start,
+                                    currentLine.end
+                                )
+                                : false;
+                        if (!isValidStructure && !isHeading) {
+                            newChildren.push(child);
+                            continue;
+                        }
+                        if (isHeading && !headingStructureValid) {
+                            newChildren.push(child);
+                            continue;
+                        }
+                        if (isTagLineValid(content, false) || (isHeading && isParsedHeadingTagPartValid(content))) {
+                            const ranges = getTagRanges(content);
+
+                            if (ranges.length > 0) {
+                                let lastIndex = 0;
+                                for (const range of ranges) {
+                                    const before = content.slice(lastIndex, range.start);
+                                    if (before) {
+                                        const t = new state.Token('text', '', 0);
+                                        t.content = before;
+                                        newChildren.push(t);
+                                    }
+
+                                    const tagText = content.slice(range.start, range.end);
+                                    const tagToken = new state.Token('vjs_tag', '', 0);
+                                    tagToken.content = tagText;
+
+                                    tagToken.meta = {
+                                        userTag: true,
+                                        heading: isHeading,
+                                        hasSoftbreak: hasSoftbreak ?? false,
+
+                                        virtualTag: matchesPreviewVirtualTag(
+                                            tagText.slice(1),
+                                            options?.highlightKeyword,
+                                            options?.caseSensitive ?? false
+                                        ),
+
+                                        segments: buildTagSegments(
+                                            tagText,
+                                            options?.highlightKeyword,
+                                            options?.caseSensitive ?? false
+                                        )
+                                    };
+
+                                    newChildren.push(tagToken);
+                                    lastIndex = range.end;
+                                }
+
+                                const tail = content.slice(lastIndex);
+                                if (tail) {
                                     const t = new state.Token('text', '', 0);
-                                    t.content = before;
+                                    t.content = tail;
                                     newChildren.push(t);
                                 }
 
-                                const tagText = content.slice(range.start, range.end);
-                                const tagToken = new state.Token('vjs_tag', '', 0);
-                                tagToken.content = tagText;
-
-                                tagToken.meta = {
-                                    userTag: true,
-                                    heading: isHeading,
-
-                                    virtualTag: matchesPreviewVirtualTag(
-                                        tagText.slice(1),
-                                        options?.highlightKeyword,
-                                        options?.caseSensitive ?? false
-                                    ),
-
-                                    segments: buildTagSegments(
-                                        tagText,
-                                        options?.highlightKeyword,
-                                        options?.caseSensitive ?? false
-                                    )
-                                };
-
-                                newChildren.push(tagToken);
-                                lastIndex = range.end;
+                                continue;
                             }
-
-                            const tail = content.slice(lastIndex);
-                            if (tail) {
-                                const t = new state.Token('text', '', 0);
-                                t.content = tail;
-                                newChildren.push(t);
-                            }
-
-                            continue;
                         }
                     }
 
