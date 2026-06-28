@@ -246,6 +246,7 @@ async function handleWebviewMessage(message: any) {
         try {
             if (!isUNC) {
                 if (!fs.existsSync(targetPath)) {
+                    console.log('L.249');
                     vscode.window.showWarningMessage(
                         vscode.l10n.t('File or directory not found.')
                     );
@@ -257,6 +258,7 @@ async function handleWebviewMessage(message: any) {
             }
         }
         catch {
+            console.log('L.261');
             vscode.window.showWarningMessage(
                 vscode.l10n.t(
                     'Failed to access network path. The server may be unavailable, authentication may be required, or the host may not be allowed by VS Code.'
@@ -277,14 +279,11 @@ async function handleWebviewMessage(message: any) {
             }
         }
         catch {
+            console.log('L.282');
             vscode.window.showWarningMessage(
-                isUNC
-                    ? vscode.l10n.t(
-                        'Failed to access network path. The server may be unavailable or authentication may be required.'
-                    )
-                    : vscode.l10n.t(
-                        'Failed to open file or directory.'
-                    )
+                vscode.l10n.t(
+                    'Failed to open file or directory.'
+                )
             );
         }
 

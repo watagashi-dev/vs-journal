@@ -22,5 +22,7 @@
   "Failed to open directory.": "フォルダーを開けませんでした。",
   "Failed to open file.": "ファイルを開けませんでした。",
   "Unsupported path type.": "サポートされていないパスです。",
-  "File or directory not found.": "ファイルまたはフォルダーが見つかりません。"
+  "File or directory not found.": "ファイルまたはフォルダーが見つかりません。",
+  "Unable to resolve relative path.": "相対パスを解決できませんでした。",
+  "Failed to access network path. The server may be unavailable, authentication may be required, or the host may not be allowed by VS Code.": "ネットワークパスにアクセスできませんでした。サーバーが利用できないか、認証が必要か、VS Codeでアクセスが許可されていない可能性があります。"
 }
