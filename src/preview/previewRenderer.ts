@@ -81,11 +81,43 @@ export function createMarkdownIt(
     const defaultImageRule = md.renderer.rules.image;
     md.renderer.rules.image = (tokens, idx, options, env, self) => {
         const token = tokens[idx];
+        const src = token.attrGet("src");
         const hit = token.meta?.hit;
 
         if (hit?.virtual) {
             token.attrJoin("class", "vjs-virtual-image-hit");
             token.attrSet("data-virtual", "true");
+        }
+
+        if (!src) {
+            return defaultImageRule
+                ? defaultImageRule(tokens, idx, options, env, self)
+                : "";
+        }
+
+        // External URL はそのまま
+        if (!src.startsWith("http://") && !src.startsWith("https://")) {
+            if (baseUri) {
+                try {
+                    const imageUri =
+                        vscode.Uri.joinPath(
+                            baseUri,
+                            "..",
+                            src
+                        );
+
+                    const webviewUri =
+                        webview.asWebviewUri(imageUri);
+
+                    token.attrSet(
+                        "src",
+                        webviewUri.toString()
+                    );
+                }
+                catch {
+                    return "";
+                }
+            }
         }
 
         return defaultImageRule
