@@ -286,7 +286,7 @@ export function isTaggableTextToken(
 }
 
 export type TagNodeContext = {
-    isTarget: boolean;
+    isTagScope: boolean;
     isHeading: boolean;
 };
 
@@ -328,7 +328,7 @@ export function getTagNodeContext(
         );
 
     return {
-        isTarget:
+        isTagScope:
             !inTable &&
             !inList &&
             !inBlockQuote,

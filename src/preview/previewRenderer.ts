@@ -237,9 +237,8 @@ export function createMarkdownIt(
                 }
                 const hasSoftbreak = token.children.some(c => c.type === 'softbreak');
                 const context = getTagNodeContext(state.tokens, index);
-                if (!context.isTarget) {
-                    return;
-                }
+                const canProcessUserTag = context.isTagScope;
+
                 // =========================================
                 // Split inline token into logical lines
                 // =========================================
@@ -320,15 +319,13 @@ export function createMarkdownIt(
                         continue;
                     }
 
-                    // ======================================================
-                    // ② TAG生成（構造変換）
-                    // ======================================================
                     if (child.type === 'text') {
                         const content = child.content;
                         // ======================================================
-                        // TAG LINE VALIDATION FILTER
-                        // text / softbreak 以外が混ざっている行はタグ対象外
+                        // PHASE 0: STRUCTURE CHECK
                         // ======================================================
+
+                        // TAG LINE VALIDATION FILTER
                         const currentLine = logicalLines.find(
                             line =>
                                 childIndex >= line.start &&
@@ -343,17 +340,22 @@ export function createMarkdownIt(
                                     currentLine.end
                                 )
                                 : false;
-                        if (!isValidStructure && !isHeading) {
-                            newChildren.push(child);
-                            continue;
-                        }
-                        if (isHeading && !headingStructureValid) {
-                            newChildren.push(child);
-                            continue;
-                        }
-                        if (isTagLineValid(content, false) || (isHeading && isParsedHeadingTagPartValid(content))) {
-                            const ranges = getTagRanges(content);
 
+                        const canCreateUserTag =
+                            canProcessUserTag &&
+                            (isHeading
+                                ? headingStructureValid
+                                : isValidStructure);
+
+                        const canProcessTag =
+                            canCreateUserTag &&
+                            (
+                                isTagLineValid(content, false) ||
+                                (isHeading && isParsedHeadingTagPartValid(content))
+                            );
+
+                        if (canProcessTag) {
+                            const ranges = getTagRanges(content);
                             if (ranges.length > 0) {
                                 let lastIndex = 0;
                                 for (const range of ranges) {
@@ -400,13 +402,12 @@ export function createMarkdownIt(
                                 continue;
                             }
                         }
-                    }
 
-                    // ======================================================
-                    // ③ TEXT HIGHLIGHT
-                    // ======================================================
-                    if (child.type === 'text') {
-                        const text = child.content;
+                        // ======================================================
+                        // PHASE 2: HIGHLIGHT (always runs)
+                        // ======================================================
+
+                        const text = content;
                         let lastIndex = 0;
                         const segments: any[] = [];
 
@@ -421,8 +422,7 @@ export function createMarkdownIt(
                                 ? new RegExp(escaped, 'g')
                                 : new RegExp(escaped, 'gi');
 
-                            let match;
-                            while ((match = regex.exec(text)) !== null) {
+                            for (const match of text.matchAll(regex)) {
                                 const before = text.slice(lastIndex, match.index);
                                 if (before) {
                                     const t = new state.Token('text', '', 0);
