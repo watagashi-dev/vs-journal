@@ -147,6 +147,8 @@ Virtual tags are based on search conditions and can be used to organize related 
 - Highlight matching content directly in preview
 - Display matching notes in a combined view
 - Navigate between matches using UI controls or keyboard shortcuts
+- Matching portions of tag names are highlighted directly in the preview
+- Link and image paths, titles, and related metadata can also be matched by virtual tags
 
 ---
 
@@ -188,6 +190,8 @@ Insert images and links directly while editing Markdown.
 - Save and paste clipboard images
 - Insert file and folder links
 - Open local files and folders from preview
+
+Journal file and folder links are stored using relative paths whenever possible.
 
 ---
 
