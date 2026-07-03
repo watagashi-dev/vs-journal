@@ -1,5 +1,25 @@
 # Change Log
 
+## [0.4.1] - 2026-07-
+
+### Fixed
+
+- Fixed several edge cases in tag parsing and preview rendering involving headings, line structure validation, and mixed Markdown content.
+- Improved error handling and user feedback when opening invalid, missing, or inaccessible file and folder links.
+
+
+### Improved
+
+- Improved Markdown file and folder link handling:
+  - Links to files and folders inside the journal are now inserted using relative paths.
+  - Relative links are now correctly resolved from the source note when opened from the preview.
+  - Better support for local paths, network paths (UNC), and VS Code internal file opening.
+- Enhanced virtual tag highlighting in preview:
+  - Virtual tag matches are now highlighted inside user tags.
+  - Matching links and images can now be highlighted when they match a virtual tag condition.
+  - Navigation now tracks all virtual-tag-related highlights consistently.
+- Improved hashtag appearance in preview for better readability and visibility.
+
 ## [0.4.0] - 2026-06-14
 
 ### Fixed
