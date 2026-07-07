@@ -170,6 +170,7 @@ export function createMarkdownIt(
             }
 
             token.attrJoin("class", `language-${lang}`);
+            token.attrSet('data-display-language', lang);
         }
         return defaultFence ? defaultFence(tokens, idx, options, env, self) : self.renderToken(tokens, idx, options);
     };

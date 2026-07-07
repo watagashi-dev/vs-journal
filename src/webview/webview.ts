@@ -214,11 +214,42 @@ declare function acquireVsCodeApi(): any;
             });
     }
 
+    function addCodeLanguageTabs(): void {
+        document
+            .querySelectorAll<HTMLElement>('code[data-display-language]')
+            .forEach(code => {
+                const lang = code.dataset.displayLanguage;
+                if (!lang) {
+                    return;
+                }
+
+                const pre = code.parentElement;
+                if (!pre || pre.tagName !== 'PRE') {
+                    return;
+                }
+                if (pre.parentElement?.classList.contains('vjs-code-block')) {
+                    return;
+                }
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'vjs-code-block';
+
+                const tab = document.createElement('div');
+                tab.className = 'vjs-code-tab';
+                tab.textContent = lang;
+
+                pre.parentElement?.insertBefore(wrapper, pre);
+                wrapper.appendChild(tab);
+                wrapper.appendChild(pre);
+            });
+    }
+
     function runHighlight(): void {
         const hljs = (window as any).hljs;
         if (!hljs) { return; }
         hljs.highlightAll();
         decorateDiffBlocks();
+        addCodeLanguageTabs();
         applyVirtualTagHighlight();
     }
 

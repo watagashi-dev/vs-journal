@@ -464,3 +464,27 @@ body>*:first-child {
   display: block;
   background-color: var(--vscode-diffEditor-removedLineBackground);
 }
+
+.vjs-code-block {
+  margin: 1em 0;
+  font-weight: 500;
+}
+
+.vjs-code-tab {
+  display: inline-block;
+  min-width: 40px;
+  padding: 3px 12px;
+  font-size: 0.85em;
+  text-align: center;
+  color: var(--vscode-tab-activeForeground);
+  background-color: var(--vscode-tab-activeBackground);
+  border: 1px solid var(--vscode-widget-border);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+}
+
+.vjs-code-block pre {
+  margin-top: 0;
+  border: 1px solid var(--vscode-widget-border);
+  border-radius: 0 6px 6px 6px;
+}
