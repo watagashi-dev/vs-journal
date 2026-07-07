@@ -159,7 +159,16 @@ export function createMarkdownIt(
             applyLineAttrs(token);
         }
         if (token.info) {
-            const lang = token.info.trim().split(/\s+/g)[0];
+            const rawLang = token.info.trim().split(/\s+/g)[0];
+            const parts = rawLang.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+            const hasDiff = parts.includes('diff');
+            const lang = parts.find(p => p !== 'diff') ?? rawLang;
+            token.attrSet('data-language', rawLang);
+
+            if (hasDiff) {
+                token.attrSet('data-diff', 'true');
+            }
+
             token.attrJoin("class", `language-${lang}`);
         }
         return defaultFence ? defaultFence(tokens, idx, options, env, self) : self.renderToken(tokens, idx, options);

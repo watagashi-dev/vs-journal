@@ -191,10 +191,34 @@ declare function acquireVsCodeApi(): any;
     // =========================================================
     // Highlight.js（型問題回避込み）
     // =========================================================
+    function decorateDiffBlocks(): void {
+        document
+            .querySelectorAll<HTMLElement>('code[data-diff="true"]')
+            .forEach(code => {
+
+                const lines = code.innerHTML.split('\n');
+
+                code.innerHTML = lines.map(line => {
+
+                    if (line.startsWith('+')) {
+                        return `<span class="vjs-diff-added">${line}</span>`;
+                    }
+
+                    if (line.startsWith('-')) {
+                        return `<span class="vjs-diff-removed">${line}</span>`;
+                    }
+
+                    return line;
+
+                }).join('');
+            });
+    }
+
     function runHighlight(): void {
         const hljs = (window as any).hljs;
         if (!hljs) { return; }
         hljs.highlightAll();
+        decorateDiffBlocks();
         applyVirtualTagHighlight();
     }
 

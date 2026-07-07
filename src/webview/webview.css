@@ -450,3 +450,17 @@ body>*:first-child {
 .vjs-nav.hidden {
   display: none;
 }
+
+.vjs-diff-block {
+  border-left: 4px solid var(--vscode-gitDecoration-modifiedResourceForeground);
+}
+
+.vjs-diff-added {
+  display: block;
+  background-color: var(--vscode-diffEditor-insertedLineBackground);
+}
+
+.vjs-diff-removed {
+  display: block;
+  background-color: var(--vscode-diffEditor-removedLineBackground);
+}
