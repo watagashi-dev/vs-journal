@@ -1,5 +1,4 @@
 declare function acquireVsCodeApi(): any;
-const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
 
 (function () {
     // =========================================================
@@ -14,13 +13,6 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
         | { type: 'jumpToFile'; filePath: string }
         | { type: 'closePreview' }
         | { type: 'edit' };
-
-    type VirtualMatch = {
-        filePath: string;
-        line: number;
-        start: number;
-        end: number;
-    };
 
     function postMessage(msg: VsCodeMessage): void {
         vscode.postMessage(msg);
@@ -335,13 +327,12 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
     const prevBtn = document.getElementById('vjs-prev');
     const nextBtn = document.getElementById('vjs-next');
 
-    let matches: VirtualMatch[] = [];
     let currentIndex = 0;
 
     function updateUI() {
         if (!nav || !counter) { return; }
 
-        const m = matches.length;
+        const m = highlightElements.length;
 
         if (m < 2) {
             nav.classList.add('hidden');
@@ -434,18 +425,18 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
     }
 
     function moveNext() {
-        if (matches.length === 0) { return; }
+        if (highlightElements.length === 0) { return; }
 
-        currentIndex = (currentIndex + 1) % matches.length;
+        currentIndex = (currentIndex + 1) % highlightElements.length;
         scrollToMatch(currentIndex);
         updateUI();
     }
 
     function movePrev() {
-        if (matches.length === 0) { return; }
+        if (highlightElements.length === 0) { return; }
 
         currentIndex =
-            (currentIndex - 1 + matches.length) % matches.length;
+            (currentIndex - 1 + highlightElements.length) % highlightElements.length;
 
         scrollToMatch(currentIndex);
         updateUI();
@@ -615,16 +606,6 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
                 setPreviewFileCount(msg.count);
                 return;
             }
-
-            if (msg.type === 'setMatches') {
-                matches = msg.matches || [];
-                currentIndex = 0;
-                highlightElements = Array.from(
-                    // document.querySelectorAll('.vjs-virtual-tag')
-                    document.querySelectorAll('[data-virtual="true"]')
-                ) as HTMLElement[];
-                updateUI();
-            }
         });
     }
 
@@ -649,6 +630,23 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
         observer.observe(warning);
     }
 
+    function refreshVirtualTagMatches() {
+        highlightElements = Array.from(
+            document.querySelectorAll('[data-virtual="true"]')
+        ) as HTMLElement[];
+
+        currentIndex = 0;
+    }
+
+    function initializeVirtualTagNavigation() {
+        //        if (!VIRTUAL_TAG) {
+        //            return;
+        //        }
+
+        refreshVirtualTagMatches();
+        updateUI();
+    }
+
     // =========================================================
     // Init
     // =========================================================
@@ -666,6 +664,10 @@ const VIRTUAL_TAG = document.body.getAttribute('data-virtual-tag') ?? '';
         runHighlight();
 
         state.domReady = true;
+
+        if (state.domReady) {
+            initializeVirtualTagNavigation();
+        }
 
         if (state.pendingScroll) {
             const scroll = state.pendingScroll;

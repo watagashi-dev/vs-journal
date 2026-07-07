@@ -414,69 +414,6 @@ async function buildHtml(
         );
         const text = Buffer.from(fileText).toString('utf8');
 
-        // =========================================
-        // Collect virtual tag matches (no usage yet)
-        // =========================================
-        if (virtualTagSession) {
-            const lines = text.split('\n');
-
-            for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-                const lineText = lines[lineIndex];
-
-                if (!lineText) {
-                    continue;
-                }
-                const keyword = virtualTagSession.keyword;
-
-                if (virtualTagSession.caseSensitive) {
-                    let index = 0;
-
-                    while (true) {
-                        const found = lineText.indexOf(keyword, index);
-
-                        if (found === -1) {
-                            break;
-                        }
-
-                        virtualTagSession.matches.push({
-                            filePath: fileMeta.filePath,
-                            line: lineIndex,
-                            start: found,
-                            end: found + keyword.length
-                        });
-
-                        index = found + keyword.length;
-                    }
-                } else {
-                    const lowerLine = lineText.toLowerCase();
-                    const lowerKeyword = keyword.toLowerCase();
-
-                    let index = 0;
-
-                    while (true) {
-                        const found = lowerLine.indexOf(lowerKeyword, index);
-
-                        if (found === -1) {
-                            break;
-                        }
-
-                        virtualTagSession.matches.push({
-                            filePath: fileMeta.filePath,
-                            line: lineIndex,
-                            start: found,
-                            end: found + keyword.length
-                        });
-
-                        index = found + keyword.length;
-                    }
-                }
-            }
-            const state = getPreviewState(panel);
-            if (state) {
-                state.virtualTagSession = virtualTagSession;
-            }
-        }
-
         htmlContent += md.render(text, {
             filePath: fileMeta.filePath,
             context: options?.context,
@@ -554,13 +491,6 @@ export async function updatePreviewPanel(
             highlight: state?.highlight
         });
         panel.webview.html = html;
-
-        if (state?.virtualTagSession) {
-            panel.webview.postMessage({
-                type: 'setMatches',
-                matches: state.virtualTagSession.matches
-            });
-        }
         panel.webview.postMessage({
             type: 'setPreviewCount',
             count: filesToPreview.length
