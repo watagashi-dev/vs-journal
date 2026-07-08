@@ -488,3 +488,8 @@ body>*:first-child {
   border: 1px solid var(--vscode-widget-border);
   border-radius: 0 6px 6px 6px;
 }
+
+.vjs-code-tab[data-virtual="true"] {
+  border-color: var(--vjs-virtual-color);
+  border-top-width: 3px;
+}

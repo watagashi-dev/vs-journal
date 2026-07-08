@@ -237,6 +237,7 @@ declare function acquireVsCodeApi(): any;
                 const tab = document.createElement('div');
                 tab.className = 'vjs-code-tab';
                 tab.textContent = lang;
+                tab.dataset.language = code.dataset.language ?? '';
 
                 pre.parentElement?.insertBefore(wrapper, pre);
                 wrapper.appendChild(tab);
@@ -375,6 +376,34 @@ declare function acquireVsCodeApi(): any;
                 }
             });
         });
+        document
+            .querySelectorAll<HTMLElement>('.vjs-code-tab')
+            .forEach((tab) => {
+                const rawLang = tab.dataset.language;
+
+                if (!rawLang) {
+                    return;
+                }
+
+                for (const rule of rules) {
+                    const keyword = rule.keyword;
+
+                    if (!keyword) {
+                        continue;
+                    }
+
+                    const matched = rule.caseSensitive
+                        ? rawLang.includes(keyword)
+                        : rawLang.toLowerCase().includes(keyword.toLowerCase());
+
+                    if (!matched) {
+                        continue;
+                    }
+
+                    tab.dataset.virtual = 'true';
+                    break;
+                }
+            });
     }
 
     const nav = document.getElementById('vjs-nav');
