@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import MarkdownIt from 'markdown-it';
 import taskLists from 'markdown-it-task-lists';
+import markdownItKatex from 'markdown-it-katex';
 
 import {
     getTagRanges,
@@ -42,7 +43,9 @@ export function createMarkdownIt(
         enabled: false,
         label: false,
         labelAfter: false
-    });
+    })
+        .use(markdownItKatex);
+
     const defaultRender = md.renderer.renderToken.bind(md.renderer);
 
     function applyLineAttrs(token: any) {

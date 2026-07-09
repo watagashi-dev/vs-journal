@@ -344,7 +344,9 @@
     "typescript-eslint": "^8.36.0"
   },
   "dependencies": {
+    "katex": "^0.17.0",
     "markdown-it": "^14.1.1",
+    "markdown-it-katex": "^2.0.3",
     "markdown-it-task-lists": "^2.1.1",
     "open": "^11.0.0"
   }
