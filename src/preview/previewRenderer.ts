@@ -84,6 +84,41 @@ export function createMarkdownIt(
         const src = token.attrGet("src");
         const hit = token.meta?.hit;
 
+        // Parse image options from alt text
+        const alt = token.content;
+        const separator = alt.indexOf("|");
+
+        if (separator >= 0) {
+            const altText = alt.slice(0, separator);
+            const optionText = alt.slice(separator + 1);
+
+            token.content = altText;
+            if (token.children && token.children.length > 0) {
+                token.children[0].content = altText;
+            }
+
+            const allowedAttrs = new Set([
+                "width",
+                "height",
+            ]);
+
+            optionText.split(",").forEach((option) => {
+                const [rawKey, rawValue] = option.split("=");
+                const key = rawKey?.trim();
+                const value = rawValue?.trim();
+
+                if (!key || !value) {
+                    return;
+                }
+
+                if (!allowedAttrs.has(key)) {
+                    return;
+                }
+
+                token.attrSet(key, value);
+            });
+        }
+
         if (hit?.virtual) {
             token.attrJoin("class", "vjs-virtual-image-hit");
             token.attrSet("data-virtual", "true");
@@ -207,8 +242,12 @@ export function createMarkdownIt(
 
             if (hrefIndex >= 0) {
                 let href = token.attrs[hrefIndex][1];
-                href = decodeURIComponent(href);
-
+                try {
+                    href = decodeURIComponent(href);
+                }
+                catch {
+                    // Keep original URL
+                }
                 // LOCAL / UNC / relative は VS Journal管理
                 const isUNC = href.startsWith('\\') && !href.startsWith('\\\\');
                 if (isUNC) {

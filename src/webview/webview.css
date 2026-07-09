@@ -318,6 +318,9 @@ table[border] td {
 
 img {
   max-width: 100%;
+}
+
+img:not([height]) {
   height: auto;
 }
 
