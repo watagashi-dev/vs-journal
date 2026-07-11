@@ -199,6 +199,19 @@ export function createMarkdownIt(
         if (token.map) {
             applyLineAttrs(token);
         }
+        const rawLang = token.info?.trim().split(/\s+/g)[0] ?? "";
+        if (rawLang.toLowerCase() === "math") {
+            const startLine = token.attrGet("data-start-line");
+            const endLine = token.attrGet("data-end-line");
+
+            const html = katex.renderToString(token.content, {
+                displayMode: true,
+                throwOnError: false
+            });
+
+            return `<div class="math-block" data-start-line="${startLine}" data-end-line="${endLine}">${html}</div>`;
+        }
+
         if (token.info) {
             const rawLang = token.info.trim().split(/\s+/g)[0];
             const parts = rawLang.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
