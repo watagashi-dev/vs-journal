@@ -43,8 +43,7 @@ export function createMarkdownIt(
         enabled: false,
         label: false,
         labelAfter: false
-    })
-        .use(markdownItKatex);
+    }).use(markdownItKatex);
 
     const defaultRender = md.renderer.renderToken.bind(md.renderer);
 

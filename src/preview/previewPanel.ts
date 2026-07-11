@@ -439,7 +439,13 @@ async function buildHtml(
         path.join(extensionContext.extensionPath, 'dist/webview/webview.css')
     );
     const cssUri = panel.webview.asWebviewUri(cssPath);
-
+    const katexCssPath = vscode.Uri.file(
+        path.join(
+            extensionContext.extensionPath,
+            'dist/webview/katex/katex.min.css'
+        )
+    );
+    const katexCssUri = panel.webview.asWebviewUri(katexCssPath);
     const scriptPath = vscode.Uri.file(
         path.join(extensionContext.extensionPath, 'dist/webview/webview.js')
     );
@@ -452,6 +458,7 @@ async function buildHtml(
     return template
         .replace(/{{cspSource}}/g, webview.cspSource)
         .replace(/{{cssUri}}/g, cssUri.toString())
+        .replace(/{{katexCssUri}}/g, katexCssUri.toString())
         .replace(/{{themeUrl}}/g, themeUrl)
         .replace(/{{hintText}}/g, hintText)
         .replace(/{{content}}/g, htmlContent)
