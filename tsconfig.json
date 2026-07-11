@@ -5,10 +5,11 @@
 		"module": "commonjs",
 		"target": "ES2022",
 		"lib": [
-			"ES2022"
+			"ES2022",
+			"DOM"
 		],
 		"sourceMap": true,
-		"strict": true,   /* enable all strict type-checking options */
+		"strict": true, /* enable all strict type-checking options */
 		"types": [
 			"node",
 			"mocha"

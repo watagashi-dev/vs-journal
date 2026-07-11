@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import MarkdownIt from 'markdown-it';
 import taskLists from 'markdown-it-task-lists';
-import markdownItKatex from 'markdown-it-katex';
+import texmath from 'markdown-it-texmath';
+import katex from 'katex';
 
 import {
     getTagRanges,
@@ -43,7 +44,10 @@ export function createMarkdownIt(
         enabled: false,
         label: false,
         labelAfter: false
-    }).use(markdownItKatex);
+    }).use(texmath, {
+        engine: katex,
+        delimiters: 'dollars',
+    });
 
     const defaultRender = md.renderer.renderToken.bind(md.renderer);
 

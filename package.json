@@ -347,8 +347,8 @@
   "dependencies": {
     "katex": "^0.17.0",
     "markdown-it": "^14.1.1",
-    "markdown-it-katex": "^2.0.3",
     "markdown-it-task-lists": "^2.1.1",
+    "markdown-it-texmath": "^1.0.0",
     "open": "^11.0.0"
   }
 }
