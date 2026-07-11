@@ -404,6 +404,35 @@ declare function acquireVsCodeApi(): any;
                     break;
                 }
             });
+        document
+            .querySelectorAll('annotation[encoding="application/x-tex"]')
+            .forEach((annotation) => {
+                const tex = annotation.textContent ?? '';
+
+                for (const rule of rules) {
+                    const keyword = rule.keyword;
+
+                    if (!keyword) {
+                        continue;
+                    }
+
+                    const matched = rule.caseSensitive
+                        ? tex.includes(keyword)
+                        : tex.toLowerCase().includes(keyword.toLowerCase());
+
+                    if (!matched) {
+                        continue;
+                    }
+
+                    const katex = annotation.closest('.katex');
+
+                    if (katex instanceof HTMLElement) {
+                        katex.dataset.virtual = 'true';
+                    }
+
+                    break;
+                }
+            });
     }
 
     const nav = document.getElementById('vjs-nav');
