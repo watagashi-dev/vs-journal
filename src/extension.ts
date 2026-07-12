@@ -600,11 +600,11 @@ async function insertFromUri(
         const currentDir = path.dirname(editor.document.uri.fsPath);
         linkPath = path.relative(currentDir, targetPath);
         if (!linkPath.startsWith('.')) {
-            linkPath = './' + linkPath;
+            linkPath = './' + linkPath.replace(/\\/g, '/');
         }
     }
     else {
-        linkPath = targetPath;
+        linkPath = targetPath.replace(/\\/g, '\\\\');
     }
 
     await insertLinkMarkdown(editor, linkPath, baseName);
