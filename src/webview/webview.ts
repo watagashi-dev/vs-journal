@@ -254,28 +254,28 @@ declare function acquireVsCodeApi(): any;
         applyVirtualTagHighlight();
     }
 
-    function applyVirtualTagHighlight(): void {
-        const raw = document.body.dataset.rules;
-        if (!raw) {
-            return;
+    interface VirtualTagRule {
+        keyword: string;
+        className: string;
+        caseSensitive: boolean;
+    }
+
+    function matchesRule(
+        text: string,
+        rule: VirtualTagRule
+    ): boolean {
+        if (!rule.keyword) {
+            return false;
         }
 
-        let rules: Array<{
-            keyword: string;
-            className: string;
-            caseSensitive: boolean;
-        }> = [];
+        return rule.caseSensitive
+            ? text.includes(rule.keyword)
+            : text.toLowerCase().includes(rule.keyword.toLowerCase());
+    }
 
-        try {
-            rules = JSON.parse(decodeURIComponent(raw));
-        } catch {
-            return;
-        }
-
-        if (!rules || rules.length === 0) {
-            return;
-        }
-
+    function applyCodeVirtualTags(
+        rules: VirtualTagRule[]
+    ): void {
         const codeBlocks = document.querySelectorAll('code');
 
         codeBlocks.forEach((block) => {
@@ -376,6 +376,11 @@ declare function acquireVsCodeApi(): any;
                 }
             });
         });
+    }
+
+    function applyCodeTabVirtualTags(
+        rules: VirtualTagRule[]
+    ): void {
         document
             .querySelectorAll<HTMLElement>('.vjs-code-tab')
             .forEach((tab) => {
@@ -386,17 +391,7 @@ declare function acquireVsCodeApi(): any;
                 }
 
                 for (const rule of rules) {
-                    const keyword = rule.keyword;
-
-                    if (!keyword) {
-                        continue;
-                    }
-
-                    const matched = rule.caseSensitive
-                        ? rawLang.includes(keyword)
-                        : rawLang.toLowerCase().includes(keyword.toLowerCase());
-
-                    if (!matched) {
+                    if (!matchesRule(rawLang, rule)) {
                         continue;
                     }
 
@@ -404,23 +399,18 @@ declare function acquireVsCodeApi(): any;
                     break;
                 }
             });
+    }
+
+    function applyKatexVirtualTags(
+        rules: VirtualTagRule[]
+    ): void {
         document
             .querySelectorAll('annotation[encoding="application/x-tex"]')
             .forEach((annotation) => {
                 const tex = annotation.textContent ?? '';
 
                 for (const rule of rules) {
-                    const keyword = rule.keyword;
-
-                    if (!keyword) {
-                        continue;
-                    }
-
-                    const matched = rule.caseSensitive
-                        ? tex.includes(keyword)
-                        : tex.toLowerCase().includes(keyword.toLowerCase());
-
-                    if (!matched) {
+                    if (!matchesRule(tex, rule)) {
                         continue;
                     }
 
@@ -433,6 +423,30 @@ declare function acquireVsCodeApi(): any;
                     break;
                 }
             });
+    }
+
+    function applyVirtualTagHighlight(): void {
+        const raw = document.body.dataset.rules;
+
+        if (!raw) {
+            return;
+        }
+
+        let rules: VirtualTagRule[] = [];
+
+        try {
+            rules = JSON.parse(decodeURIComponent(raw));
+        } catch {
+            return;
+        }
+
+        if (rules.length === 0) {
+            return;
+        }
+
+        applyCodeVirtualTags(rules);
+        applyCodeTabVirtualTags(rules);
+        applyKatexVirtualTags(rules);
     }
 
     const nav = document.getElementById('vjs-nav');
