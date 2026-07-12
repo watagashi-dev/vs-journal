@@ -644,6 +644,16 @@ async function handleInsertFileOrDir(canSelectFolders: boolean) {
 export async function activate(context: vscode.ExtensionContext) {
     setExtensionContext(context);
 
+    // Restore tag usage history
+    const savedTagUsage =
+        context.globalState.get<Record<string, number>>('tagUsage', {});
+
+    sessionTagUsage.clear();
+
+    for (const [tag, count] of Object.entries(savedTagUsage)) {
+        sessionTagUsage.set(tag, count);
+    }
+
     // --- Status Bar ---
     const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
     context.subscriptions.push(statusBar);
@@ -992,8 +1002,22 @@ export async function activate(context: vscode.ExtensionContext) {
         ),
 
         // Command to increment tag usage count
-        vscode.commands.registerCommand('vsJournal.incrementTagUsage', (tag: string) => {
-            sessionTagUsage.set(tag, (sessionTagUsage.get(tag) ?? 0) + 1);
+        /*
+                vscode.commands.registerCommand('vsJournal.incrementTagUsage', (tag: string) => {
+                    sessionTagUsage.set(tag, (sessionTagUsage.get(tag) ?? 0) + 1);
+                }),
+        */
+        vscode.commands.registerCommand('vsJournal.incrementTagUsage', async (tag: string) => {
+            const count = (sessionTagUsage.get(tag) ?? 0) + 1;
+
+            sessionTagUsage.set(tag, count);
+
+            const savedTagUsage =
+                context.globalState.get<Record<string, number>>('tagUsage', {});
+
+            savedTagUsage[tag] = count;
+
+            await context.globalState.update('tagUsage', savedTagUsage);
         }),
 
         vscode.languages.registerCompletionItemProvider(
@@ -1043,6 +1067,8 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.workspace.onDidChangeConfiguration(async event => {
             if (event.affectsConfiguration('vsJournal.journalDir')) {
                 resetVirtualTags();
+                sessionTagUsage.clear();
+                await context.globalState.update('tagUsage', {});
                 await performScan();
                 setupWatcher(context);
                 disposePreviewPanel();
