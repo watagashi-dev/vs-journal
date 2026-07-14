@@ -195,6 +195,7 @@ declare function acquireVsCodeApi(): any;
         document
             .querySelectorAll<HTMLElement>('code[data-diff="true"]')
             .forEach(code => {
+                console.log(code.innerHTML);
 
                 const lines = code.innerHTML.split('\n');
 
@@ -210,7 +211,7 @@ declare function acquireVsCodeApi(): any;
 
                     return line;
 
-                }).join('');
+                }).join('\n');
             });
     }
 
