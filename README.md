@@ -159,6 +159,8 @@ Tags are suggested as you type based on existing tags.
 - Prevents inconsistencies
 - Faster input
 - Suggestions are automatically sorted
+- Frequently used tags are displayed higher in the suggestion list
+- Completion ranking is automatically persisted
 
 ---
 
@@ -168,6 +170,9 @@ The Markdown preview is optimized for readability and interaction.
 
 - Highlighting for user tags and virtual tag matches
 - Syntax highlighting for code blocks
+- Support for diff code block rendering
+- Language labels for code blocks
+- Support for simple TeX-style mathematical expressions
 - Improved table rendering (header emphasis, borders)
 - Better checklist visibility
 - Inline display of external images
@@ -183,6 +188,73 @@ Large note collections may be partially displayed to maintain performance.
 
 ---
 
+### VS Journal Markdown Extensions
+
+In addition to standard Markdown, VS Journal supports several extended syntax features.
+
+#### Mathematical Expressions
+
+Simple TeX-style mathematical expressions can be rendered in the preview.
+
+Inline expression:
+
+```markdown
+$E = mc^2$
+```
+
+Block expression:
+
+```markdown
+$$
+\sum_{i=1}^{n} i
+$$
+```
+
+#### Diff Code Blocks
+
+Diff-style code blocks can be rendered with added and removed lines highlighted.
+They can also be combined with normal language specification.
+
+````text
+```cpp_diff
+- int value = 10;
++ int value = 20;
+```
+````
+
+![](images/screenshot-diff-sample.png)
+
+#### Image Display Options
+
+Image display size can be controlled using options in the ALT text.
+
+Supported options:
+
+| Option | Description |
+|---------|-------------|
+| width | Set image width (px) |
+| height | Set image height (px) |
+
+Width:
+
+```markdown
+![Screenshot|width=400](image.png)
+```
+
+Height:
+
+```markdown
+![Screenshot|height=300](image.png)
+```
+
+Multiple options:
+
+```markdown
+![Screenshot|width=400|height=300](image.png)
+```
+
+---
+
 ### 7. Images & File Links
 
 Insert images and links directly while editing Markdown.
@@ -190,6 +262,7 @@ Insert images and links directly while editing Markdown.
 - Save and paste clipboard images
 - Insert file and folder links
 - Open local files and folders from preview
+- Control image display size through ALT text options
 
 Journal file and folder links are stored using relative paths whenever possible.
 
@@ -291,6 +364,9 @@ Shortcuts:
 | Insert Folder Link | Ctrl+Alt+Shift+I | Cmd+Option+Shift+I |
 
 When pasting an image, the clipboard image is saved automatically and a Markdown image link is inserted.
+
+Image size can be controlled using ALT text options.
+See **VS Journal Markdown Extensions** for details.
 
 ---
 
@@ -436,7 +512,6 @@ VS Journal will continue to evolve while staying simple and lightweight.
 ### Writing Experience
 
 - Enhanced Markdown editing support
-- Basic math expression support
 
 ---
 

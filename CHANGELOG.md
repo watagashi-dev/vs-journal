@@ -1,5 +1,57 @@
 # Change Log
 
+## [0.5.0] - 2026-07-
+
+## Added
+
+### Mathematical Expression Support
+
+- Added support for rendering simple TeX-style mathematical expressions.
+
+### Code Block Enhancements
+
+- Added support for diff code blocks.
+- Improved language label handling for code blocks.
+
+### Image Display
+
+- Added support for specifying image display options through image ALT text.
+
+### Tag Completion
+
+- Added persistence for tag completion ranking based on usage frequency.
+
+## Improved
+
+### File and Folder Links
+
+- Journal-internal file and folder links are now stored as relative paths.
+- Improved local file link resolution.
+- Added support for UNC network paths.
+- Improved handling of file paths containing special characters.
+
+### Virtual Tags
+
+- Enhanced virtual tag highlighting in previews.
+- Matching portions of tag names are now highlighted.
+- Links and image paths/titles are now included in virtual tag matching.
+- Improved virtual tag navigation behavior.
+
+### Markdown Preview
+
+- Improved handling of encoded URLs in preview rendering.
+
+## Fixed
+
+### Virtual Tags
+
+- Fixed cases where virtual tag navigation was not displayed correctly.
+- Fixed inconsistencies between highlighted results and navigation targets.
+
+### File Links
+
+- Fixed incorrect path separator generation when inserting relative file links.
+
 ## [0.4.1] - 2026-07-
 
 ### Fixed
