@@ -213,10 +213,23 @@ export function createMarkdownIt(
         }
 
         if (token.info) {
-            const rawLang = token.info.trim().split(/\s+/g)[0];
-            const parts = rawLang.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
-            const hasDiff = parts.includes('diff');
-            const lang = parts.find(p => p !== 'diff') ?? rawLang;
+            const rawLang = token.info.trim();
+            const tokens = rawLang
+                .split(/[\s_-]+/)
+                .filter(Boolean);
+            const KNOWN_FLAGS = new Set([
+                'diff'
+            ]);
+
+            const flags = new Set(
+                tokens
+                    .map(t => t.toLowerCase())
+                    .filter(t => KNOWN_FLAGS.has(t))
+            );
+            const hasDiff = flags.has('diff');
+            const lang =
+                tokens.find(t => !KNOWN_FLAGS.has(t.toLowerCase()))
+                ?? '';
             token.attrSet('data-language', rawLang);
 
             if (hasDiff) {

@@ -459,11 +459,13 @@ body>*:first-child {
 }
 
 .vjs-diff-added {
-  background-color: var(--vscode-diffEditor-insertedLineBackground);
+  /* background-color: var(--vscode-diffEditor-insertedLineBackground); */
+  background-color: #144212;
 }
 
 .vjs-diff-removed {
-  background-color: var(--vscode-diffEditor-removedLineBackground);
+  /*  background-color: var(--vscode-diffEditor-removedLineBackground); */
+  background-color: #600;
 }
 
 .vjs-code-block {
