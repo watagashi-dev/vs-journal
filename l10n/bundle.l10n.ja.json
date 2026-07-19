@@ -16,6 +16,8 @@
   "Delete this file?": "このファイルを削除しますか？",
   "Delete this virtual tag?": "この仮想タグを削除しますか？",
   "Delete": "削除",
+  "Failed to move file to trash. Delete permanently?": "ゴミ箱へ移動できませんでした。このファイルを完全に削除しますか？",
+  "Delete Permanently": "完全削除",
   "Insert": "挿入",
   "No virtual tags yet": "仮想タグはありません",
   "No tags found": "タグが見つかりません",

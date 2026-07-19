@@ -1,3 +1,4 @@
+import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { FileMeta } from '../models/FileMeta';
@@ -87,4 +88,25 @@ export function createFileMeta(
         mtime,
         size
     };
+}
+
+export async function deleteNote(uri: vscode.Uri): Promise<boolean> {
+    try {
+        await vscode.workspace.fs.delete(uri, { useTrash: true });
+        return true;
+    } catch (err) {
+        const deleteLabel = vscode.l10n.t('Delete Permanently');
+        const result = await vscode.window.showWarningMessage(
+            vscode.l10n.t('Failed to move file to trash. Delete permanently?'),
+            { modal: true },
+            deleteLabel
+        );
+
+        if (result !== deleteLabel) {
+            return false;
+        }
+
+        await vscode.workspace.fs.delete(uri, { useTrash: false });
+        return true;
+    }
 }

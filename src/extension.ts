@@ -8,7 +8,7 @@ import { execFileSync } from 'child_process';
 import { FileMeta } from './models/FileMeta';
 import { measure } from './perf';
 import { TagHierarchyBuilder, TagHierarchyNode } from './services/TagHierarchyBuilder';
-import { createFileMeta } from './services/fileMetaService';
+import { createFileMeta, deleteNote } from './services/fileMetaService';
 import { TagTreeProvider } from './sidebar/TagTreeProvider';
 import {
     FileNameStyle,
@@ -959,8 +959,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 if (result !== deleteLabel) { return; }
             }
             const uri = vscode.Uri.file(item.path);
-
-            await vscode.workspace.fs.delete(uri, { useTrash: true });
+            await deleteNote(uri);
         }),
 
         vscode.commands.registerCommand(
