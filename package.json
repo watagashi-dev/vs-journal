@@ -41,11 +41,6 @@
         "icon": "$(preview)"
       },
       {
-        "command": "vs-journal.selectJournalDir",
-        "title": "%command.selectJournalDir%",
-        "icon": "$(gear)"
-      },
-      {
         "command": "vs-journal.addVirtualTag",
         "title": "%command.addVirtualTag%",
         "icon": "$(tag)"

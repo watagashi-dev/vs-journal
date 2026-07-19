@@ -664,6 +664,7 @@ export async function activate(context: vscode.ExtensionContext) {
             const shortDir = dir.length > 40 ? '…' + dir.slice(-37) : dir;
             statusBar.text = `VS Journal: ${shortDir}`;
             statusBar.tooltip = dir;
+            statusBar.command = 'vs-journal.selectJournalDir';
             statusBar.show();
         } else {
             statusBar.hide();
