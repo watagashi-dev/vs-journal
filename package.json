@@ -41,6 +41,11 @@
         "icon": "$(preview)"
       },
       {
+        "command": "vs-journal.selectJournalDir",
+        "title": "%command.selectJournalDir%",
+        "icon": "$(gear)"
+      },
+      {
         "command": "vs-journal.addVirtualTag",
         "title": "%command.addVirtualTag%",
         "icon": "$(tag)"
@@ -219,14 +224,9 @@
           "group": "navigation@2"
         },
         {
-          "command": "vs-journal.selectJournalDir",
-          "when": "view == VSJournal.TagTree",
-          "group": "navigation@3"
-        },
-        {
           "command": "vs-journal.addVirtualTag",
           "when": "view == VSJournal.TagTree",
-          "group": "navigation@4"
+          "group": "navigation@3"
         }
       ],
       "commandPalette": [
