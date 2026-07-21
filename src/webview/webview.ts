@@ -462,7 +462,7 @@ declare function acquireVsCodeApi(): any;
 
         const m = highlightElements.length;
 
-        if (m < 2) {
+        if (m < 1) {
             nav.classList.add('hidden');
             return;
         }
@@ -555,7 +555,18 @@ declare function acquireVsCodeApi(): any;
     function moveNext() {
         if (highlightElements.length === 0) { return; }
 
-        currentIndex = (currentIndex + 1) % highlightElements.length;
+        let nextIndex = currentIndex;
+
+        const currentEl = highlightElements[currentIndex];
+        if (currentEl) {
+            const rect = currentEl.getBoundingClientRect();
+            const threshold = window.innerHeight * 0.9;
+
+            if (rect.top <= threshold) {
+                nextIndex = (currentIndex + 1) % highlightElements.length;
+            }
+        }
+        currentIndex = nextIndex;
         scrollToMatch(currentIndex);
         updateUI();
     }
@@ -563,8 +574,21 @@ declare function acquireVsCodeApi(): any;
     function movePrev() {
         if (highlightElements.length === 0) { return; }
 
-        currentIndex =
-            (currentIndex - 1 + highlightElements.length) % highlightElements.length;
+        let prevIndex = currentIndex;
+
+        const currentEl = highlightElements[currentIndex];
+        if (currentEl) {
+            const rect = currentEl.getBoundingClientRect();
+            const threshold = window.innerHeight * 0.1;
+
+            if (rect.top < threshold) {
+                prevIndex =
+                    (currentIndex - 1 + highlightElements.length) %
+                    highlightElements.length;
+            }
+        }
+
+        currentIndex = prevIndex;
 
         scrollToMatch(currentIndex);
         updateUI();
@@ -767,10 +791,6 @@ declare function acquireVsCodeApi(): any;
     }
 
     function initializeVirtualTagNavigation() {
-        //        if (!VIRTUAL_TAG) {
-        //            return;
-        //        }
-
         refreshVirtualTagMatches();
         updateUI();
     }
