@@ -191,58 +191,47 @@ declare function acquireVsCodeApi(): any;
     // =========================================================
     // Highlight.js（型問題回避込み）
     // =========================================================
-    function decorateDiffBlocks(): void {
+    function decorateCodeBlocks(): void {
         document
-            .querySelectorAll<HTMLElement>('code[data-diff="true"]')
+            .querySelectorAll<HTMLElement>('pre > code')
             .forEach(code => {
-                console.log(code.innerHTML);
-
                 const lines = code.innerHTML.split('\n');
+                if (lines.length > 0 && lines.at(-1) === '') {
+                    lines.pop();
+                }
+                const hasDiff =
+                    code.dataset.diff === 'true';
+                const hasLineNumber =
+                    code.dataset.linenumber === 'true';
 
-                code.innerHTML = lines.map(line => {
-
-                    if (line.startsWith('+')) {
-                        return `<span class="vjs-diff-added">${line}</span>`;
+                const digits =
+                    String(lines.length).length;
+                code.innerHTML = lines.map((line, index) => {
+                    let className = '';
+                    if (hasDiff) {
+                        if (line.startsWith('+')) {
+                            className = `vjs-diff-added`;
+                        }
+                        if (line.startsWith('-')) {
+                            className = `vjs-diff-removed`;
+                        }
                     }
 
-                    if (line.startsWith('-')) {
-                        return `<span class="vjs-diff-removed">${line}</span>`;
-                    }
+                    if (hasLineNumber) {
+                        const lineClass = className ? ` ${className}` : '';
 
+                        line =
+                            `<span class="vjs-line"><span class="vjs-line-number">${String(index + 1).padStart(digits, ' ')}</span><span class="vjs-line-content${lineClass}">${line}</span></span>`;
+                    } else {
+                        const lineClass = className ? ` ${className}` : '';
+                        const content = line === '' ? '&#8203;' : line;
+
+                        line =
+                            `<span class="vjs-line"><span class="vjs-line-content${lineClass}">${content}</span></span>`;
+                    }
                     return line;
-
-                }).join('\n');
-            });
-    }
-
-    function addCodeLanguageTabs(): void {
-        document
-            .querySelectorAll<HTMLElement>('code[data-display-language]')
-            .forEach(code => {
-                const lang = code.dataset.displayLanguage;
-                if (!lang) {
-                    return;
-                }
-
-                const pre = code.parentElement;
-                if (!pre || pre.tagName !== 'PRE') {
-                    return;
-                }
-                if (pre.parentElement?.classList.contains('vjs-code-block')) {
-                    return;
-                }
-
-                const wrapper = document.createElement('div');
-                wrapper.className = 'vjs-code-block';
-
-                const tab = document.createElement('div');
-                tab.className = 'vjs-code-tab';
-                tab.textContent = lang;
-                tab.dataset.language = code.dataset.language ?? '';
-
-                pre.parentElement?.insertBefore(wrapper, pre);
-                wrapper.appendChild(tab);
-                wrapper.appendChild(pre);
+                    //}).join(hasLineNumber ? '' : '\n');
+                }).join('');
             });
     }
 
@@ -250,8 +239,7 @@ declare function acquireVsCodeApi(): any;
         const hljs = (window as any).hljs;
         if (!hljs) { return; }
         hljs.highlightAll();
-        decorateDiffBlocks();
-        addCodeLanguageTabs();
+        decorateCodeBlocks();
         applyVirtualTagHighlight();
     }
 
@@ -379,29 +367,6 @@ declare function acquireVsCodeApi(): any;
         });
     }
 
-    function applyCodeTabVirtualTags(
-        rules: VirtualTagRule[]
-    ): void {
-        document
-            .querySelectorAll<HTMLElement>('.vjs-code-tab')
-            .forEach((tab) => {
-                const rawLang = tab.dataset.language;
-
-                if (!rawLang) {
-                    return;
-                }
-
-                for (const rule of rules) {
-                    if (!matchesRule(rawLang, rule)) {
-                        continue;
-                    }
-
-                    tab.dataset.virtual = 'true';
-                    break;
-                }
-            });
-    }
-
     function applyKatexVirtualTags(
         rules: VirtualTagRule[]
     ): void {
@@ -446,7 +411,6 @@ declare function acquireVsCodeApi(): any;
         }
 
         applyCodeVirtualTags(rules);
-        applyCodeTabVirtualTags(rules);
         applyKatexVirtualTags(rules);
     }
 
@@ -731,7 +695,6 @@ declare function acquireVsCodeApi(): any;
                 const link = document.getElementById('hljs-theme') as HTMLLinkElement | null;
                 if (link && msg.themeUrl) {
                     link.href = msg.themeUrl;
-                    runHighlight();
                 }
             }
 

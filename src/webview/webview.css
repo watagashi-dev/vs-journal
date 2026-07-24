@@ -458,14 +458,22 @@ body>*:first-child {
   border-left: 4px solid var(--vscode-gitDecoration-modifiedResourceForeground);
 }
 
+.vjs-line {
+  display: flex;
+}
+
 .vjs-diff-added {
-  /* background-color: var(--vscode-diffEditor-insertedLineBackground); */
-  background-color: #144212;
+  background-color: color-mix(in srgb,
+      var(--vscode-gitDecoration-addedResourceForeground) 15%,
+      transparent);
+  border-left: 3px solid var(--vscode-gitDecoration-addedResourceForeground);
 }
 
 .vjs-diff-removed {
-  /*  background-color: var(--vscode-diffEditor-removedLineBackground); */
-  background-color: #600;
+  background-color: color-mix(in srgb,
+      var(--vscode-gitDecoration-deletedResourceForeground) 15%,
+      transparent);
+  border-left: 3px solid var(--vscode-gitDecoration-deletedResourceForeground);
 }
 
 .vjs-code-block {
@@ -495,4 +503,34 @@ body>*:first-child {
 .vjs-code-tab[data-virtual="true"] {
   border-color: var(--vjs-virtual-color);
   border-top-width: 3px;
+}
+
+.vjs-code-block pre:has(code[data-wrap="true"]) {
+  white-space: pre-wrap;
+}
+
+.vjs-code-block code[data-wrap="true"] {
+  white-space: inherit;
+  word-break: break-all;
+}
+
+.vjs-line {
+  display: flex;
+}
+
+.vjs-line-number {
+  flex: 0 0 3em;
+  padding-right: 8px;
+  margin-right: 8px;
+
+  text-align: right;
+  user-select: none;
+
+  border-right: 1px solid var(--vscode-editorIndentGuide-background);
+  color: var(--vscode-editorLineNumber-foreground);
+}
+
+.vjs-line-content {
+  flex: 1;
+  min-width: 0;
 }

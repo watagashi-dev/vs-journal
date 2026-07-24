@@ -212,34 +212,70 @@ export function createMarkdownIt(
             return `<div class="math-block" data-start-line="${startLine}" data-end-line="${endLine}">${html}</div>`;
         }
 
+        let displayLang = '';
+        let hasNoTab = false;
+        let hasWrap = false;
         if (token.info) {
             const rawLang = token.info.trim();
-            const tokens = rawLang
+            const langTokens = rawLang
                 .split(/[\s_-]+/)
                 .filter(Boolean);
             const KNOWN_FLAGS = new Set([
-                'diff'
+                'diff',
+                'wrap',
+                'linenumber',
+                'notab'
             ]);
 
             const flags = new Set(
-                tokens
+                langTokens
                     .map(t => t.toLowerCase())
                     .filter(t => KNOWN_FLAGS.has(t))
             );
-            const hasDiff = flags.has('diff');
+
+            hasWrap = flags.has('wrap');
+            hasNoTab = flags.has('notab');
+
             const lang =
-                tokens.find(t => !KNOWN_FLAGS.has(t.toLowerCase()))
+                langTokens.find(t => !KNOWN_FLAGS.has(t.toLowerCase()))
                 ?? '';
+            displayLang = lang;
             token.attrSet('data-language', rawLang);
 
-            if (hasDiff) {
+            if (flags.has('diff')) {
                 token.attrSet('data-diff', 'true');
+            }
+            if (hasWrap) {
+                token.attrSet('data-wrap', 'true');
+            }
+            if (flags.has('linenumber')) {
+                token.attrSet('data-linenumber', 'true');
             }
 
             token.attrJoin("class", `language-${lang}`);
-            token.attrSet('data-display-language', lang);
         }
-        return defaultFence ? defaultFence(tokens, idx, options, env, self) : self.renderToken(tokens, idx, options);
+
+        const html = defaultFence
+            ? defaultFence(tokens, idx, options, env, self)
+            : self.renderToken(tokens, idx, options);
+
+        if (!displayLang && !hasWrap) {
+            return html;
+        }
+
+        const isVirtual =
+            token.meta?.hit?.virtual === true;
+        return `
+<div class="vjs-code-block">
+    ${!hasNoTab && displayLang
+                ? `<div class="vjs-code-tab"
+            data-language="${displayLang}"
+            ${isVirtual ? 'data-virtual="true"' : ''}>
+            ${displayLang}
+        </div>`
+                : ''} 
+    ${html}
+</div>`;
     };
 
     const defaultHtmlBlock = md.renderer.rules.html_block;
@@ -345,6 +381,23 @@ export function createMarkdownIt(
         'vjs-tag-mark',
         (state) => {
             state.tokens.forEach((token, index) => {
+                if (token.type === 'fence') {
+                    const rawLang = token.info?.trim().split(/\s+/g)[0] ?? '';
+                    token.meta = {
+                        ...(token.meta || {}),
+                        hit: {
+                            virtual: rawLang
+                                ? matchesPreviewVirtualTag(
+                                    [rawLang],
+                                    options?.highlightKeyword,
+                                    options?.caseSensitive ?? false
+                                )
+                                : false
+                        }
+                    };
+
+                    return;
+                }
                 if (token.type !== 'inline' || !token.children) {
                     return;
                 }
