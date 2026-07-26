@@ -530,12 +530,14 @@ declare function acquireVsCodeApi(): any;
         const currentEl = highlightElements[currentIndex];
         if (currentEl) {
             const rect = currentEl.getBoundingClientRect();
-            const threshold = window.innerHeight * 0.9;
+            const threshold = 10;
 
-            if (rect.top <= threshold) {
+            // Move to the next tag if the current tag is not near the bottom edge
+            if (rect.bottom <= window.innerHeight - threshold) {
                 nextIndex = (currentIndex + 1) % highlightElements.length;
             }
         }
+
         currentIndex = nextIndex;
         scrollToMatch(currentIndex);
         updateUI();
@@ -549,9 +551,10 @@ declare function acquireVsCodeApi(): any;
         const currentEl = highlightElements[currentIndex];
         if (currentEl) {
             const rect = currentEl.getBoundingClientRect();
-            const threshold = window.innerHeight * 0.1;
+            const threshold = 10;
 
-            if (rect.top < threshold) {
+            // Move to the previous tag if the current tag is not near the top edge
+            if (rect.top >= threshold) {
                 prevIndex =
                     (currentIndex - 1 + highlightElements.length) %
                     highlightElements.length;
@@ -559,7 +562,6 @@ declare function acquireVsCodeApi(): any;
         }
 
         currentIndex = prevIndex;
-
         scrollToMatch(currentIndex);
         updateUI();
     }
