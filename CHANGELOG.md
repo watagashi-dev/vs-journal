@@ -1,5 +1,29 @@
 # Change Log
 
+## [0.5.1] - 2026-07-
+
+## Added
+
+- Added new code block display options:
+  - `wrap`: Wrap long lines.
+  - `linenumber`: Show line numbers.
+  - `notab`: Hide the language tab.
+
+## Improved
+
+- Improved the appearance of diff code blocks:
+  - Highlight added and removed lines with line-based backgrounds.
+  - Use colors that match the active VS Code theme.
+- Improved virtual tag navigation for smoother movement between highlighted tags based on their current on-screen position.
+- Changed how the journal folder is selected:
+  - Removed the selection button from the sidebar.
+  - You can now change the journal folder by clicking its path in the status bar.
+
+## Fixed
+
+- Added a fallback option to permanently delete a note if moving it to the trash fails.
+- Fixed an issue where notes could not be deleted in some environments.
+
 ## [0.5.0] - 2026-07-19
 
 ## Added

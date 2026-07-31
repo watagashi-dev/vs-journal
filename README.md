@@ -170,8 +170,12 @@ The Markdown preview is optimized for readability and interaction.
 
 - Highlighting for user tags and virtual tag matches
 - Syntax highlighting for code blocks
-- Support for diff code block rendering
-- Language labels for code blocks
+- Extended code block display support
+  - Language labels displayed as tabs
+  - Diff rendering
+  - Line wrapping
+  - Line number display
+  - Hide language tabs
 - Support for simple TeX-style mathematical expressions
 - Improved table rendering (header emphasis, borders)
 - Better checklist visibility
@@ -223,6 +227,25 @@ They can also be combined with normal language specification.
 ````
 
 ![](images/screenshot-diff-sample.png)
+
+#### Code Block Display Options
+
+Code block display can be customized by adding options to the language specification.
+
+Example:
+
+```typescript wrap linenumber
+const longText = "This is a long line...";
+```
+
+Supported options:
+
+| Option | Description |
+| --- | --- |
+| `diff` | Highlight added and removed lines based on `+-` prefixes |
+| `wrap` | Wrap long lines |
+| `linenumber` | Display line numbers |
+| `notab` | Hide the language tab |
 
 #### Image Display Options
 
