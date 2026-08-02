@@ -169,61 +169,58 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
                 const item = new VSTagItem(
                     null,
                     section.label,
-                    vscode.TreeItemCollapsibleState.None,
+                    vscode.TreeItemCollapsibleState.Expanded,
                     'section'
                 );
 
                 // Use icon for visual emphasis
                 item.type = 'section';
+                item.sectionKey = section.key;
                 item.tooltip = '';
                 item.id = `section:${section.key}`;
                 item.iconPath = new vscode.ThemeIcon('folder-opened', new vscode.ThemeColor('charts.blue'));
                 result.push(item);
-
-                const nodes = section.getNodes(this);
-
-                // ===== EMPTY STATE =====
-                if (nodes.length === 0 && section.emptyLabel) {
-                    const empty = new VSTagItem(
-                        null,
-                        section.emptyLabel,
-                        vscode.TreeItemCollapsibleState.None,
-                        'empty'
-                    );
-
-                    empty.type = 'spacer'; // 既存流用でもOK
-                    if (section.emptyCommand) {
-                        empty.command = {
-                            command: section.emptyCommand,
-                            title: section.emptyLabel,
-                        };
-                    };
-                    empty.iconPath = undefined;
-                    empty.tooltip = '';
-
-                    result.push(empty);
-                    return;
-                }
-                for (const node of nodes) {
-                    result.push(this.createTagItem(node, section));
-                }
             };
 
             for (const section of TAG_SECTIONS) {
                 pushSection(section);
             }
-            // result.push(createSpacerItem());
-
             return Promise.resolve(result);
         }
 
         // ===== SECTION (No children) =====
-        if (!element.node) {
-            return Promise.resolve([]);
-        }
+        if (!element.node && element.type === 'section') {
+            const section = TAG_SECTIONS.find(s => s.key === element.sectionKey)!;
+            const nodes = section.getNodes(this);
 
+            if (nodes.length === 0 && section.emptyLabel) {
+                const empty = new VSTagItem(
+                    null,
+                    section.emptyLabel,
+                    vscode.TreeItemCollapsibleState.None,
+                    'empty'
+                );
+
+                empty.type = 'spacer';
+                if (section.emptyCommand) {
+                    empty.command = {
+                        command: section.emptyCommand,
+                        title: section.emptyLabel,
+                    };
+                }
+
+                return Promise.resolve([empty]);
+            }
+
+            return Promise.resolve(
+                nodes.map(node => this.createTagItem(node, section))
+            );
+        }
         // ===== TAG NODE =====
         const node = element.node;
+        if (!node) {
+            return Promise.resolve([]);
+        }
         const children: VSTagItem[] = [];
 
         // Child tags
