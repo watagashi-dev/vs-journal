@@ -36,6 +36,7 @@ import {
     removeVirtualTagsForFile,
     rebuildVirtualTagIndex,
 } from './services/virtualTagService';
+import { StateService } from './services/StateService';
 
 let tagProvider: TagTreeProvider;
 
@@ -643,10 +644,10 @@ async function handleInsertFileOrDir(canSelectFolders: boolean) {
 
 export async function activate(context: vscode.ExtensionContext) {
     setExtensionContext(context);
+    const stateService = new StateService(context.globalState);
 
     // Restore tag usage history
-    const savedTagUsage =
-        context.globalState.get<Record<string, number>>('tagUsage', {});
+    const savedTagUsage = stateService.getTagUsage();
 
     sessionTagUsage.clear();
 
@@ -1012,12 +1013,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
             sessionTagUsage.set(tag, count);
 
-            const savedTagUsage =
-                context.globalState.get<Record<string, number>>('tagUsage', {});
+            const savedTagUsage = stateService.getTagUsage();
 
             savedTagUsage[tag] = count;
 
-            await context.globalState.update('tagUsage', savedTagUsage);
+            await stateService.updateTagUsage(savedTagUsage);
         }),
 
         vscode.languages.registerCompletionItemProvider(
@@ -1068,7 +1068,7 @@ export async function activate(context: vscode.ExtensionContext) {
             if (event.affectsConfiguration('vsJournal.journalDir')) {
                 resetVirtualTags();
                 sessionTagUsage.clear();
-                await context.globalState.update('tagUsage', {});
+                await stateService.clearTagUsage();
                 await performScan();
                 setupWatcher(context);
                 disposePreviewPanel();
