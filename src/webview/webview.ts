@@ -195,7 +195,9 @@ declare function acquireVsCodeApi(): any;
         document
             .querySelectorAll<HTMLElement>('pre > code')
             .forEach(code => {
+                // console.log(code.innerHTML);
                 const lines = code.innerHTML.split('\n');
+                console.log(lines);
                 if (lines.length > 0 && lines.at(-1) === '') {
                     lines.pop();
                 }
