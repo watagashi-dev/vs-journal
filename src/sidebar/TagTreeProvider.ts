@@ -3,6 +3,7 @@ import { TagHierarchyNode } from '../services/TagHierarchyBuilder';
 import { getJournalRelativePath } from '../extension';
 import { FileMeta } from '../models/FileMeta';
 import { PreviewContext } from '../preview/previewPanel';
+import { StateService } from '../services/StateService';
 
 type TagSection = {
     key: 'system' | 'user' | 'virtual';
@@ -84,6 +85,13 @@ class VSTagItem extends vscode.TreeItem {
     public highlight?: {
         keyword: string;
     };
+
+    // Unique key used for view state.
+    public stateKey?: string;
+    // Whether the state should be persisted.
+    public isPersistable = true;
+    // Default expanded state of this item.
+    public defaultExpanded = false;
 }
 
 function createSpacerItem(): VSTagItem {
@@ -101,7 +109,10 @@ function createSpacerItem(): VSTagItem {
 }
 
 export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
-
+    constructor(
+        private readonly stateService: StateService
+    ) {
+    }
     private _onDidChangeTreeData = new vscode.EventEmitter<void>();
     readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
@@ -152,6 +163,23 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         this._onDidChangeTreeData.fire();
     }
 
+    private getCollapsibleState(
+        defaultExpanded: boolean,
+        stateKey?: string
+    ): vscode.TreeItemCollapsibleState {
+
+        const expanded = stateKey !== undefined &&
+            this.stateService.getExpandedItems().includes(stateKey);
+
+        const isExpanded = defaultExpanded
+            ? !expanded
+            : expanded;
+
+        return isExpanded
+            ? vscode.TreeItemCollapsibleState.Expanded
+            : vscode.TreeItemCollapsibleState.Collapsed;
+    }
+
     getTreeItem(element: VSTagItem): vscode.TreeItem {
         return element;
     }
@@ -166,16 +194,20 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
 
             const pushSection = (section: TagSection) => {
                 // Section header (not clickable, no collapse chevron)
+                const stateKey = `section:${section.key}`;
                 const item = new VSTagItem(
                     null,
                     section.label,
-                    vscode.TreeItemCollapsibleState.Expanded,
+                    this.getCollapsibleState(true, stateKey),
                     'section'
                 );
 
                 // Use icon for visual emphasis
                 item.type = 'section';
                 item.sectionKey = section.key;
+                item.stateKey = stateKey;
+                item.isPersistable = section.key !== 'virtual';
+                item.defaultExpanded = true;
                 item.tooltip = '';
                 item.id = `section:${section.key}`;
                 item.iconPath = new vscode.ThemeIcon('folder-opened', new vscode.ThemeColor('charts.blue'));
@@ -239,7 +271,9 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
 
             item.type = 'file';
             item.sectionKey = element.sectionKey;
-
+            item.stateKey = `file:${getJournalRelativePath(file.filePath)}`;
+            item.isPersistable = element.sectionKey !== 'virtual';
+            item.defaultExpanded = false;
             item.parentTag = node.name;
 
             item.id = `${item.sectionKey}:${node.name}:file:${file.filePath}`;
@@ -275,15 +309,19 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             ? `tag:${section.key}`
             : 'tag';
 
+        const stateKey = `tag:${node.path}`;
         const item = new VSTagItem(
             node,
             label,
-            vscode.TreeItemCollapsibleState.Collapsed,
+            this.getCollapsibleState(false, stateKey),
             context
         );
 
         item.type = 'tag';
         item.sectionKey = section?.key;
+        item.stateKey = stateKey;
+        item.isPersistable = section?.key !== 'virtual';
+        item.defaultExpanded = false;
 
         if (section?.highlight) {
             item.highlight = section.highlight(node.name);

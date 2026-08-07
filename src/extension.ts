@@ -720,10 +720,46 @@ export async function activate(context: vscode.ExtensionContext) {
     };
 
     // --- Tag Tree ---
-    tagProvider = new TagTreeProvider();
-    vscode.window.createTreeView('VSJournal.TagTree', {
+    tagProvider = new TagTreeProvider(stateService);
+    const tagTreeView = vscode.window.createTreeView(
+        'VSJournal.TagTree', {
         treeDataProvider: tagProvider,
         showCollapseAll: true,
+    });
+    tagTreeView.onDidExpandElement(async e => {
+        const item = e.element;
+
+        if (!item.stateKey || !item.isPersistable) {
+            return;
+        }
+        // default closed -> opened means save
+        if (!item.defaultExpanded) {
+            await stateService.addExpandedItem(
+                item.stateKey
+            );
+        } else {
+            // default opened -> closed cannot happen here
+            // handled by collapse
+        }
+    });
+
+    tagTreeView.onDidCollapseElement(async e => {
+        const item = e.element;
+
+        if (!item.stateKey || !item.isPersistable) {
+            return;
+        }
+        // default opened -> closed means save
+        if (item.defaultExpanded) {
+            await stateService.addExpandedItem(
+                item.stateKey
+            );
+        } else {
+            // default closed -> expanded state removed
+            await stateService.removeExpandedItem(
+                item.stateKey
+            );
+        }
     });
 
     // --- Command Registration ---

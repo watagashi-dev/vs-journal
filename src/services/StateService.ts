@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 
 export class StateService {
     private static readonly TAG_USAGE_KEY = 'tagUsage';
-    private static readonly EXPANDED_TAGS_KEY = 'expandedTags';
+    private static readonly EXPANDED_ITEMS_KEY = 'expandedItems';
 
     constructor(
         private readonly globalState: vscode.Memento
@@ -30,69 +30,67 @@ export class StateService {
             {}
         );
     }
-
-
-    getExpandedTags(): string[] {
+    getExpandedItems(): string[] {
         return this.globalState.get<string[]>(
-            StateService.EXPANDED_TAGS_KEY,
+            StateService.EXPANDED_ITEMS_KEY,
             []
         );
     }
 
-    async updateExpandedTags(
-        expandedTags: string[]
+    async updateExpandedItems(
+        expandedItems: string[]
     ): Promise<void> {
         await this.globalState.update(
-            StateService.EXPANDED_TAGS_KEY,
-            expandedTags
+            StateService.EXPANDED_ITEMS_KEY,
+            expandedItems
         );
     }
 
-    async addExpandedTag(
-        tag: string
+    async addExpandedItem(
+        key: string
     ): Promise<void> {
-        const expandedTags = this.getExpandedTags();
+        const expandedItems = this.getExpandedItems();
 
-        if (!expandedTags.includes(tag)) {
-            await this.updateExpandedTags([
-                ...expandedTags,
-                tag
+        if (!expandedItems.includes(key)) {
+            await this.updateExpandedItems([
+                ...expandedItems,
+                key
             ]);
         }
     }
 
-    async removeExpandedTag(
-        tag: string
+    async removeExpandedItem(
+        key: string
     ): Promise<void> {
-        await this.updateExpandedTags(
-            this.getExpandedTags().filter(
-                item => item !== tag
+        await this.updateExpandedItems(
+            this.getExpandedItems().filter(
+                item => item !== key
             )
         );
     }
 
     /**
-     * Remove all saved view states.
+     * Remove all saved expanded states.
      * Used when journal root folder changes.
      */
-    async clearExpandedTags(): Promise<void> {
-        await this.updateExpandedTags([]);
+    async clearExpandedItems(): Promise<void> {
+        await this.updateExpandedItems([]);
     }
 
     /**
-     * Remove expanded tags that no longer exist.
+     * Remove expanded states that no longer exist.
      */
-    async cleanupExpandedTags(
-        existingTags: Set<string>
+    async cleanupExpandedItems(
+        existingItems: Set<string>
     ): Promise<void> {
-        const expandedTags = this.getExpandedTags();
+        const expandedItems = this.getExpandedItems();
 
-        const filteredTags = expandedTags.filter(
-            tag => existingTags.has(tag)
+        const filteredItems = expandedItems.filter(
+            item => existingItems.has(item)
         );
 
-        if (filteredTags.length !== expandedTags.length) {
-            await this.updateExpandedTags(filteredTags);
+        if (filteredItems.length !== expandedItems.length) {
+            await this.updateExpandedItems(filteredItems);
         }
     }
 }

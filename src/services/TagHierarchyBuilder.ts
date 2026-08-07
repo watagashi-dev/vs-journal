@@ -3,6 +3,7 @@ import { sortFiles } from './fileSort';
 
 export interface TagHierarchyNode {
     name: string;
+    path: string;
     children: Map<string, TagHierarchyNode>;
     files: FileMeta[];
     contextValue?: string;
@@ -33,10 +34,15 @@ export class TagHierarchyBuilder {
                     parts = parts.slice(0, 3).concat([parts.slice(3).join('/')]);
                 }
 
+                let currentPath = '';
                 for (const part of parts) {
+                    currentPath = currentPath
+                        ? `${currentPath}/${part}`
+                        : part;
                     if (!currentMap.has(part)) {
                         currentMap.set(part, {
                             name: part,
+                            path: currentPath,
                             children: new Map(),
                             files: [],
                             contextValue: 'tag'
@@ -76,7 +82,6 @@ export class TagHierarchyBuilder {
             for (const node of rootNodes) {
                 sortNode(node);
             }
-
             return rootNodes;
         };
 
