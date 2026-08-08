@@ -72,23 +72,28 @@
       },
       {
         "command": "vsJournal.sortByTitle",
-        "title": "%command.SortByTitle%"
+        "title": "%command.SortByTitle%",
+        "enablement": "!(viewItem =~ /^tag(:system|:user|:virtual)?:sort:title:(asc|desc)$/)"
       },
       {
         "command": "vsJournal.sortByCreatedDate",
-        "title": "%command.SortByCreatedDate%"
+        "title": "%command.SortByCreatedDate%",
+        "enablement": "!(viewItem =~ /^tag(:system|:user|:virtual)?:sort:ctime:(asc|desc)$/)"
       },
       {
         "command": "vsJournal.sortByModifiedDate",
-        "title": "%command.SortByModifiedDate%"
+        "title": "%command.SortByModifiedDate%",
+        "enablement": "!(viewItem =~ /^tag(:system|:user|:virtual)?:sort:mtime:(asc|desc)$/)"
       },
       {
         "command": "vsJournal.sortAscending",
-        "title": "%command.SortAscending%"
+        "title": "%command.SortAscending%",
+        "enablement": "!(viewItem =~ /^tag(:system|:user|:virtual)?:sort:[^:]+:asc$/)"
       },
       {
         "command": "vsJournal.sortDescending",
-        "title": "%command.SortDescending%"
+        "title": "%command.SortDescending%",
+        "enablement": "!(viewItem =~ /^tag(:system|:user|:virtual)?:sort:[^:]+:desc$/)"
       }
     ],
     "configuration": {

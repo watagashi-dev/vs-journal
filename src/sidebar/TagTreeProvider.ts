@@ -258,11 +258,16 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         if (!node) {
             return Promise.resolve([]);
         }
+
+        const section = TAG_SECTIONS.find(
+            candidate => candidate.key === element.sectionKey
+        );
+
         const children: VSTagItem[] = [];
 
         // Child tags
         for (const child of node.children.values()) {
-            children.push(this.createTagItem(child));
+            children.push(this.createTagItem(child, section));
         }
 
         // Files
@@ -326,17 +331,24 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             : 'tag';
 
         const stateKey = `tag:${node.path}`;
+        const persistable = section?.key !== 'virtual';
+        const sortState = this.stateService.getSortState(
+            stateKey,
+            persistable
+        );
+        const sortContext = `sort:${sortState.key}:${sortState.order}`;
+
         const item = new VSTagItem(
             node,
             label,
             this.getCollapsibleState(false, stateKey),
-            context
+            `${context}:${sortContext}`
         );
 
         item.type = 'tag';
         item.sectionKey = section?.key;
         item.stateKey = stateKey;
-        item.isPersistable = section?.key !== 'virtual';
+        item.isPersistable = persistable;
         item.defaultExpanded = false;
 
         if (section?.highlight) {
