@@ -37,6 +37,7 @@ import {
     rebuildVirtualTagIndex,
 } from './services/virtualTagService';
 import { StateService } from './services/StateService';
+import { SortKey, SortOrder } from './services/fileSort';
 
 let tagProvider: TagTreeProvider;
 
@@ -645,6 +646,41 @@ async function handleInsertFileOrDir(canSelectFolders: boolean) {
 export async function activate(context: vscode.ExtensionContext) {
     setExtensionContext(context);
     const stateService = new StateService(context.globalState);
+    const updateTagSortState = async (
+        item: vscode.TreeItem & {
+            type?: string;
+            stateKey?: string;
+            isPersistable?: boolean;
+        },
+        update: Partial<{
+            key: SortKey;
+            order: SortOrder;
+        }>
+    ) => {
+        if (
+            !item ||
+            item.type !== 'tag' ||
+            !item.stateKey
+        ) {
+            return;
+        }
+
+        const current = stateService.getSortState(
+            item.stateKey,
+            item.isPersistable !== false
+        );
+
+        await stateService.updateSortState(
+            item.stateKey,
+            {
+                ...current,
+                ...update
+            },
+            item.isPersistable !== false
+        );
+
+        tagProvider.refreshView();
+    };
 
     // Restore tag usage history
     const savedTagUsage = stateService.getTagUsage();
@@ -726,6 +762,7 @@ export async function activate(context: vscode.ExtensionContext) {
         treeDataProvider: tagProvider,
         showCollapseAll: true,
     });
+
     tagTreeView.onDidExpandElement(async e => {
         const item = e.element;
 
@@ -738,8 +775,10 @@ export async function activate(context: vscode.ExtensionContext) {
                 item.stateKey
             );
         } else {
-            // default opened -> closed cannot happen here
-            // handled by collapse
+            // default closed -> expanded state removed
+            await stateService.removeExpandedItem(
+                item.stateKey
+            );
         }
     });
 
@@ -929,6 +968,51 @@ export async function activate(context: vscode.ExtensionContext) {
             // --- Refresh tree ---
             rebuildTree();
         }),
+
+        vscode.commands.registerCommand(
+            'vsJournal.sortByTitle',
+            async (item) => {
+                await updateTagSortState(item, {
+                    key: 'title'
+                });
+            }
+        ),
+
+        vscode.commands.registerCommand(
+            'vsJournal.sortByCreatedDate',
+            async (item) => {
+                await updateTagSortState(item, {
+                    key: 'ctime'
+                });
+            }
+        ),
+
+        vscode.commands.registerCommand(
+            'vsJournal.sortByModifiedDate',
+            async (item) => {
+                await updateTagSortState(item, {
+                    key: 'mtime'
+                });
+            }
+        ),
+
+        vscode.commands.registerCommand(
+            'vsJournal.sortAscending',
+            async (item) => {
+                await updateTagSortState(item, {
+                    order: 'asc'
+                });
+            }
+        ),
+
+        vscode.commands.registerCommand(
+            'vsJournal.sortDescending',
+            async (item) => {
+                await updateTagSortState(item, {
+                    order: 'desc'
+                });
+            }
+        ),
 
         vscode.commands.registerCommand('vsJournal.deleteVirtualTag',
             async (

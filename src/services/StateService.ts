@@ -1,8 +1,17 @@
 import * as vscode from 'vscode';
+import { SortKey, SortOrder } from './fileSort';
+
+export type SortState = {
+    key: SortKey;
+    order: SortOrder;
+};
 
 export class StateService {
     private static readonly TAG_USAGE_KEY = 'tagUsage';
     private static readonly EXPANDED_ITEMS_KEY = 'expandedItems';
+    private static readonly SORT_STATES_KEY = 'sortStates';
+
+    private readonly sessionSortStates = new Map<string, SortState>();
 
     constructor(
         private readonly globalState: vscode.Memento
@@ -75,6 +84,60 @@ export class StateService {
      */
     async clearExpandedItems(): Promise<void> {
         await this.updateExpandedItems([]);
+    }
+
+    getSortState(
+        key: string,
+        persistable: boolean
+    ): SortState {
+        if (!persistable) {
+            return this.sessionSortStates.get(key) ?? {
+                key: 'title',
+                order: 'asc'
+            };
+        }
+
+        const sortStates = this.globalState.get<Record<string, SortState>>(
+            StateService.SORT_STATES_KEY,
+            {}
+        );
+
+        return sortStates[key] ?? {
+            key: 'title',
+            order: 'asc'
+        };
+    }
+
+    async updateSortState(
+        key: string,
+        sortState: SortState,
+        persistable: boolean
+    ): Promise<void> {
+        if (!persistable) {
+            this.sessionSortStates.set(key, sortState);
+            return;
+        }
+
+        const sortStates = this.globalState.get<Record<string, SortState>>(
+            StateService.SORT_STATES_KEY,
+            {}
+        );
+
+        await this.globalState.update(
+            StateService.SORT_STATES_KEY,
+            {
+                ...sortStates,
+                [key]: sortState
+            }
+        );
+    }
+
+    async clearSortStates(): Promise<void> {
+        this.sessionSortStates.clear();
+        await this.globalState.update(
+            StateService.SORT_STATES_KEY,
+            {}
+        );
     }
 
     /**

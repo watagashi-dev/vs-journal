@@ -37,5 +37,10 @@
   "command.deleteVirtualTag.title": "Delete Virtual Tag",
   "command.insertFile": "VSJ: Insert File link",
   "command.insertFolder": "VSJ: Insert Folder link",
-  "command.paste": "VSJ: Paste Image"
+  "command.paste": "VSJ: Paste Image",
+  "command.SortByTitle": "Sort by Title",
+  "command.SortByCreatedDate": "Sort by Created Date",
+  "command.SortByModifiedDate": "Sort by Modified Date",
+  "command.SortAscending": "Ascending",
+  "command.SortDescending": "Descending"
 }

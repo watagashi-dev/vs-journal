@@ -33,7 +33,7 @@ export function createFileMeta(
     }
 
     if (stats) {
-        ctime = stats.ctimeMs;
+        ctime = stats.birthtimeMs;
         mtime = stats.mtimeMs;
         size = stats.size;
     }

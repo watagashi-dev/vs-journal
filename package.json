@@ -69,6 +69,26 @@
       {
         "command": "vsJournal.insertFolder",
         "title": "%command.insertFolder%"
+      },
+      {
+        "command": "vsJournal.sortByTitle",
+        "title": "%command.SortByTitle%"
+      },
+      {
+        "command": "vsJournal.sortByCreatedDate",
+        "title": "%command.SortByCreatedDate%"
+      },
+      {
+        "command": "vsJournal.sortByModifiedDate",
+        "title": "%command.SortByModifiedDate%"
+      },
+      {
+        "command": "vsJournal.sortAscending",
+        "title": "%command.SortAscending%"
+      },
+      {
+        "command": "vsJournal.sortDescending",
+        "title": "%command.SortDescending%"
       }
     ],
     "configuration": {
@@ -247,12 +267,39 @@
       ],
       "view/item/context": [
         {
+          "command": "vsJournal.sortByTitle",
+          "when": "view == VSJournal.TagTree && viewItem =~ /^tag/",
+          "group": "1_sort"
+        },
+        {
+          "command": "vsJournal.sortByCreatedDate",
+          "when": "view == VSJournal.TagTree && viewItem =~ /^tag/",
+          "group": "1_sort"
+        },
+        {
+          "command": "vsJournal.sortByModifiedDate",
+          "when": "view == VSJournal.TagTree && viewItem =~ /^tag/",
+          "group": "1_sort"
+        },
+        {
+          "command": "vsJournal.sortAscending",
+          "when": "view == VSJournal.TagTree && viewItem =~ /^tag/",
+          "group": "2_sort"
+        },
+        {
+          "command": "vsJournal.sortDescending",
+          "when": "view == VSJournal.TagTree && viewItem =~ /^tag/",
+          "group": "2_sort"
+        },
+        {
           "command": "vsJournal.deleteFile",
-          "when": "view == VSJournal.TagTree && viewItem == file"
+          "when": "view == VSJournal.TagTree && viewItem == file",
+          "group": "9_delete"
         },
         {
           "command": "vsJournal.deleteVirtualTag",
-          "when": "view == VSJournal.TagTree && viewItem =~ /tag:virtual/"
+          "when": "view == VSJournal.TagTree && viewItem =~ /tag:virtual/",
+          "group": "9_delete"
         }
       ],
       "editor/context": [

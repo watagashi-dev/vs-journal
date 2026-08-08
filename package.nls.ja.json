@@ -37,5 +37,10 @@
   "command.deleteVirtualTag.title": "仮想タグを削除",
   "command.insertFile": "VSJ: ファイルへのリンクを挿入",
   "command.insertFolder": "VSJ: フォルダーへのリンクを挿入",
-  "command.paste": "VSJ: 画像を貼り付け"
+  "command.paste": "VSJ: 画像を貼り付け",
+  "command.SortByTitle": "タイトルで並べ替え",
+  "command.SortByCreatedDate": "作成日で並べ替え",
+  "command.SortByModifiedDate": "更新日で並べ替え",
+  "command.SortAscending": "昇順",
+  "command.SortDescending": "降順"
 }

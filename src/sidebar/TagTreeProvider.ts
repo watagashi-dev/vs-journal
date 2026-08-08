@@ -4,6 +4,7 @@ import { getJournalRelativePath } from '../extension';
 import { FileMeta } from '../models/FileMeta';
 import { PreviewContext } from '../preview/previewPanel';
 import { StateService } from '../services/StateService';
+import { sortFiles } from '../services/fileSort';
 
 type TagSection = {
     key: 'system' | 'user' | 'virtual';
@@ -163,6 +164,10 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         this._onDidChangeTreeData.fire();
     }
 
+    refreshView(): void {
+        this._onDidChangeTreeData.fire();
+    }
+
     private getCollapsibleState(
         defaultExpanded: boolean,
         stateKey?: string
@@ -261,7 +266,18 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         }
 
         // Files
-        for (const file of node.files) {
+        const persistable = element.sectionKey !== 'virtual';
+        const sortState = this.stateService.getSortState(
+            `tag:${node.path}`,
+            persistable
+        );
+        const sortedFiles = sortFiles(
+            node.files,
+            sortState.key,
+            sortState.order
+        );
+
+        for (const file of sortedFiles) {
             const item = new VSTagItem(
                 null,
                 file.title,
@@ -272,7 +288,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             item.type = 'file';
             item.sectionKey = element.sectionKey;
             item.stateKey = `file:${getJournalRelativePath(file.filePath)}`;
-            item.isPersistable = element.sectionKey !== 'virtual';
+            item.isPersistable = persistable;
             item.defaultExpanded = false;
             item.parentTag = node.name;
 
