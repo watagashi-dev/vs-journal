@@ -16,21 +16,6 @@ function createStub(title: string): FileMeta {
 
 suite('fileSort tests', () => {
 
-    test('title basic sort', () => {
-        const files = [
-            createStub('b'),
-            createStub('a'),
-            createStub('c')
-        ];
-
-        const result = sortFiles(files);
-
-        assert.deepStrictEqual(
-            result.map(f => f.title),
-            ['a', 'b', 'c']
-        );
-    });
-
     test('numbers as strings', () => {
         const files = [
             createStub('10'),
@@ -73,6 +58,81 @@ suite('fileSort tests', () => {
         assert.deepStrictEqual(
             result.map(f => f.title),
             ['_a', '-a', 'a']
+        );
+    });
+
+    test('title asc', () => {
+        const files = [
+            createStub('b'),
+            createStub('a'),
+            createStub('c')
+        ];
+
+        const result = sortFiles(files);
+
+        assert.deepStrictEqual(
+            result.map(f => f.title),
+            ['a', 'b', 'c']
+        );
+    });
+
+    test('title desc', () => {
+        const files = [
+            createStub('b'),
+            createStub('a'),
+            createStub('c')
+        ];
+
+        const result = sortFiles(files, 'title', 'desc');
+
+        assert.deepStrictEqual(
+            result.map(f => f.title),
+            ['c', 'b', 'a']
+        );
+    });
+
+    test('ctime asc', () => {
+        const files = [
+            { ...createStub('a'), ctime: 1 },
+            { ...createStub('b'), ctime: 3 },
+            { ...createStub('c'), ctime: 2 }
+        ];
+
+        const result = sortFiles(files, 'ctime', 'asc');
+
+        assert.deepStrictEqual(
+            result.map(f => f.title),
+            ['a', 'c', 'b']
+        );
+    });
+
+    test('ctime desc', () => {
+        const files = [
+            { ...createStub('a'), ctime: 1 },
+            { ...createStub('b'), ctime: 3 },
+            { ...createStub('c'), ctime: 2 }
+        ];
+
+        const result = sortFiles(files, 'ctime', 'desc');
+
+        assert.deepStrictEqual(
+            result.map(f => f.title),
+            ['b', 'c', 'a']
+        );
+    });
+
+    test('mtime asc', () => {
+        const files = [
+            { ...createStub('a'), mtime: 1 },
+            { ...createStub('b'), mtime: 3 },
+            { ...createStub('c'), mtime: 2 }
+        ];
+
+        const result = sortFiles(files, 'mtime', 'asc');
+
+        assert.deepStrictEqual(
+            result.map(f => f.title),
+            ['a', 'c', 'b']
         );
     });
 
