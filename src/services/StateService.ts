@@ -7,6 +7,9 @@ export type SortState = {
 };
 
 export class StateService {
+    private static readonly STATE_VERSION_KEY = 'stateVersion';
+    private static readonly CURRENT_STATE_VERSION = 1;
+
     private static readonly TAG_USAGE_KEY = 'tagUsage';
     private static readonly EXPANDED_ITEMS_KEY = 'expandedItems';
     private static readonly SORT_STATES_KEY = 'sortStates';
@@ -16,6 +19,47 @@ export class StateService {
     constructor(
         private readonly globalState: vscode.Memento
     ) { }
+
+    /**
+     * Initialize persisted state.
+     * Reset all StateService data when the persisted state version changes.
+     */
+    async initialize(): Promise<void> {
+        const version = this.globalState.get<number>(
+            StateService.STATE_VERSION_KEY,
+            0
+        );
+
+        if (version === StateService.CURRENT_STATE_VERSION) {
+            return;
+        }
+
+        await this.resetState();
+
+        await this.globalState.update(
+            StateService.STATE_VERSION_KEY,
+            StateService.CURRENT_STATE_VERSION
+        );
+    }
+
+    private async resetState(): Promise<void> {
+        this.sessionSortStates.clear();
+
+        await Promise.all([
+            this.globalState.update(
+                StateService.TAG_USAGE_KEY,
+                {}
+            ),
+            this.globalState.update(
+                StateService.EXPANDED_ITEMS_KEY,
+                []
+            ),
+            this.globalState.update(
+                StateService.SORT_STATES_KEY,
+                {}
+            )
+        ]);
+    }
 
     getTagUsage(): Record<string, number> {
         return this.globalState.get<Record<string, number>>(
