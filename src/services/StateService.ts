@@ -8,7 +8,7 @@ export type SortState = {
 
 export class StateService {
     private static readonly STATE_VERSION_KEY = 'stateVersion';
-    private static readonly CURRENT_STATE_VERSION = 1;
+    private static readonly CURRENT_STATE_VERSION = 0;
 
     private static readonly TAG_USAGE_KEY = 'tagUsage';
     private static readonly EXPANDED_ITEMS_KEY = 'expandedItems';
@@ -46,18 +46,9 @@ export class StateService {
         this.sessionSortStates.clear();
 
         await Promise.all([
-            this.globalState.update(
-                StateService.TAG_USAGE_KEY,
-                {}
-            ),
-            this.globalState.update(
-                StateService.EXPANDED_ITEMS_KEY,
-                []
-            ),
-            this.globalState.update(
-                StateService.SORT_STATES_KEY,
-                {}
-            )
+            this.clearTagUsage(),
+            this.clearExpandedItems(),
+            this.clearSortStates()
         ]);
     }
 
@@ -199,5 +190,61 @@ export class StateService {
         if (filteredItems.length !== expandedItems.length) {
             await this.updateExpandedItems(filteredItems);
         }
+    }
+
+    logStateForDevelopment(): void {
+        const stateVersion = this.globalState.get<number>(
+            StateService.STATE_VERSION_KEY,
+            0
+        );
+
+        const tagUsage = this.globalState.get<Record<string, number>>(
+            StateService.TAG_USAGE_KEY,
+            {}
+        );
+
+        const expandedItems = this.globalState.get<string[]>(
+            StateService.EXPANDED_ITEMS_KEY,
+            []
+        );
+
+        const sortStates = this.globalState.get<Record<string, SortState>>(
+            StateService.SORT_STATES_KEY,
+            {}
+        );
+
+        console.group('[StateService] Persisted State');
+
+        console.log('State Version:', stateVersion);
+
+        console.group('Tag Usage');
+        console.table(
+            Object.entries(tagUsage).map(([tag, usage]) => ({
+                tag,
+                usage
+            }))
+        );
+        console.groupEnd();
+
+        console.group('Expanded Items');
+        console.table(
+            expandedItems.map((item, index) => ({
+                index,
+                item
+            }))
+        );
+        console.groupEnd();
+
+        console.group('Sort States');
+        console.table(
+            Object.entries(sortStates).map(([item, state]) => ({
+                item,
+                key: state.key,
+                order: state.order
+            }))
+        );
+        console.groupEnd();
+
+        console.groupEnd();
     }
 }

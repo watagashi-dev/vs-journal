@@ -647,6 +647,9 @@ export async function activate(context: vscode.ExtensionContext) {
     setExtensionContext(context);
     const stateService = new StateService(context.globalState);
     await stateService.initialize();
+    if (context.extensionMode === vscode.ExtensionMode.Development) {
+        stateService.logStateForDevelopment();
+    }
     const updateTagSortState = async (
         item: vscode.TreeItem & {
             type?: string;
