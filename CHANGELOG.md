@@ -1,15 +1,29 @@
 # Change Log
 
-## [0.5.1] - 2026-07-
+## [0.6.0] - 2026-08-XX
 
-## Added
+### Added
+
+- Tags in the sidebar can now be collapsed by group: System Tags, User Tags, and Virtual Tags
+- Files under tags can now be sorted by title, creation date, or modification date
+- File sorting can now be set to ascending or descending order
+- Tag expansion states are now saved and restored when VS Journal is reopened
+- Sort settings for each tag are now saved and restored when VS Journal is reopened
+
+### Changed
+
+- The "creation date" used for file sorting now uses the file creation time
+
+## [0.5.1] - 2026-08-01
+
+### Added
 
 - Added new code block display options:
   - `wrap`: Wrap long lines.
   - `linenumber`: Show line numbers.
   - `notab`: Hide the language tab.
 
-## Improved
+### Improved
 
 - Improved the appearance of diff code blocks:
   - Highlight added and removed lines with line-based backgrounds.
@@ -19,60 +33,60 @@
   - Removed the selection button from the sidebar.
   - You can now change the journal folder by clicking its path in the status bar.
 
-## Fixed
+### Fixed
 
 - Added a fallback option to permanently delete a note if moving it to the trash fails.
 - Fixed an issue where notes could not be deleted in some environments.
 
 ## [0.5.0] - 2026-07-19
 
-## Added
+### Added
 
-### Mathematical Expression Support
+#### Mathematical Expression Support
 
 - Added support for rendering simple TeX-style mathematical expressions.
 
-### Code Block Enhancements
+#### Code Block Enhancements
 
 - Added support for diff code blocks.
 - Improved language label handling for code blocks.
 
-### Image Display
+#### Image Display
 
 - Added support for specifying image display options through image ALT text.
 
-### Tag Completion
+#### Tag Completion
 
 - Added persistence for tag completion ranking based on usage frequency.
 
-## Improved
+### Improved
 
-### File and Folder Links
+#### File and Folder Links
 
 - Journal-internal file and folder links are now stored as relative paths.
 - Improved local file link resolution.
 - Added support for UNC network paths.
 - Improved handling of file paths containing special characters.
 
-### Virtual Tags
+#### Virtual Tags
 
 - Enhanced virtual tag highlighting in previews.
 - Matching portions of tag names are now highlighted.
 - Links and image paths/titles are now included in virtual tag matching.
 - Improved virtual tag navigation behavior.
 
-### Markdown Preview
+#### Markdown Preview
 
 - Improved handling of encoded URLs in preview rendering.
 
-## Fixed
+### Fixed
 
-### Virtual Tags
+#### Virtual Tags
 
 - Fixed cases where virtual tag navigation was not displayed correctly.
 - Fixed inconsistencies between highlighted results and navigation targets.
 
-### File Links
+#### File Links
 
 - Fixed incorrect path separator generation when inserting relative file links.
 
@@ -82,7 +96,6 @@
 
 - Fixed several edge cases in tag parsing and preview rendering involving headings, line structure validation, and mixed Markdown content.
 - Improved error handling and user feedback when opening invalid, missing, or inaccessible file and folder links.
-
 
 ### Improved
 

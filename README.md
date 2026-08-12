@@ -295,9 +295,21 @@ Journal file and folder links are stored using relative paths whenever possible.
 
 Organize and navigate notes through a hierarchical tag tree.
 
-- Tags displayed as a tree structure
-- Automatically sorted
-- Manage files and virtual tags directly from the Tag Tree context menu
+- Tags are grouped into System Tags, User Tags, and Virtual Tags
+- Each tag group can be collapsed
+- Tags are displayed as a tree structure
+- Tags are automatically sorted alphabetically
+- Files under each tag can be sorted by title, created date, or modified date
+- File sorting can be changed from the context menu
+  - Title
+  - Created Date
+  - Modified Date
+  - Ascending / Descending
+- Tag expansion states are preserved
+- File sorting settings for each tag are preserved
+
+The Tag Tree context menu can be used to manage files and virtual tags,
+as well as change file sorting options.
 
 ---
 
