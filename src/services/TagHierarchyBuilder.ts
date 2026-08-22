@@ -1,5 +1,4 @@
 import { FileMeta } from "../models/FileMeta";
-import { sortFiles } from './fileSort';
 
 export interface TagHierarchyNode {
     name: string;
@@ -64,9 +63,6 @@ export class TagHierarchyBuilder {
                     .sort(([a], [b]) => a.localeCompare(b));
 
                 node.children = new Map(sortedChildren);
-
-                // Files
-                node.files = sortFiles(node.files, 'title', 'asc');
 
                 // Recursion
                 for (const [, child] of sortedChildren) {

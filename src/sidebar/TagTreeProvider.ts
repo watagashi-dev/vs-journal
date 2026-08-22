@@ -172,7 +172,6 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         defaultExpanded: boolean,
         stateKey?: string
     ): vscode.TreeItemCollapsibleState {
-
         const expanded = stateKey !== undefined &&
             this.stateService.getExpandedItems().includes(stateKey);
 
@@ -271,9 +270,9 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         }
 
         // Files
-        const persistable = element.sectionKey !== 'virtual';
+        const persistable = element.isPersistable;
         const sortState = this.stateService.getSortState(
-            `tag:${node.path}`,
+            element.stateKey!,
             persistable
         );
         const sortedFiles = sortFiles(
@@ -297,7 +296,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             item.defaultExpanded = false;
             item.parentTag = node.name;
 
-            item.id = `${item.sectionKey}:${node.name}:file:${file.filePath}`;
+            item.id = `${item.sectionKey}:${node.name}:${item.stateKey}`;
             item.path = file.filePath;
             item.file = file;
 
@@ -330,19 +329,21 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             ? `tag:${section.key}`
             : 'tag';
 
-        const stateKey = `tag:${node.path}`;
+        const stateKey = `tag:${section?.key ?? 'user'}:${node.path}`;
         const persistable = section?.key !== 'virtual';
         const sortState = this.stateService.getSortState(
             stateKey,
             persistable
         );
         const sortContext = `sort:${sortState.key}:${sortState.order}`;
-
+        const contextValue = node.files.length > 0
+            ? `${context}:${sortContext}`
+            : context;
         const item = new VSTagItem(
             node,
             label,
             this.getCollapsibleState(false, stateKey),
-            `${context}:${sortContext}`
+            contextValue
         );
 
         item.type = 'tag';
@@ -355,7 +356,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             item.highlight = section.highlight(node.name);
         }
 
-        item.id = `${section?.key ?? 'unknown'}:tag:${node.name}`;
+        item.id = `${section?.key ?? 'unknown'}:tag:${node.path}`;
         item.tooltip = '';
 
         item.command = {

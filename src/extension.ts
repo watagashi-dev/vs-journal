@@ -390,7 +390,10 @@ function rebuildSystemTags() {
     }
 }
 
-function rebuildTree() {
+function rebuildTree(): {
+    system: TagHierarchyNode[];
+    user: TagHierarchyNode[];
+} {
     const config = vscode.workspace.getConfiguration('vsJournal');
     const visibility = config.get<Record<string, boolean>>(
         'systemTags.visibility',
@@ -421,6 +424,11 @@ function rebuildTree() {
         normalizedVirtualMap
     );
     tagProvider.refresh(result.system, result.user, result.virtual);
+
+    return {
+        system: result.system,
+        user: result.user
+    };
 }
 
 export function readFileEntry(filePath: string): { content: string; stats: fs.Stats } {
@@ -1192,7 +1200,11 @@ export async function activate(context: vscode.ExtensionContext) {
             if (event.affectsConfiguration('vsJournal.journalDir')) {
                 resetVirtualTags();
                 sessionTagUsage.clear();
+
                 await stateService.clearTagUsage();
+                await stateService.clearSortStates();
+                await stateService.clearExpandedItems();
+
                 await performScan();
                 setupWatcher(context);
                 disposePreviewPanel();
@@ -1287,7 +1299,31 @@ export async function activate(context: vscode.ExtensionContext) {
         await refreshAllData();
         // await new Promise(r => setTimeout(r, 10000)); // Intentional delay
 
-        rebuildTree();
+        const result = rebuildTree();
+        const existingTagStateKeys = new Set<string>();
+
+        const collectTagStateKeys = (
+            nodes: TagHierarchyNode[],
+            sectionKey: string
+        ): void => {
+            for (const node of nodes) {
+                existingTagStateKeys.add(
+                    `tag:${sectionKey}:${node.path}`
+                );
+
+                collectTagStateKeys(
+                    Array.from(node.children.values()),
+                    sectionKey
+                );
+            }
+        };
+
+        collectTagStateKeys(result.system, 'system');
+        collectTagStateKeys(result.user, 'user');
+
+        await stateService.cleanupExpandedTagItems(existingTagStateKeys);
+        await stateService.cleanupSortStates(existingTagStateKeys);
+
         tagProvider.setScanning(false);
         updateStatusBar();
     };

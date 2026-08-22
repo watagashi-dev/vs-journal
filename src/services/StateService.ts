@@ -175,6 +175,31 @@ export class StateService {
         );
     }
 
+    async cleanupSortStates(
+        existingTagStateKeys: Set<string>
+    ): Promise<void> {
+        const sortStates = this.globalState.get<Record<string, SortState>>(
+            StateService.SORT_STATES_KEY,
+            {}
+        );
+
+        const filteredSortStates = Object.fromEntries(
+            Object.entries(sortStates).filter(
+                ([stateKey]) => existingTagStateKeys.has(stateKey)
+            )
+        );
+
+        if (
+            Object.keys(filteredSortStates).length !==
+            Object.keys(sortStates).length
+        ) {
+            await this.globalState.update(
+                StateService.SORT_STATES_KEY,
+                filteredSortStates
+            );
+        }
+    }
+
     /**
      * Remove expanded states that no longer exist.
      */
@@ -186,6 +211,28 @@ export class StateService {
         const filteredItems = expandedItems.filter(
             item => existingItems.has(item)
         );
+
+        if (filteredItems.length !== expandedItems.length) {
+            await this.updateExpandedItems(filteredItems);
+        }
+    }
+
+    private isSectionExpandedItem(stateKey: string): boolean {
+        return stateKey.startsWith('section:');
+    }
+
+    async cleanupExpandedTagItems(
+        existingTagStateKeys: Set<string>
+    ): Promise<void> {
+        const expandedItems = this.getExpandedItems();
+
+        const filteredItems = expandedItems.filter(item => {
+            if (this.isSectionExpandedItem(item)) {
+                return true;
+            }
+
+            return existingTagStateKeys.has(item);
+        });
 
         if (filteredItems.length !== expandedItems.length) {
             await this.updateExpandedItems(filteredItems);

@@ -273,27 +273,27 @@
       "view/item/context": [
         {
           "command": "vsJournal.sortByTitle",
-          "when": "view == VSJournal.TagTree && viewItem =~ /^tag/",
+          "when": "view == VSJournal.TagTree && viewItem =~ /^tag(:system|:user|:virtual):sort:[^:]+:(asc|desc)$/",
           "group": "1_sort"
         },
         {
           "command": "vsJournal.sortByCreatedDate",
-          "when": "view == VSJournal.TagTree && viewItem =~ /^tag/",
+          "when": "view == VSJournal.TagTree && viewItem =~ /^tag(:system|:user|:virtual):sort:[^:]+:(asc|desc)$/",
           "group": "1_sort"
         },
         {
           "command": "vsJournal.sortByModifiedDate",
-          "when": "view == VSJournal.TagTree && viewItem =~ /^tag/",
+          "when": "view == VSJournal.TagTree && viewItem =~ /^tag(:system|:user|:virtual):sort:[^:]+:(asc|desc)$/",
           "group": "1_sort"
         },
         {
           "command": "vsJournal.sortAscending",
-          "when": "view == VSJournal.TagTree && viewItem =~ /^tag/",
+          "when": "view == VSJournal.TagTree && viewItem =~ /^tag(:system|:user|:virtual):sort:[^:]+:(asc|desc)$/",
           "group": "2_sort"
         },
         {
           "command": "vsJournal.sortDescending",
-          "when": "view == VSJournal.TagTree && viewItem =~ /^tag/",
+          "when": "view == VSJournal.TagTree && viewItem =~ /^tag(:system|:user|:virtual):sort:[^:]+:(asc|desc)$/",
           "group": "2_sort"
         },
         {
