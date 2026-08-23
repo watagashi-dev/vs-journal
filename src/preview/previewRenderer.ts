@@ -433,6 +433,7 @@ export function createMarkdownIt(
                 const isHeading = context.isHeading;
                 const rules = state.env?.rules ?? [];
                 const newChildren: any[] = [];
+                let linkDepth = 0;
 
                 const headingStructureValid =
                     !isHeading ||
@@ -461,6 +462,13 @@ export function createMarkdownIt(
                             }
                         };
 
+                        linkDepth++;
+                        newChildren.push(child);
+                        continue;
+                    }
+
+                    if (child.type === 'link_close') {
+                        linkDepth = Math.max(0, linkDepth - 1);
                         newChildren.push(child);
                         continue;
                     }
@@ -486,6 +494,10 @@ export function createMarkdownIt(
                     }
 
                     if (child.type === 'text') {
+                        if (linkDepth > 0) {
+                            newChildren.push(child);
+                            continue;
+                        }
                         const content = child.content;
                         // ======================================================
                         // PHASE 0: STRUCTURE CHECK
