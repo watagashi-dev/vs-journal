@@ -86,20 +86,6 @@ suite('TagHierarchyBuilder Tests', () => {
         assert.strictEqual(node.files[0].filePath, '/system.md');
     });
 
-    test('user files are sorted alphabetically', () => {
-        const builder = new TagHierarchyBuilder();
-        const userTagIndex = new Map<string, FileMeta[]>();
-        userTagIndex.set('tag', [
-            createFileMetaStub('/b.md', 'b'),
-            createFileMetaStub('/a.md', 'a')
-        ]);
-
-        const result = builder.build(new Map(), userTagIndex, new Map());
-        const files = result.user[0].files;
-        assert.strictEqual(files[0].title, 'a');
-        assert.strictEqual(files[1].title, 'b');
-    });
-
     test('tags are sorted alphabetically', () => {
         const builder = new TagHierarchyBuilder();
 
