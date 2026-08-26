@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { TagHierarchyNode } from '../services/TagHierarchyBuilder';
-import { getJournalRelativePath } from '../extension';
+import { getJournalDir, getJournalRelativePath } from '../extension';
 import { FileMeta } from '../models/FileMeta';
 import { PreviewContext } from '../preview/previewPanel';
 import { StateService } from '../services/StateService';
@@ -45,6 +45,33 @@ const TAG_SECTIONS: TagSection[] = [
         highlight: (tagName) => ({ keyword: tagName, className: 'vjs-virtual-tag' }),
     },
 ];
+
+function fnv1a64(value: string): bigint {
+    const FNV_OFFSET_BASIS = 0xcbf29ce484222325n;
+    const FNV_PRIME = 0x100000001b3n;
+    const MASK_64 = 0xffffffffffffffffn;
+
+    let hash = FNV_OFFSET_BASIS;
+
+    for (let i = 0; i < value.length; i++) {
+        hash ^= BigInt(value.charCodeAt(i));
+        hash = (hash * FNV_PRIME) & MASK_64;
+    }
+
+    return hash;
+}
+
+function toBase36(value: bigint): string {
+    return value.toString(36);
+}
+
+function createTreeItemId(
+    type: 'section' | 'tag' | 'file',
+    journalDir: string,
+    id: string
+): string {
+    return `${type}:${toBase36(fnv1a64(`${journalDir}:${id}`))}`;
+}
 
 function formatTagLabel(
     node: TagHierarchyNode,
@@ -193,6 +220,8 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             return Promise.resolve([this.createSpinnerItem()]);
         }
         // ===== ROOT =====
+        const journalDir = getJournalDir();
+
         if (!element) {
             const result: VSTagItem[] = [];
 
@@ -213,7 +242,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
                 item.isPersistable = section.key !== 'virtual';
                 item.defaultExpanded = true;
                 item.tooltip = '';
-                item.id = `section:${section.key}`;
+                item.id = createTreeItemId('section', journalDir, section.key);
                 item.iconPath = new vscode.ThemeIcon('folder-opened', new vscode.ThemeColor('charts.blue'));
                 result.push(item);
             };
@@ -249,7 +278,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             }
 
             return Promise.resolve(
-                nodes.map(node => this.createTagItem(node, section))
+                nodes.map(node => this.createTagItem(node, section, journalDir))
             );
         }
         // ===== TAG NODE =====
@@ -266,7 +295,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
 
         // Child tags
         for (const child of node.children.values()) {
-            children.push(this.createTagItem(child, section));
+            children.push(this.createTagItem(child, section, journalDir));
         }
 
         // Files
@@ -289,14 +318,15 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
                 'file'
             );
 
+            const filePath = getJournalRelativePath(file.filePath);
             item.type = 'file';
             item.sectionKey = element.sectionKey;
-            item.stateKey = `file:${getJournalRelativePath(file.filePath)}`;
+            item.stateKey = `file:${filePath}`;
             item.isPersistable = persistable;
             item.defaultExpanded = false;
             item.parentTag = node.name;
 
-            item.id = `${item.sectionKey}:${node.name}:${item.stateKey}`;
+            item.id = createTreeItemId('file', journalDir, `${item.sectionKey}:${node.path}:${filePath}`);
             item.path = file.filePath;
             item.file = file;
 
@@ -323,7 +353,11 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         return Promise.resolve(children);
     }
 
-    private createTagItem(node: TagHierarchyNode, section?: TagSection): VSTagItem {
+    private createTagItem(
+        node: TagHierarchyNode,
+        section: TagSection | undefined,
+        journalDir: string
+    ): VSTagItem {
         const label = section ? formatTagLabel(node, section) : node.name;
         const context = section
             ? `tag:${section.key}`
@@ -356,9 +390,8 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             item.highlight = section.highlight(node.name);
         }
 
-        item.id = `${section?.key ?? 'unknown'}:tag:${node.path}`;
+        item.id = createTreeItemId('tag', journalDir, `${section?.key ?? 'unknown'}:${node.path}`);
         item.tooltip = '';
-
         item.command = {
             command: 'vsJournal.previewMultiEntry',
             title: 'Open Tag',

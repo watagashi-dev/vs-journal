@@ -56,7 +56,7 @@ export type VSJournalConfig = {
     folderStructure: FolderStructure;
 };
 
-function getJournalDir(): string {
+export function getJournalDir(): string {
     const config = vscode.workspace.getConfiguration('vsJournal');
     const setting = config.inspect<string>('journalDir');
     if (!setting || (setting.globalValue === undefined && setting.workspaceValue === undefined && setting.workspaceFolderValue === undefined)) {
