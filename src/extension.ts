@@ -487,6 +487,7 @@ async function refreshAllData() {
         addUserTagsFromMeta(meta);
     }
 
+    console.log('[VJS user tags]', userTagIndexMap);
     rebuildSystemTags();
 
     const readFileContent = (filePath: string): string => {
@@ -501,11 +502,21 @@ function removeUserTagsFromMeta(oldMeta: FileMeta | undefined) {
         return;
     }
 
-    oldMeta.tags.forEach(tag => {
+    const tags = new Set<string>(oldMeta.tags);
+
+    for (const heading of oldMeta.headings) {
+        for (const tag of heading.tags) {
+            tags.add(tag);
+        }
+    }
+
+    for (const tag of tags) {
         const files = userTagIndexMap.get(tag);
 
         if (files) {
-            const filtered = files.filter(f => f.filePath !== oldMeta.filePath);
+            const filtered = files.filter(
+                f => f.filePath !== oldMeta.filePath
+            );
 
             if (filtered.length === 0) {
                 userTagIndexMap.delete(tag);
@@ -513,14 +524,22 @@ function removeUserTagsFromMeta(oldMeta: FileMeta | undefined) {
                 userTagIndexMap.set(tag, filtered);
             }
         }
-    });
+    }
 }
 
 function addUserTagsFromMeta(meta: FileMeta) {
-    meta.tags.forEach(tag => {
+    const tags = new Set<string>(meta.tags);
+
+    for (const heading of meta.headings) {
+        for (const tag of heading.tags) {
+            tags.add(tag);
+        }
+    }
+
+    for (const tag of tags) {
         const arr = userTagIndexMap.get(tag) ?? [];
         userTagIndexMap.set(tag, [...arr, meta]);
-    });
+    }
 }
 
 function updateSingleFile(filePath: string) {
