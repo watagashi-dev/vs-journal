@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import {
     shouldShowCompletionMultiLine,
+    parseHeading,
     getTagRanges,
     extractTags,
     isTagToken,
@@ -279,5 +280,96 @@ suite('Tag Logic Tests', () => {
             '` #NG-tag1 `',
             []
         );
+    });
+});
+
+suite('parseHeading Tests', () => {
+
+    test('H1 should be ignored', () => {
+        const result = parseHeading(
+            '# VS Journal 0.6.1',
+            0
+        );
+
+        assert.strictEqual(result, null);
+    });
+
+    test('heading without tag should be ignored', () => {
+        const result = parseHeading(
+            '## 見出し1',
+            1
+        );
+
+        assert.strictEqual(result, null);
+    });
+
+    test('H2 with tag should be parsed', () => {
+        const result = parseHeading(
+            '## 見出し2 #別タグ',
+            2
+        );
+
+        assert.deepStrictEqual(result, {
+            text: '見出し2',
+            level: 2,
+            line: 2,
+            tags: ['別タグ']
+        });
+    });
+
+    test('H3 with tag should be parsed', () => {
+        const result = parseHeading(
+            '### 見出し2-2 #別タグ',
+            3
+        );
+
+        assert.deepStrictEqual(result, {
+            text: '見出し2-2',
+            level: 3,
+            line: 3,
+            tags: ['別タグ']
+        });
+    });
+
+    test('tag should be removed from heading text', () => {
+        const result = parseHeading(
+            '## 見出し3 #開発',
+            4
+        );
+
+        assert.ok(result);
+        assert.strictEqual(result.text, '見出し3');
+        assert.deepStrictEqual(result.tags, ['開発']);
+    });
+
+    test('multiple tags should be parsed', () => {
+        const result = parseHeading(
+            '## 見出し #開発 #テスト',
+            5
+        );
+
+        assert.ok(result);
+        assert.strictEqual(result.text, '見出し');
+        assert.deepStrictEqual(result.tags, ['開発', 'テスト']);
+    });
+
+    test('heading level should be preserved', () => {
+        const result = parseHeading(
+            '##### 深い見出し #テスト',
+            10
+        );
+
+        assert.ok(result);
+        assert.strictEqual(result.level, 5);
+    });
+
+    test('line number should be preserved', () => {
+        const result = parseHeading(
+            '## 見出し #タグ',
+            123
+        );
+
+        assert.ok(result);
+        assert.strictEqual(result.line, 123);
     });
 });

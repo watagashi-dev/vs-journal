@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { FileMeta } from '../models/FileMeta';
-import { CodeBlockTracker, extractTags } from './tagLogic';
+import { FileMeta, HeadingMeta } from '../models/FileMeta';
+import { CodeBlockTracker, extractTags, parseHeading } from './tagLogic';
 
 export function createFileMeta(
     filePath: string,
@@ -77,6 +77,21 @@ export function createFileMeta(
         }
     }
     const uniqueTags = [...new Set(tags)];
+    const headings: HeadingMeta[] = [];
+    const headingTracker = new CodeBlockTracker();
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (!headingTracker.processLine(line)) {
+            continue;
+        }
+
+        const heading = parseHeading(line, i);
+        if (heading) {
+            headings.push(heading);
+        }
+    }
+    console.log('[VJS heading] headings:', headings);
 
     // --- 5. Return ---
     return {
@@ -84,6 +99,7 @@ export function createFileMeta(
         fileName,
         title,
         tags: uniqueTags,
+        headings,
         ctime,
         mtime,
         size

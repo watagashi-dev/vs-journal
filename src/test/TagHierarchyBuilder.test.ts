@@ -12,6 +12,7 @@ suite('TagHierarchyBuilder Tests', () => {
             fileName,
             title,
             tags: [],
+            headings: [],
             ctime: Date.now(),
             mtime: Date.now(),
             size: 789

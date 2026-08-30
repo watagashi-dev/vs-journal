@@ -8,6 +8,7 @@ function createStub(title: string): FileMeta {
         fileName: `${title}.md`,
         title,
         tags: [],
+        headings: [],
         ctime: 0,
         mtime: 0,
         size: 0

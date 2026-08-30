@@ -16,6 +16,7 @@ function createMeta(filePath: string): FileMeta {
         fileName: filePath,
         title: filePath,
         tags: [],
+        headings: [],
         ctime: 0,
         mtime: 0,
         size: 0

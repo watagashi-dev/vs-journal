@@ -1,7 +1,7 @@
 // ============================
 // Tag Logic Utilities
 // ============================
-import { FileMeta } from '../models/FileMeta';
+import { FileMeta, HeadingMeta } from '../models/FileMeta';
 
 // Regex for tag token (unchanged to preserve current behavior)
 const TAG_REGEX = /#([\p{L}\p{N}_\-/ー]+)$/u;
@@ -171,10 +171,69 @@ export function isParsedHeadingTagPartValid(
         tagPart
     );
 }
+
+// ----------------------------
+// Heading parsing
+// ----------------------------
+export function parseHeading(
+    line: string,
+    lineNumber: number
+): HeadingMeta | null {
+
+    const trimmed = line.trim();
+
+    const match = trimmed.match(/^(#+)\s+(.*)$/);
+
+    if (!match) {
+        return null;
+    }
+
+    const level = match[1].length;
+
+    // H1 is the file title
+    if (level === 1) {
+        return null;
+    }
+
+    const content = match[2];
+
+    // Validate the heading's tag structure
+    if (!isHeadingTagPartValid(trimmed, false)) {
+        return null;
+    }
+
+    const tags = extractTags(trimmed);
+
+    // No tag -> not a heading tag
+    if (tags.length === 0) {
+        return null;
+    }
+
+    const ranges = getTagRanges(content);
+
+    let text = content;
+
+    for (let i = ranges.length - 1; i >= 0; i--) {
+        const range = ranges[i];
+
+        text =
+            text.slice(0, range.start) +
+            text.slice(range.end);
+    }
+
+    text = text.trim();
+
+    return {
+        text,
+        level,
+        line: lineNumber,
+        tags
+    };
+}
+
 // ----------------------------
 // Tag extraction
 // ----------------------------
-
 export function getTagRanges(line: string): { start: number; end: number }[] {
     const safeLine = normalizeInlineCode(line);
 
