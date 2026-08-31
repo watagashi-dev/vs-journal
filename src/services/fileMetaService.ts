@@ -91,7 +91,6 @@ export function createFileMeta(
             headings.push(heading);
         }
     }
-    console.log('[VJS heading] headings:', headings);
 
     // --- 5. Return ---
     return {

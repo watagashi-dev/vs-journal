@@ -98,7 +98,7 @@ class VSTagItem extends vscode.TreeItem {
         this.contextValue = contextValue;
     }
     // Node type for logic
-    public type?: 'file' | 'tag' | 'section' | 'spacer' | 'spinner';
+    public type?: 'file' | 'heading' | 'tag' | 'section' | 'spacer' | 'spinner';
 
     // File path (only for file nodes)
     public path?: string;
@@ -228,10 +228,11 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             const pushSection = (section: TagSection) => {
                 // Section header (not clickable, no collapse chevron)
                 const stateKey = `section:${section.key}`;
+                const collapsibleState = this.getCollapsibleState(true, stateKey);
                 const item = new VSTagItem(
                     null,
                     section.label,
-                    this.getCollapsibleState(true, stateKey),
+                    collapsibleState,
                     'section'
                 );
 
@@ -243,7 +244,13 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
                 item.defaultExpanded = true;
                 item.tooltip = '';
                 item.id = createTreeItemId('section', journalDir, section.key);
-                item.iconPath = new vscode.ThemeIcon('folder-opened', new vscode.ThemeColor('charts.blue'));
+                item.iconPath = new vscode.ThemeIcon(
+                    collapsibleState === vscode.TreeItemCollapsibleState.Expanded
+                        ? 'folder-opened'
+                        : 'folder',
+                    new vscode.ThemeColor('charts.blue')
+                );
+                //item.iconPath = new vscode.ThemeIcon('folder-opened', new vscode.ThemeColor('charts.blue'));
                 result.push(item);
             };
 
@@ -281,6 +288,37 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
                 nodes.map(node => this.createTagItem(node, section, journalDir))
             );
         }
+
+        // ===== FILE NODE =====
+        if (element.type === 'file' && element.file && element.parentTag) {
+            const file = element.file;
+            const parentTag = element.parentTag;
+
+            const headings = file.headings.filter(
+                heading => heading.tags.includes(parentTag)
+            );
+
+            return Promise.resolve(
+                headings.map(heading => {
+                    const item = new VSTagItem(
+                        null,
+                        heading.text,
+                        vscode.TreeItemCollapsibleState.None,
+                        'heading'
+                    );
+
+                    item.type = 'heading';
+                    item.file = file;
+                    item.path = file.filePath;
+                    item.sectionKey = element.sectionKey;
+                    item.isPersistable = false;
+                    item.defaultExpanded = false;
+
+                    return item;
+                })
+            );
+        }
+
         // ===== TAG NODE =====
         const node = element.node;
         if (!node) {
@@ -311,17 +349,26 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         );
 
         for (const file of sortedFiles) {
-            const item = new VSTagItem(
-                null,
-                file.title,
-                vscode.TreeItemCollapsibleState.None,
-                'file'
+            const headings = file.headings.filter(
+                heading => heading.tags.includes(node.path)
             );
 
             const filePath = getJournalRelativePath(file.filePath);
+            // const stateKey = `file:${element.sectionKey}:${node.path}:${filePath}`;
+
+            const item = new VSTagItem(
+                null,
+                file.title,
+                headings.length > 0
+                    //? this.getCollapsibleState(false, stateKey)
+                    ? vscode.TreeItemCollapsibleState.Collapsed
+                    : vscode.TreeItemCollapsibleState.None,
+                'file'
+            );
+
             item.type = 'file';
             item.sectionKey = element.sectionKey;
-            item.stateKey = `file:${filePath}`;
+            // item.stateKey = stateKey;
             item.isPersistable = persistable;
             item.defaultExpanded = false;
             item.parentTag = node.name;
@@ -329,6 +376,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             item.id = createTreeItemId('file', journalDir, `${item.sectionKey}:${node.path}:${filePath}`);
             item.path = file.filePath;
             item.file = file;
+            item.iconPath = new vscode.ThemeIcon('file');
 
             // Set preview context once
             item.previewContext = {
@@ -385,6 +433,7 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         item.stateKey = stateKey;
         item.isPersistable = persistable;
         item.defaultExpanded = false;
+        item.iconPath = new vscode.ThemeIcon('tag');
 
         if (section?.highlight) {
             item.highlight = section.highlight(node.name);

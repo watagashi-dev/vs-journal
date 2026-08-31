@@ -487,7 +487,6 @@ async function refreshAllData() {
         addUserTagsFromMeta(meta);
     }
 
-    console.log('[VJS user tags]', userTagIndexMap);
     rebuildSystemTags();
 
     const readFileContent = (filePath: string): string => {
@@ -800,6 +799,7 @@ export async function activate(context: vscode.ExtensionContext) {
         if (!item.stateKey || !item.isPersistable) {
             return;
         }
+
         // default closed -> opened means save
         if (!item.defaultExpanded) {
             await stateService.addExpandedItem(
@@ -810,6 +810,10 @@ export async function activate(context: vscode.ExtensionContext) {
             await stateService.removeExpandedItem(
                 item.stateKey
             );
+        }
+
+        if (item.type === 'section') {
+            tagProvider.refreshView();
         }
     });
 
@@ -829,6 +833,9 @@ export async function activate(context: vscode.ExtensionContext) {
             await stateService.removeExpandedItem(
                 item.stateKey
             );
+        }
+        if (item.type === 'section') {
+            tagProvider.refreshView();
         }
     });
 
