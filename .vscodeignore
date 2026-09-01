@@ -1,6 +1,7 @@
 # 開発用
 src/
 test/
+dist/test
 out/
 .vscode/
 .vscode-test/
@@ -9,6 +10,7 @@ out/
 eslint.config.*
 esbuild.js
 tsconfig.json
+tsconfig.webview.json
 .gitignore
 .yarnrc
 
