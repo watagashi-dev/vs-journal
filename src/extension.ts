@@ -877,6 +877,7 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('vs-journal.previewEntry', async (arg?: unknown) => {
             let filePath: string | undefined;
             let context: PreviewContext | undefined;
+            let scrollLine: number | undefined;
 
             if (typeof arg === 'string') {
                 filePath = arg;
@@ -885,6 +886,7 @@ export async function activate(context: vscode.ExtensionContext) {
             else if (arg && typeof arg === 'object') {
                 filePath = (arg as any).filePath ?? (arg as any).fsPath;
                 context = (arg as any).context ?? { kind: 'file' };
+                scrollLine = (arg as any).scrollLine;
             }
 
             const highlight = (arg as any)?.highlight;
@@ -899,7 +901,8 @@ export async function activate(context: vscode.ExtensionContext) {
                 }
             }
             else {
-                setCursorLine(filePath, 0);
+                // setCursorLine(filePath, 0);
+                setCursorLine(filePath, scrollLine ?? 0);
             }
 
             if (!filePath) {

@@ -314,6 +314,17 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
                     item.isPersistable = false;
                     item.defaultExpanded = false;
 
+                    item.command = {
+                        command: 'vs-journal.previewEntry',
+                        title: 'Preview Entry',
+                        arguments: [{
+                            filePath: file.filePath,
+                            context: {
+                                kind: 'file'
+                            },
+                            scrollLine: heading.line
+                        }]
+                    };
                     return item;
                 })
             );
