@@ -5,6 +5,8 @@
   "Virtual Tags": "仮想タグ",
   "Untagged": "タグ無",
   "Today": "今日",
+  "Yesterday": "昨日",
+  "Last Week": "最近1週間",
   "{month}/{day}/{year}": "{year}年{month}月{day}日",
   "{hour}:{minute}": "{hour}:{minute}",
   "Click or press Enter to edit": "クリックまたはEnterで編集",

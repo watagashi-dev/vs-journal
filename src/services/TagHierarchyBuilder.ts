@@ -20,7 +20,10 @@ export class TagHierarchyBuilder {
         virtual: TagHierarchyNode[];
     } {
 
-        const buildTree = (tagIndex: Map<string, FileMeta[]>): TagHierarchyNode[] => {
+        const buildTree = (
+            tagIndex: Map<string, FileMeta[]>,
+            sortRoot = true
+        ): TagHierarchyNode[] => {
             const nodesMap: Map<string, TagHierarchyNode> = new Map();
 
             for (const [tagPath, files] of tagIndex.entries()) {
@@ -70,8 +73,9 @@ export class TagHierarchyBuilder {
                 }
             };
 
-            const rootEntries = [...nodesMap.entries()]
-                .sort(([a], [b]) => a.localeCompare(b));
+            const rootEntries = sortRoot
+                ? [...nodesMap.entries()].sort(([a], [b]) => a.localeCompare(b))
+                : [...nodesMap.entries()];
 
             const rootNodes = rootEntries.map(([, node]) => node);
 
@@ -82,7 +86,7 @@ export class TagHierarchyBuilder {
         };
 
         return {
-            system: buildTree(systemTagIndex),
+            system: buildTree(systemTagIndex, false),
             user: buildTree(userTagIndex),
             virtual: buildTree(virtualTagIndex)
         };

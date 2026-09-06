@@ -3,7 +3,7 @@
   "displayName": "VS Journal",
   "publisher": "watagashi-dev",
   "description": "%extension.description%",
-  "version": "0.6.99",
+  "version": "0.6.1",
   "engines": {
     "vscode": "^1.109.0"
   },
@@ -138,17 +138,29 @@
         "vsJournal.systemTags.visibility": {
           "type": "object",
           "default": {
-            "Today": true
+            "Today": true,
+            "Yesterday": true,
+            "Last Week": true
           },
           "properties": {
             "Today": {
               "type": "boolean",
               "default": true,
               "description": "%config.systemTags.today.description%"
+            },
+            "Yesterday": {
+              "type": "boolean",
+              "default": true,
+              "description": "%config.systemTags.yesterday.description%"
+            },
+            "Last Week": {
+              "type": "boolean",
+              "default": true,
+              "description": "%config.systemTags.lastWeek.description%"
             }
           },
           "additionalProperties": false,
-          "markdownDescription": "%config.systemTags.today.markdownDescription%"
+          "markdownDescription": "%config.systemTags.visibility.markdownDescription%"
         },
         "vsJournal.fileNameStyle": {
           "type": "string",

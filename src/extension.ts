@@ -361,9 +361,50 @@ const systemTagDefinitions: SystemTagDefinition[] = [
             const mtime = new Date(_meta.mtime);
 
             return (
+                now.getFullYear() === mtime.getFullYear() &&
                 now.getMonth() === mtime.getMonth() &&
                 now.getDate() === mtime.getDate()
             );
+        }
+    },
+    {
+        id: 'Yesterday',
+        build: (_meta) => {
+            const now = new Date();
+            const mtime = new Date(_meta.mtime);
+
+            const today = new Date(
+                now.getFullYear(),
+                now.getMonth(),
+                now.getDate()
+            );
+
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            return (
+                mtime.getFullYear() === yesterday.getFullYear() &&
+                mtime.getMonth() === yesterday.getMonth() &&
+                mtime.getDate() === yesterday.getDate()
+            );
+        }
+    },
+    {
+        id: 'Last Week',
+        build: (_meta) => {
+            const now = new Date();
+            const mtime = new Date(_meta.mtime);
+
+            const today = new Date(
+                now.getFullYear(),
+                now.getMonth(),
+                now.getDate()
+            );
+
+            const start = new Date(today);
+            start.setDate(start.getDate() - 7);
+
+            return mtime >= start && mtime < today;
         }
     },
     {
