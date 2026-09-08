@@ -379,10 +379,9 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
 
             item.type = 'file';
             item.sectionKey = element.sectionKey;
-            // item.stateKey = stateKey;
             item.isPersistable = persistable;
             item.defaultExpanded = false;
-            item.parentTag = node.name;
+            item.parentTag = node.path;
 
             item.id = createTreeItemId('file', journalDir, `${item.sectionKey}:${node.path}:${filePath}`);
             item.path = file.filePath;
