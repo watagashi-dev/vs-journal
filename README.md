@@ -127,6 +127,20 @@ Tags can be nested using `/` (up to 4 levels):
 #project/dev/frontend
 ```
 
+#### Heading Tags
+Adding a tag to a heading line allows the heading to be displayed in the tag tree.
+
+For example:
+
+```text
+## Today's work #work
+### VS Journal #project/vs-journal
+```
+
+In the tag tree, tagged headings are displayed as child nodes of the corresponding file under the relevant tag.
+Clicking a heading node opens the preview and scrolls to the corresponding heading.
+The tag added to a heading is not displayed as part of the heading text in the preview.
+
 #### Tag Rules
 
 - Tags are only recognized when written:
@@ -305,6 +319,8 @@ Organize and navigate notes through a hierarchical tag tree.
   - Created Date
   - Modified Date
   - Ascending / Descending
+- Tagged headings are displayed as child nodes of the corresponding file
+- Clicking a heading node scrolls the preview to the corresponding heading
 - Tag expansion states are preserved
 - File sorting settings for each tag are preserved
 
@@ -318,11 +334,13 @@ as well as change file sorting options.
 Tags automatically assigned based on file state.
 
 - `Today` — Notes updated today
+- `Yesterday` — Notes updated yesterday
+- `Last Week` — Notes updated within the past 7 days, excluding today
 - `Untagged` — Notes without any user-defined tags
 
 These are dynamically generated and not based on file content.
 
-System tag visibility can be configured in settings.
+Each system tag can be individually shown or hidden in settings.
 
 ---
 
@@ -460,7 +478,7 @@ Cmd+Option+P (macOS)
 | vsJournal.confirmDeleteFile | Confirm before deleting file | true |
 | vsJournal.confirmDeleteVirtualTag | Confirm before deleting virtual tag | true |
 | vsJournal.virtualTags.caseSensitive | Case-sensitive virtual tags | false |
-| vsJournal.systemTags.visibility | Control system tag visibility | { "Today": true } |
++| vsJournal.systemTags.visibility | Control system tag visibility | { "Today": true, "Yesterday": true, "Last Week": true } |
 | vsJournal.fileNameStyle | File naming format for new entries | datetime-minute |
 | vsJournal.folderStructure | Folder structure for new entries | flat |
 | vsJournal.paste.saveLocation | Location for pasted images | structured |
@@ -477,7 +495,9 @@ Example:
   "vsJournal.confirmDeleteVirtualTag": false,
   "vsJournal.virtualTags.caseSensitive": true,
   "vsJournal.systemTags.visibility": {
-    "Today": true
+    "Today": true,
+    "Yesterday": true,
+    "Last Week": true
   },
   "vsJournal.fileNameStyle": "datetime-minute",
   "vsJournal.folderStructure": "yyyy-mm-dd",

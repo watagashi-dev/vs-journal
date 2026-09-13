@@ -91,12 +91,27 @@ VS Journal は高速に動作することを最優先に設計されています
 #project/dev/frontend
 ```
 
+#### 見出しタグ
+見出し行にタグを記述すると、その見出しをタグツリーから確認できます。
+
+例えば、次のように見出しにタグを付けることができます。
+
+```text
+## Today's work #work
+### VS Journal #project/vs-journal
+```
+
+タグツリーでは、タグに該当するファイルの子ノードとして、そのタグが付けられた見出しが表示されます。
+見出しノードをクリックするとプレビュー画面が開き、該当する見出しまでスクロールします。
+見出しに付けたタグは、プレビュー上の見出し本文には表示されません。
+
 #### タグのルール
 
 - タグは「独立した行」または「見出し行」に記述されたもののみ認識されます
 - 文中のハッシュタグは無視されます
 - コードブロック内のハッシュタグは無視されます
 - インラインコード内のハッシュタグもタグとして扱われません
+
 
 ---
 
@@ -253,6 +268,8 @@ Markdown編集中に画像やファイルへのリンクを簡単に挿入でき
 - タグは階層構造で表示
 - アルファベット順で自動ソート
 - 各タグ配下のファイルはタイトル・作成日時・更新日時で並べ替え可能
+- タグ付き見出しは、該当するファイルの子ノードとして表示
+- 見出しノードをクリックすると、該当する見出しまでスクロールしてプレビュー
 - コンテクストメニューからファイルのソート条件を変更可能
   - タイトル
   - 作成日時
@@ -273,11 +290,13 @@ Markdown編集中に画像やファイルへのリンクを簡単に挿入でき
 ユーザーが付与しなくても自動的に分類されるタグです。
 
 - `Today` : 当日更新されたメモ
+- `Yesterday` : 前日に更新されたメモ
+- `Last Week` : 過去7日間に更新されたメモ（当日を除く）
 - `Untagged` : ユーザータグが存在しないメモ
 
 これらはファイル内容ではなく状態に基づいて自動付与されます。
 
-※ システムタグは設定により表示を制御できます。
+※ システムタグは、それぞれ個別に表示・非表示を設定できます。
 
 ---
 
@@ -411,7 +430,7 @@ Cmd+Option+P (Mac)
 | vsJournal.confirmDeleteFile | ファイル削除確認 | true |
 | vsJournal.confirmDeleteVirtualTag | 仮想タグ削除確認 | true |
 | vsJournal.virtualTags.caseSensitive | 仮想タグの大文字小文字区別 | false |
-| vsJournal.systemTags.visibility | システムタグ表示制御 | { "Today": true } |
+| vsJournal.systemTags.visibility | システムタグ表示制御 | { "Today": true, "Yesterday": true, "Last Week": true } |
 | vsJournal.fileNameStyle | 新規メモのファイル名形式 | datetime-minute |
 | vsJournal.folderStructure | 新規メモの保存フォルダ構造 | flat |
 | vsJournal.paste.saveLocation | 貼り付け画像保存先 | structured |
@@ -431,8 +450,10 @@ Cmd+Option+P (Mac)
   "vsJournal.confirmDeleteVirtualTag": false,
   "vsJournal.virtualTags.caseSensitive": true,
   "vsJournal.systemTags.visibility": {
-    "Today": true
-  },
+    "Today": true,
+    "Yesterday": true,
+    "Last Week": true
+  }
   "vsJournal.fileNameStyle": "datetime-minute",
   "vsJournal.folderStructure": "yyyy-mm-dd",
   "vsJournal.paste.saveLocation": "structured",

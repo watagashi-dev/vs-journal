@@ -1,5 +1,20 @@
 # Change Log
 
+## [0.6.1] - 2026-09-XX
+
+### Added
+
+- Added heading tags support.
+  - Headings with user tags are displayed under their journal entry in the tag tree.
+  - Clicking a heading opens the full preview and scrolls to that heading.
+- Added `Yesterday` and `Last Week` system tags.
+- Added individual visibility settings for system tags.
+
+### Changed
+
+- Improved the extension build process with esbuild bundling.
+- Reduced unnecessary files included in VSIX packages.
+
 ## [0.6.0] - 2026-08-30
 
 ### Added
