@@ -1,3 +1,5 @@
+import hljs from 'highlight.js';
+
 declare function acquireVsCodeApi(): any;
 
 (function () {
@@ -236,15 +238,12 @@ declare function acquireVsCodeApi(): any;
     }
 
     function runHighlight(): void {
-        const hljs = (window as any).hljs;
-        if (!hljs) { return; }
         document
             .querySelectorAll<HTMLElement>('code[class*="language-"]')
             .forEach(code => {
                 hljs.highlightElement(code);
             });
 
-        //        hljs.highlightAll();
         decorateCodeBlocks();
         applyVirtualTagHighlight();
     }
