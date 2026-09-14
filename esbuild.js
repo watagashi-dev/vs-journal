@@ -2,6 +2,7 @@ const esbuild = require("esbuild");
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
+const isWebview = process.argv.includes('--webview');
 
 /**
  * @type {import('esbuild').Plugin}
@@ -26,22 +27,26 @@ const esbuildProblemMatcherPlugin = {
 async function main() {
 	const ctx = await esbuild.context({
 		entryPoints: [
-			'src/extension.ts'
+			isWebview
+				? 'src/webview/webview.ts'
+				: 'src/extension.ts'
 		],
 		bundle: true,
-		format: 'cjs',
+		format: isWebview ? 'iife' : 'cjs',
 		minify: production,
 		sourcemap: !production,
 		sourcesContent: false,
-		platform: 'node',
-		outfile: 'dist/extension.js',
-		external: ['vscode'],
+		platform: isWebview ? 'browser' : 'node',
+		outfile: isWebview
+			? 'dist/webview/webview.js'
+			: 'dist/extension.js',
+		external: isWebview ? [] : ['vscode'],
 		logLevel: 'silent',
 		plugins: [
-			/* add to the end of plugins array */
 			esbuildProblemMatcherPlugin,
 		],
 	});
+
 	if (watch) {
 		await ctx.watch();
 	} else {
