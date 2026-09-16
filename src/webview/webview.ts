@@ -197,43 +197,138 @@ declare function acquireVsCodeApi(): any;
         document
             .querySelectorAll<HTMLElement>('pre > code')
             .forEach(code => {
-                const lines = code.innerHTML.split('\n');
-                if (lines.length > 0 && lines.at(-1) === '') {
-                    lines.pop();
-                }
                 const hasDiff =
                     code.dataset.diff === 'true';
                 const hasLineNumber =
                     code.dataset.linenumber === 'true';
 
+                const splitNode = (node: Node): DocumentFragment[] => {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        const parts = (node.textContent ?? '').split('\n');
+                        return parts.map(part => {
+                            const fragment = document.createDocumentFragment();
+                            if (part !== '') {
+                                fragment.appendChild(
+                                    document.createTextNode(part)
+                                );
+                            }
+                            return fragment;
+                        });
+                    }
+
+                    if (node.nodeType !== Node.ELEMENT_NODE) {
+                        const fragment = document.createDocumentFragment();
+                        fragment.appendChild(node.cloneNode(true));
+                        return [fragment];
+                    }
+
+                    const element = node as HTMLElement;
+                    const childLines: DocumentFragment[] = [];
+
+                    Array.from(element.childNodes).forEach(child => {
+                        const lines = splitNode(child);
+
+                        if (childLines.length === 0) {
+                            childLines.push(...lines);
+                            return;
+                        }
+
+                        childLines[childLines.length - 1].appendChild(lines[0]);
+
+                        for (let i = 1; i < lines.length; i++) {
+                            childLines.push(lines[i]);
+                        }
+                    });
+
+                    if (childLines.length === 0) {
+                        const fragment = document.createDocumentFragment();
+                        fragment.appendChild(element.cloneNode(false));
+                        return [fragment];
+                    }
+
+                    return childLines.map(line => {
+                        const fragment = document.createDocumentFragment();
+                        const clone = element.cloneNode(false) as HTMLElement;
+                        clone.appendChild(line);
+                        fragment.appendChild(clone);
+                        return fragment;
+                    });
+                };
+
+                const lines: DocumentFragment[] = [];
+
+                Array.from(code.childNodes).forEach(node => {
+                    const nodeLines = splitNode(node);
+
+                    if (lines.length === 0) {
+                        lines.push(...nodeLines);
+                        return;
+                    }
+
+                    lines[lines.length - 1].appendChild(nodeLines[0]);
+
+                    for (let i = 1; i < nodeLines.length; i++) {
+                        lines.push(nodeLines[i]);
+                    }
+                });
+
+                if (
+                    lines.length > 0 &&
+                    lines.at(-1)?.textContent === ''
+                ) {
+                    lines.pop();
+                }
+
                 const digits =
                     String(lines.length).length;
-                code.innerHTML = lines.map((line, index) => {
+
+                const result = document.createDocumentFragment();
+
+                lines.forEach((line, index) => {
+                    const lineText = line.textContent ?? '';
                     let className = '';
+
                     if (hasDiff) {
-                        if (line.startsWith('+')) {
-                            className = `vjs-diff-added`;
+                        if (lineText.startsWith('+')) {
+                            className = 'vjs-diff-added';
                         }
-                        if (line.startsWith('-')) {
-                            className = `vjs-diff-removed`;
+                        if (lineText.startsWith('-')) {
+                            className = 'vjs-diff-removed';
                         }
                     }
+
+                    const lineElement =
+                        document.createElement('span');
+                    lineElement.className = 'vjs-line';
 
                     if (hasLineNumber) {
-                        const lineClass = className ? ` ${className}` : '';
+                        const numberElement =
+                            document.createElement('span');
+                        numberElement.className =
+                            'vjs-line-number';
+                        numberElement.textContent =
+                            String(index + 1).padStart(digits, ' ');
 
-                        line =
-                            `<span class="vjs-line"><span class="vjs-line-number">${String(index + 1).padStart(digits, ' ')}</span><span class="vjs-line-content${lineClass}">${line}</span></span>`;
-                    } else {
-                        const lineClass = className ? ` ${className}` : '';
-                        const content = line === '' ? '&#8203;' : line;
-
-                        line =
-                            `<span class="vjs-line"><span class="vjs-line-content${lineClass}">${content}</span></span>`;
+                        lineElement.appendChild(numberElement);
                     }
-                    return line;
-                    //}).join(hasLineNumber ? '' : '\n');
-                }).join('');
+
+                    const contentElement =
+                        document.createElement('span');
+                    contentElement.className =
+                        'vjs-line-content' +
+                        (className ? ` ${className}` : '');
+
+                    if (line.childNodes.length === 0) {
+                        contentElement.textContent = '\u200B';
+                    } else {
+                        contentElement.appendChild(line);
+                    }
+
+                    lineElement.appendChild(contentElement);
+                    result.appendChild(lineElement);
+                });
+
+                code.replaceChildren(result);
             });
     }
 
