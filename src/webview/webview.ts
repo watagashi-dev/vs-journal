@@ -339,6 +339,16 @@ declare function acquireVsCodeApi(): any;
                 hljs.highlightElement(code);
             });
 
+        document
+            .querySelectorAll<HTMLElement>('.vjs-code-tab[data-language]')
+            .forEach(tab => {
+                const language = tab.dataset.language;
+
+                if (language && !hljs.getLanguage(language)) {
+                    tab.classList.add('vjs-code-tab-unsupported');
+                }
+            });
+
         decorateCodeBlocks();
         applyVirtualTagHighlight();
     }

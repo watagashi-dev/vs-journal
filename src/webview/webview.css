@@ -494,6 +494,10 @@ body>*:first-child {
   border-radius: 6px 6px 0 0;
 }
 
+.vjs-code-tab-unsupported {
+  font-style: italic;
+}
+
 .vjs-code-block pre {
   margin-top: 0;
   border: 1px solid var(--vscode-widget-border);
