@@ -642,7 +642,19 @@ export function createMarkdownIt(
     return md;
 }
 
-export function getHljsThemeUrl(isDark: boolean) {
+export function getHljsThemeUrl(
+    webview: vscode.Webview,
+    isDark: boolean,
+    extensionUri: vscode.Uri
+) {
     const theme = isDark ? 'vs2015' : 'vs';
-    return `https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/${theme}.min.css`;
+    const themePath = vscode.Uri.joinPath(
+        extensionUri,
+        'dist',
+        'webview',
+        'styles',
+        `${theme}.css`
+    );
+
+    return webview.asWebviewUri(themePath).toString();
 }

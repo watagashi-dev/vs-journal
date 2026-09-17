@@ -88,7 +88,11 @@ export function notifyThemeChanged() {
 
     currentPanel.webview.postMessage({
         type: 'themeChanged',
-        themeUrl: getHljsThemeUrl(vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark)
+        themeUrl: getHljsThemeUrl(
+            currentPanel.webview,
+            vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark,
+            vscode.Uri.file(extensionContext.extensionPath)
+        )
     });
 }
 
@@ -453,7 +457,11 @@ async function buildHtml(
 
     const hintText = getHintText(filesToPreview.length);
     const isDark = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark;
-    const themeUrl = getHljsThemeUrl(isDark);
+    const themeUrl = getHljsThemeUrl(
+        webview,
+        isDark,
+        vscode.Uri.file(extensionContext.extensionPath)
+    );
 
     return template
         .replace(/{{cspSource}}/g, webview.cspSource)
