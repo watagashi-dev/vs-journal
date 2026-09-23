@@ -1,6 +1,18 @@
 import hljs from 'highlight.js';
+import log from './languages/log';
+import syslog from './languages/syslog';
+import asm from './languages/asm';
+import shasm from './languages/shasm';
+import verilog from './languages/verilog';
+import vhdl from './languages/vhdl';
 
 declare function acquireVsCodeApi(): any;
+hljs.registerLanguage('log', log);
+hljs.registerLanguage('syslog', syslog);
+hljs.registerLanguage('asm', asm);
+hljs.registerLanguage('shasm', shasm);
+hljs.registerLanguage('verilog', verilog);
+hljs.registerLanguage('vhdl', vhdl);
 
 (function () {
     // =========================================================
