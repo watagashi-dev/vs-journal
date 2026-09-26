@@ -360,11 +360,16 @@ const systemTagDefinitions: SystemTagDefinition[] = [
             const now = new Date();
             const mtime = new Date(_meta.mtime);
 
-            return (
-                now.getFullYear() === mtime.getFullYear() &&
-                now.getMonth() === mtime.getMonth() &&
-                now.getDate() === mtime.getDate()
+            const today = new Date(
+                now.getFullYear(),
+                now.getMonth(),
+                now.getDate()
             );
+
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            return mtime >= today && mtime < tomorrow;
         }
     },
     {
@@ -381,12 +386,7 @@ const systemTagDefinitions: SystemTagDefinition[] = [
 
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
-
-            return (
-                mtime.getFullYear() === yesterday.getFullYear() &&
-                mtime.getMonth() === yesterday.getMonth() &&
-                mtime.getDate() === yesterday.getDate()
-            );
+            return mtime >= yesterday && mtime < today;
         }
     },
     {
@@ -404,7 +404,10 @@ const systemTagDefinitions: SystemTagDefinition[] = [
             const start = new Date(today);
             start.setDate(start.getDate() - 7);
 
-            return mtime >= start && mtime < today;
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            return mtime >= start && mtime < yesterday;
         }
     },
     {
