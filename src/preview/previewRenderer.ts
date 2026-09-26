@@ -647,7 +647,9 @@ export function getHljsThemeUrl(
     isDark: boolean,
     extensionUri: vscode.Uri
 ) {
-    const theme = isDark ? 'vs2015' : 'vs';
+    const theme = isDark
+        ? 'atom-one-dark'
+        : 'atom-one-light';
     const themePath = vscode.Uri.joinPath(
         extensionUri,
         'dist',
