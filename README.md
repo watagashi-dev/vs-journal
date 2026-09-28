@@ -184,6 +184,17 @@ The Markdown preview is optimized for readability and interaction.
 
 - Highlighting for user tags and virtual tag matches
 - Syntax highlighting for code blocks
+
+  Additional supported languages:
+  - Assembly (`asm`)
+  - SuperH Assembly (`shasm`)
+  - Verilog (`verilog`)
+  - VHDL (`vhdl`)
+  - Log (`log`)
+  - Syslog (`syslog`)
+
+  Unsupported language names are displayed in italics.
+
 - Extended code block display support
   - Language labels displayed as tabs
   - Diff rendering

@@ -1,5 +1,17 @@
 # Change Log
 
+## [0.7.0] - 2026-09-
+
+### Changed
+
+- Improved code block syntax highlighting with bundled highlight.js.
+- Added syntax highlighting support for Assembly, SuperH Assembly, Verilog, and VHDL.
+- Added log and syslog syntax highlighting.
+- Improved code block rendering for multiline syntax-highlighted code and consecutive comments.
+- Added italic styling for unsupported code block languages.
+- Replaced the highlight.js CDN dependency with locally bundled resources.
+- Improved Today, Yesterday, and Last Week system tag date handling.
+
 ## [0.6.1] - 2026-09-13
 
 ### Added
