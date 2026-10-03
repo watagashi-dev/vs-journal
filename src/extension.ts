@@ -5,7 +5,7 @@ import * as os from 'os';
 import * as path from 'path';
 
 import { execFileSync } from 'child_process';
-import { FileMeta } from './models/FileMeta';
+import { FileMeta, VirtualTagFile } from './models/FileMeta';
 import { measure } from './perf';
 import { TagHierarchyBuilder, TagHierarchyNode } from './services/TagHierarchyBuilder';
 import { createFileMeta, deleteNote } from './services/fileMetaService';
@@ -458,6 +458,7 @@ function rebuildTree(): {
         normalizedVirtualMap.set(
             tag,
             Array.from(virtualTagIndexMap.get(tag)?.values() ?? [])
+                .map(entry => entry.meta)
         );
     }
 
@@ -1042,7 +1043,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
                 // --- Register virtual tag (empty entry allowed for now) ---
                 if (!virtualTagIndexMap.has(trimmed)) {
-                    virtualTagIndexMap.set(trimmed, new Map<string, FileMeta>());
+                    virtualTagIndexMap.set(
+                        trimmed,
+                        new Map<string, VirtualTagFile>()
+                    );
                 }
                 const readFileContent = (filePath: string): string => {
                     return readFileEntry(filePath).content;
@@ -1105,7 +1109,7 @@ export async function activate(context: vscode.ExtensionContext) {
                     node?: TagHierarchyNode;
                 }
             ) => {
-                if (!item || item.contextValue !== 'tag:virtual') {
+                if (!item || !item.contextValue?.startsWith('tag:virtual')) {
                     return;
                 }
                 const node = item.node;
