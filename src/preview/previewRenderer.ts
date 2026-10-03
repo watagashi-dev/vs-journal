@@ -16,6 +16,7 @@ import {
     matchesPreviewVirtualTag,
     buildTagSegments
 } from '../services/virtualTagService';
+import { VirtualTagFile } from '../models/FileMeta';
 
 export type InlineVirtualHit = {
     virtualTag: boolean;
@@ -28,6 +29,7 @@ export function createMarkdownIt(
     options?: {
         caseSensitive: boolean;
         highlightKeyword: string | undefined;
+        virtualTagFile?: VirtualTagFile;
     }
 ) {
     const highlightKeyword =
@@ -35,6 +37,9 @@ export function createMarkdownIt(
 
     const caseSensitive =
         options?.caseSensitive ?? false;
+
+    const virtualTagFile =
+        options?.virtualTagFile;
 
     const md = new MarkdownIt({
         html: true,
