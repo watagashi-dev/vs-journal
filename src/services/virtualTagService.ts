@@ -1,4 +1,8 @@
-import { FileMeta } from '../models/FileMeta';
+import {
+    FileMeta,
+    VirtualTagFile,
+    VirtualTagMatch
+} from '../models/FileMeta';
 import {
     virtualTagSet,
     virtualTagIndexMap
@@ -19,12 +23,78 @@ function addMetaToTagIndex(tag: string, meta: FileMeta): void {
     let fileMap = virtualTagIndexMap.get(tag);
 
     if (!fileMap) {
-        fileMap = new Map<string, FileMeta>();
+        fileMap = new Map<string, VirtualTagFile>();
         virtualTagIndexMap.set(tag, fileMap);
     }
 
     const key = filePathToKey(meta.filePath);
-    fileMap.set(key, meta);
+    fileMap.set(key, {
+        meta,
+        matches: []
+    });
+}
+
+export function findVirtualTagMatches(
+    tag: string,
+    content: string,
+    meta: FileMeta,
+    caseSensitive: boolean
+): VirtualTagMatch[] {
+    const matches: VirtualTagMatch[] = [];
+
+    const source = caseSensitive
+        ? content
+        : content.toLowerCase();
+
+    const target = caseSensitive
+        ? tag
+        : tag.toLowerCase();
+
+    if (target.length === 0) {
+        return matches;
+    }
+
+    const lines = content.split(/\r?\n/);
+    let contentOffset = 0;
+
+    for (let line = 0; line < lines.length; line++) {
+        const lineText = lines[line];
+
+        const lineSource = source.slice(
+            contentOffset,
+            contentOffset + lineText.length
+        );
+
+        let searchStart = 0;
+
+        while (true) {
+            const index = lineSource.indexOf(
+                target,
+                searchStart
+            );
+
+            if (index === -1) {
+                break;
+            }
+
+            const heading = meta.headings.some(
+                item => item.line === line
+            );
+
+            matches.push({
+                line,
+                start: index,
+                end: index + tag.length,
+                isHeading: heading
+            });
+
+            searchStart = index + tag.length;
+        }
+
+        contentOffset += lineText.length + 1;
+    }
+
+    return matches;
 }
 
 /**

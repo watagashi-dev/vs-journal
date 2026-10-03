@@ -1,12 +1,13 @@
 import { FileMeta } from './models/FileMeta';
 import { filePathToKey } from './extension';
+import { VirtualTagFile } from './models/FileMeta';
 
 const cursorLineMap = new Map<string, number>();
 let lastActiveFilePath: string | undefined;
 
 export const systemTagIndexMap = new Map<string, FileMeta[]>();
 export const userTagIndexMap = new Map<string, FileMeta[]>();
-export const virtualTagIndexMap = new Map<string, Map<string, FileMeta>>();
+export const virtualTagIndexMap = new Map<string, Map<string, VirtualTagFile>>();
 
 export const virtualTagSet = new Set<string>();
 

@@ -2,13 +2,26 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import open from 'open';
-import { FileMeta } from '../models/FileMeta';
+import {
+    FileMeta,
+    VirtualTagFile
+} from '../models/FileMeta';
 import { createMarkdownIt, getHljsThemeUrl } from './previewRenderer';
 import { getCursorLine, getLastActiveFilePath } from '../state';
+import { findVirtualTagMatches } from '../services/virtualTagService';
 
 let currentPanel: vscode.WebviewPanel | undefined;
 let currentDocument: vscode.TextDocument | undefined;
 let extensionContext: vscode.ExtensionContext;
+let virtualTagFileCache:
+    {
+        tag: string;
+        filePath: string;
+        mtime: number;
+        size: number;
+        value: VirtualTagFile;
+    }
+    | undefined;
 
 export type PreviewContext = {
     kind: 'file' | 'tag';
@@ -418,6 +431,43 @@ async function buildHtml(
         );
         const text = Buffer.from(fileText).toString('utf8');
 
+        if (highlight?.keyword) {
+            const cached =
+                virtualTagFileCache &&
+                    virtualTagFileCache.tag === highlight.keyword &&
+                    virtualTagFileCache.filePath === fileMeta.filePath &&
+                    virtualTagFileCache.mtime === fileMeta.mtime &&
+                    virtualTagFileCache.size === fileMeta.size
+                    ? virtualTagFileCache.value
+                    : undefined;
+
+            const virtualTagFile = cached ?? {
+                meta: fileMeta,
+                matches: findVirtualTagMatches(
+                    highlight.keyword,
+                    text,
+                    fileMeta,
+                    caseSensitive
+                )
+            };
+
+            if (!cached) {
+                virtualTagFileCache = {
+                    tag: highlight.keyword,
+                    filePath: fileMeta.filePath,
+                    mtime: fileMeta.mtime,
+                    size: fileMeta.size,
+                    value: virtualTagFile
+                };
+            }
+
+            console.log(
+                'preview virtual tag:',
+                cached ? 'cache' : 'new',
+                highlight.keyword,
+                virtualTagFile
+            );
+        }
         htmlContent += md.render(text, {
             filePath: fileMeta.filePath,
             context: options?.context,

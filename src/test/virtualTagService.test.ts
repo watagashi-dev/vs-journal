@@ -46,7 +46,7 @@ baz`;
         assert.strictEqual(files!.size, 1);
 
         const file = Array.from(files!.values())[0];
-        assert.strictEqual(file.filePath, 'a.md');
+        assert.strictEqual(file.meta.filePath, 'a.md');
     });
 
     test('multiple hits in one file (case sensitive)', () => {
@@ -64,7 +64,7 @@ foo`;
         assert.strictEqual(files.size, 1);
 
         const file = Array.from(files.values())[0];
-        assert.strictEqual(file.filePath, 'a.md');
+        assert.strictEqual(file.meta.filePath, 'a.md');
     });
 
     test('multiple tags (case sensitive)', () => {
@@ -111,7 +111,7 @@ foobar`;
         assert.strictEqual(files.size, 1);
 
         const file = Array.from(files.values())[0];
-        assert.strictEqual(file.filePath, 'a.md');
+        assert.strictEqual(file.meta.filePath, 'a.md');
     });
 
     test('japanese match (case sensitive)', () => {
@@ -127,7 +127,7 @@ foobar`;
         assert.strictEqual(files.size, 1);
 
         const file = Array.from(files.values())[0];
-        assert.strictEqual(file.filePath, 'a.md');
+        assert.strictEqual(file.meta.filePath, 'a.md');
     });
 
     // =========================
