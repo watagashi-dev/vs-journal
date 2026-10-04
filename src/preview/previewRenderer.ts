@@ -499,6 +499,30 @@ export function createMarkdownIt(
                     }
 
                     if (child.type === 'text') {
+                        const line = token.map?.[0];
+
+                        const virtualMatches =
+                            virtualTagFile?.matches.filter(
+                                match => match.line === line
+                            ) ?? [];
+
+                        console.log(
+                            'virtual matches for token:',
+                            line,
+                            child.content,
+                            virtualMatches
+                        );
+                        console.log(
+                            'virtual match positions:',
+                            line,
+                            JSON.stringify(
+                                virtualMatches.map(match => ({
+                                    start: match.start,
+                                    end: match.end,
+                                    isHeading: match.isHeading
+                                }))
+                            )
+                        );
                         if (linkDepth > 0) {
                             newChildren.push(child);
                             continue;
@@ -585,7 +609,6 @@ export function createMarkdownIt(
                                 continue;
                             }
                         }
-
                         // ======================================================
                         // PHASE 2: HIGHLIGHT (always runs)
                         // ======================================================
@@ -594,31 +617,46 @@ export function createMarkdownIt(
                         let lastIndex = 0;
                         const segments: any[] = [];
 
-                        for (const rule of rules) {
-                            const { keyword, className, caseSensitive } = rule;
-                            if (!keyword) {
+                        const virtualMatchesForText =
+                            virtualMatches.filter(
+                                match =>
+                                    match.end <= text.length
+                            );
+                        const rule = rules.find(
+                            item =>
+                                item.keyword === options?.highlightKeyword
+                        );
+                        for (const match of virtualMatchesForText) {
+                            if (match.start < lastIndex) {
                                 continue;
                             }
 
-                            const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                            const regex = caseSensitive
-                                ? new RegExp(escaped, 'g')
-                                : new RegExp(escaped, 'gi');
+                            const before = text.slice(
+                                lastIndex,
+                                match.start
+                            );
 
-                            for (const match of text.matchAll(regex)) {
-                                const before = text.slice(lastIndex, match.index);
-                                if (before) {
-                                    const t = new state.Token('text', '', 0);
-                                    t.content = before;
-                                    segments.push(t);
-                                }
-                                const span = new state.Token('vjs_text_span', '', 0);
-                                span.content = match[0];
-                                span.meta = { className };
-                                segments.push(span);
-
-                                lastIndex = match.index + match[0].length;
+                            if (before) {
+                                const t = new state.Token('text', '', 0);
+                                t.content = before;
+                                segments.push(t);
                             }
+
+                            const span = new state.Token(
+                                'vjs_text_span',
+                                '',
+                                0
+                            );
+                            span.content = text.slice(
+                                match.start,
+                                match.end
+                            );
+                            span.meta = {
+                                className: rule?.className
+                            };
+                            segments.push(span);
+
+                            lastIndex = match.end;
                         }
 
                         const tail = text.slice(lastIndex);
