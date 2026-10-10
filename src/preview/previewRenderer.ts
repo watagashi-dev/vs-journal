@@ -505,24 +505,6 @@ export function createMarkdownIt(
                             virtualTagFile?.matches.filter(
                                 match => match.line === line
                             ) ?? [];
-
-                        console.log(
-                            'virtual matches for token:',
-                            line,
-                            child.content,
-                            virtualMatches
-                        );
-                        console.log(
-                            'virtual match positions:',
-                            line,
-                            JSON.stringify(
-                                virtualMatches.map(match => ({
-                                    start: match.start,
-                                    end: match.end,
-                                    isHeading: match.isHeading
-                                }))
-                            )
-                        );
                         if (linkDepth > 0) {
                             newChildren.push(child);
                             continue;

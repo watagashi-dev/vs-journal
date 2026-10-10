@@ -25,6 +25,9 @@ hljs.registerLanguage('vhdl', vhdl);
         | { type: 'openLocalLink'; path: string }
         | { type: 'jumpToLine'; filePath: string; line: number }
         | { type: 'jumpToFile'; filePath: string }
+        | { type: 'virtualTagScroll'; filePath: string; line: number }
+        | { type: 'virtualTagNext' }
+        | { type: 'virtualTagPrev' }
         | { type: 'closePreview' }
         | { type: 'edit' };
 
@@ -189,7 +192,29 @@ hljs.registerLanguage('vhdl', vhdl);
     // Window
     // =========================================================
     function setupWindowHandlers(): void {
-        window.addEventListener('scroll', updateCurrentIndexFromScroll, { passive: true });
+        // window.addEventListener('scroll', updateCurrentIndexFromScroll, { passive: true });
+        let virtualTagScrollTimer: ReturnType<typeof setTimeout> | undefined;
+
+        window.addEventListener('scroll', () => {
+            if (virtualTagScrollTimer !== undefined) {
+                clearTimeout(virtualTagScrollTimer);
+            }
+
+            virtualTagScrollTimer = setTimeout(() => {
+                virtualTagScrollTimer = undefined;
+
+                const position = getCurrentSourcePosition();
+
+                if (!position) {
+                    return;
+                }
+                postMessage({
+                    type: 'virtualTagScroll',
+                    filePath: position.filePath,
+                    line: position.line
+                });
+            }, 50);
+        }, { passive: true });
         window.addEventListener('scroll', resetHeaderTimer, { passive: true });
         window.addEventListener('wheel', resetHeaderTimer, { passive: true });
 
@@ -542,11 +567,12 @@ hljs.registerLanguage('vhdl', vhdl);
     const nextBtn = document.getElementById('vjs-next');
 
     let currentIndex = 0;
+    let virtualTagTotalMatches = 0;
 
     function updateUI() {
         if (!nav || !counter) { return; }
 
-        const m = highlightElements.length;
+        const m = virtualTagTotalMatches;
 
         if (m < 1) {
             nav.classList.add('hidden');
@@ -808,6 +834,127 @@ hljs.registerLanguage('vhdl', vhdl);
         });
     }
 
+    function getCurrentSourcePosition(): {
+        filePath: string;
+        line: number;
+    } | undefined {
+        const container =
+            document.scrollingElement ??
+            document.documentElement;
+
+        const viewportY =
+            container.scrollTop +
+            window.innerHeight / 2;
+
+        const fileBlocks = Array.from(
+            document.querySelectorAll<HTMLElement>(
+                '[data-file]'
+            )
+        );
+
+        let nearestPosition: {
+            filePath: string;
+            line: number;
+            distance: number;
+        } | undefined;
+
+        for (const fileBlock of fileBlocks) {
+            const filePath =
+                fileBlock.getAttribute('data-file');
+
+            if (!filePath) {
+                continue;
+            }
+
+            const elements = Array.from(
+                fileBlock.querySelectorAll<HTMLElement>(
+                    '[data-start-line]'
+                )
+            );
+
+            for (const el of elements) {
+                const start = Number(
+                    el.getAttribute('data-start-line')
+                );
+                const end = Number(
+                    el.getAttribute('data-end-line')
+                    ?? el.getAttribute('data-start-line')
+                );
+
+                if (
+                    !Number.isFinite(start) ||
+                    !Number.isFinite(end)
+                ) {
+                    continue;
+                }
+
+                const rect = el.getBoundingClientRect();
+
+                const top =
+                    rect.top + container.scrollTop;
+                const bottom =
+                    rect.bottom + container.scrollTop;
+
+                const distance =
+                    viewportY < top
+                        ? top - viewportY
+                        : viewportY > bottom
+                            ? viewportY - bottom
+                            : 0;
+
+                if (
+                    viewportY < top ||
+                    viewportY > bottom
+                ) {
+                    if (
+                        !nearestPosition ||
+                        distance < nearestPosition.distance
+                    ) {
+                        nearestPosition = {
+                            filePath,
+                            line: viewportY < top ? start : end - 1,
+                            distance
+                        };
+                    }
+                    continue;
+                }
+
+                const height = Math.max(1, rect.height);
+                const ratio =
+                    Math.max(
+                        0,
+                        Math.min(
+                            1,
+                            (viewportY - top) / height
+                        )
+                    );
+
+                const lineCount =
+                    Math.max(1, end - start);
+
+                const line =
+                    start +
+                    Math.min(
+                        lineCount - 1,
+                        Math.floor(ratio * lineCount)
+                    );
+
+                return {
+                    filePath,
+                    line
+                };
+            }
+        }
+
+        if (nearestPosition) {
+            return {
+                filePath: nearestPosition.filePath,
+                line: nearestPosition.line
+            };
+        }
+        return undefined;
+    }
+
     let highlightElements: HTMLElement[] = [];
 
     // theme変更対応（旧コードで消えがちな部分）
@@ -839,6 +986,15 @@ hljs.registerLanguage('vhdl', vhdl);
                     msg.filePath,
                     msg.line
                 );
+            }
+
+            if (msg?.type === 'scrollToVirtualTagMatch') {
+                currentIndex = msg.currentIndex;
+                virtualTagTotalMatches = msg.totalMatches;
+                updateUI();
+
+                executeScrollToLine(msg.filePath, msg.line);
+                return;
             }
 
             if (msg.type === 'setPreviewCount') {

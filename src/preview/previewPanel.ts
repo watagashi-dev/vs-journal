@@ -4,7 +4,8 @@ import * as fs from 'fs';
 import open from 'open';
 import {
     FileMeta,
-    VirtualTagFile
+    VirtualTagFile,
+    VirtualTagSession
 } from '../models/FileMeta';
 import { createMarkdownIt, getHljsThemeUrl } from './previewRenderer';
 import { getCursorLine, getLastActiveFilePath } from '../state';
@@ -29,6 +30,11 @@ export type PreviewContext = {
     tagName?: string;
 };
 
+type PreviewBuildResult = {
+    html: string;
+    virtualTagSession?: VirtualTagSession;
+};
+
 // =========================================
 // Virtual Tag Session (new unified state)
 // =========================================
@@ -37,13 +43,6 @@ export type VirtualTagMatch = {
     line: number;
     start: number;
     end: number;
-};
-
-export type VirtualTagSession = {
-    keyword: string;
-    caseSensitive: boolean;
-    matches: VirtualTagMatch[];
-    currentIndex: number;
 };
 
 const previewStateMap = new Map<
@@ -207,13 +206,107 @@ export function ensurePreviewPanel(
         requestSyncScroll(e.webviewPanel);
     });
 
-    currentPanel.webview.onDidReceiveMessage(handleWebviewMessage);
+    currentPanel.webview.onDidReceiveMessage(
+        message => handleWebviewMessage(currentPanel!, message)
+    );
 
     return currentPanel;
 }
 
-async function handleWebviewMessage(message: any) {
+async function handleWebviewMessage(
+    panel: vscode.WebviewPanel,
+    message: any
+) {
     if (!message) { return; }
+
+    if (
+        message.type === 'virtualTagNext' ||
+        message.type === 'virtualTagPrev'
+    ) {
+        const state = getPreviewState(panel);
+        const session = state?.virtualTagSession;
+
+        if (!session) {
+            return;
+        }
+
+        const totalMatches = session.matches.reduce(
+            (total, file) => total + file.matches.length,
+            0
+        );
+
+        if (totalMatches === 0) {
+            return;
+        }
+
+        const direction = message.type === 'virtualTagNext' ? 1 : -1;
+
+        session.currentIndex = (
+            session.currentIndex + direction + totalMatches
+        ) % totalMatches;
+
+        let index = 0;
+
+        for (const file of session.matches) {
+            for (const match of file.matches) {
+                if (index === session.currentIndex) {
+                    panel.webview.postMessage({
+                        type: 'scrollToVirtualTagMatch',
+                        filePath: file.meta.filePath,
+                        line: match.line,
+                        start: match.start,
+                        end: match.end,
+                        currentIndex: session.currentIndex,
+                        totalMatches
+                    });
+
+                    return;
+                }
+
+                index++;
+            }
+        }
+
+        return;
+    }
+
+    if (message.type === 'virtualTagScroll') {
+        const state = getPreviewState(panel);
+        const session = state?.virtualTagSession;
+
+        if (!session) {
+            return;
+        }
+
+        let currentIndex = -1;
+        let minDistance = Infinity;
+        let index = 0;
+
+        for (const file of session.matches) {
+            if (file.meta.filePath === message.filePath) {
+                for (const match of file.matches) {
+                    const distance = Math.abs(
+                        match.line - message.line
+                    );
+
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        currentIndex = index;
+                    }
+
+                    index++;
+                }
+            } else {
+                index += file.matches.length;
+            }
+        }
+
+        if (currentIndex >= 0) {
+            session.currentIndex = currentIndex;
+        }
+
+        return;
+    }
 
     if (message.type === 'openExternal') {
         await vscode.env.openExternal(vscode.Uri.parse(message.url));
@@ -374,7 +467,7 @@ async function buildHtml(
         context?: PreviewContext;
         highlight?: { keyword: string, className: string };
     }
-): Promise<string> {
+): Promise<PreviewBuildResult> {
     const webview = panel.webview;
 
     // =========================================
@@ -454,13 +547,7 @@ async function buildHtml(
                     value: virtualTagFile
                 };
             }
-
-            console.log(
-                'preview virtual tag:',
-                cached ? 'cache' : 'new',
-                highlight.keyword,
-                virtualTagFile
-            );
+            virtualTagSession?.matches.push(virtualTagFile);
         }
 
         const md = createMarkdownIt(
@@ -517,7 +604,7 @@ async function buildHtml(
         vscode.Uri.file(extensionContext.extensionPath)
     );
 
-    return template
+    const html = template
         .replace(/{{cspSource}}/g, webview.cspSource)
         .replace(/{{cssUri}}/g, cssUri.toString())
         .replace(/{{katexCssUri}}/g, katexCssUri.toString())
@@ -541,6 +628,11 @@ async function buildHtml(
             return encodeURIComponent(JSON.stringify(rules));
         })())
         .replace(/{{scriptUri}}/g, scriptUri.toString());
+
+    return {
+        html,
+        virtualTagSession
+    };
 }
 
 export async function updatePreviewPanel(
@@ -554,12 +646,20 @@ export async function updatePreviewPanel(
     try {
         const state = getPreviewState(panel);
 
-        const html = await buildHtml(panel, filesToPreview, {
+        const result = await buildHtml(panel, filesToPreview, {
             ...options,
             context: state?.context,
             highlight: state?.highlight
         });
-        panel.webview.html = html;
+
+        panel.webview.html = result.html;
+
+        if (state) {
+            setPreviewState(panel, {
+                ...state,
+                virtualTagSession: result.virtualTagSession
+            });
+        }
         panel.webview.postMessage({
             type: 'setPreviewCount',
             count: filesToPreview.length

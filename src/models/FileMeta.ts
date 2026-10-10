@@ -27,3 +27,10 @@ export interface VirtualTagFile {
   meta: FileMeta;
   matches: VirtualTagMatch[];
 }
+
+export type VirtualTagSession = {
+  keyword: string;
+  caseSensitive: boolean;
+  matches: VirtualTagFile[];
+  currentIndex: number;
+};
