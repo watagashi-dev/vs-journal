@@ -250,6 +250,7 @@ async function handleWebviewMessage(
         for (const file of session.matches) {
             for (const match of file.matches) {
                 if (index === session.currentIndex) {
+                    session.isScrollLocked = true;
                     panel.webview.postMessage({
                         type: 'scrollToVirtualTagMatch',
                         filePath: file.meta.filePath,
@@ -274,7 +275,7 @@ async function handleWebviewMessage(
         const state = getPreviewState(panel);
         const session = state?.virtualTagSession;
 
-        if (!session) {
+        if (!session || session.isScrollLocked) {
             return;
         }
 
@@ -303,6 +304,28 @@ async function handleWebviewMessage(
 
         if (currentIndex >= 0) {
             session.currentIndex = currentIndex;
+
+            const totalMatches = session.matches.reduce(
+                (total, file) => total + file.matches.length,
+                0
+            );
+
+            panel.webview.postMessage({
+                type: 'virtualTagCurrentChanged',
+                currentIndex: session.currentIndex,
+                totalMatches
+            });
+        }
+
+        return;
+    }
+
+    if (message.type === 'virtualTagScrollEnd') {
+        const state = getPreviewState(panel);
+        const session = state?.virtualTagSession;
+
+        if (session) {
+            session.isScrollLocked = false;
         }
 
         return;
@@ -490,7 +513,8 @@ async function buildHtml(
             keyword: highlight.keyword,
             caseSensitive,
             matches: [],
-            currentIndex: 0
+            currentIndex: 0,
+            isScrollLocked: false
         };
     }
 
@@ -603,6 +627,10 @@ async function buildHtml(
         isDark,
         vscode.Uri.file(extensionContext.extensionPath)
     );
+    const virtualTagCount = virtualTagSession?.matches.reduce(
+        (total, file) => total + file.matches.length,
+        0
+    ) ?? 0;
 
     const html = template
         .replace(/{{cspSource}}/g, webview.cspSource)
@@ -610,6 +638,7 @@ async function buildHtml(
         .replace(/{{katexCssUri}}/g, katexCssUri.toString())
         .replace(/{{themeUrl}}/g, themeUrl)
         .replace(/{{hintText}}/g, hintText)
+        .replace(/{{virtualTagCount}}/g, String(virtualTagCount))
         .replace(/{{content}}/g, htmlContent)
         .replace(/{{warning}}/g, warningHtml)
         .replace(/{{highlightRules}}/g, (() => {

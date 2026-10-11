@@ -29,6 +29,8 @@ hljs.registerLanguage('vhdl', vhdl);
         | { type: 'virtualTagNext' }
         | { type: 'virtualTagPrev' }
         | { type: 'closePreview' }
+        | { type: 'virtualTagScrollEnd' }
+        | { type: 'virtualTagCurrentChanged'; currentIndex: number; totalMatches: number; }
         | { type: 'edit' };
 
     function postMessage(msg: VsCodeMessage): void {
@@ -191,9 +193,13 @@ hljs.registerLanguage('vhdl', vhdl);
     // =========================================================
     // Window
     // =========================================================
+
+    let isVirtualTagJumping = false;
     function setupWindowHandlers(): void {
-        // window.addEventListener('scroll', updateCurrentIndexFromScroll, { passive: true });
         let virtualTagScrollTimer: ReturnType<typeof setTimeout> | undefined;
+
+        window.addEventListener('scroll', resetHeaderTimer, { passive: true });
+        window.addEventListener('wheel', resetHeaderTimer, { passive: true });
 
         window.addEventListener('scroll', () => {
             if (virtualTagScrollTimer !== undefined) {
@@ -203,20 +209,25 @@ hljs.registerLanguage('vhdl', vhdl);
             virtualTagScrollTimer = setTimeout(() => {
                 virtualTagScrollTimer = undefined;
 
+                if (isVirtualTagJumping) {
+                    isVirtualTagJumping = false;
+                    postMessage({ type: 'virtualTagScrollEnd' });
+                    return;
+                }
+
                 const position = getCurrentSourcePosition();
 
                 if (!position) {
                     return;
                 }
+
                 postMessage({
                     type: 'virtualTagScroll',
                     filePath: position.filePath,
                     line: position.line
                 });
-            }, 50);
+            }, 100);
         }, { passive: true });
-        window.addEventListener('scroll', resetHeaderTimer, { passive: true });
-        window.addEventListener('wheel', resetHeaderTimer, { passive: true });
 
         window.addEventListener('mousemove', () => {
             const now = Date.now();
@@ -567,7 +578,11 @@ hljs.registerLanguage('vhdl', vhdl);
     const nextBtn = document.getElementById('vjs-next');
 
     let currentIndex = 0;
-    let virtualTagTotalMatches = 0;
+
+    const body = document.body;
+    let virtualTagTotalMatches = Number(
+        body.dataset.virtualTagCount ?? 0
+    );
 
     function updateUI() {
         if (!nav || !counter) { return; }
@@ -665,47 +680,15 @@ hljs.registerLanguage('vhdl', vhdl);
     }
 
     function moveNext() {
-        if (highlightElements.length === 0) { return; }
-
-        let nextIndex = currentIndex;
-
-        const currentEl = highlightElements[currentIndex];
-        if (currentEl) {
-            const rect = currentEl.getBoundingClientRect();
-            const threshold = 10;
-
-            // Move to the next tag if the current tag is not near the bottom edge
-            if (rect.bottom <= window.innerHeight - threshold) {
-                nextIndex = (currentIndex + 1) % highlightElements.length;
-            }
-        }
-
-        currentIndex = nextIndex;
-        scrollToMatch(currentIndex);
-        updateUI();
+        postMessage({
+            type: 'virtualTagNext'
+        });
     }
 
     function movePrev() {
-        if (highlightElements.length === 0) { return; }
-
-        let prevIndex = currentIndex;
-
-        const currentEl = highlightElements[currentIndex];
-        if (currentEl) {
-            const rect = currentEl.getBoundingClientRect();
-            const threshold = 10;
-
-            // Move to the previous tag if the current tag is not near the top edge
-            if (rect.top >= threshold) {
-                prevIndex =
-                    (currentIndex - 1 + highlightElements.length) %
-                    highlightElements.length;
-            }
-        }
-
-        currentIndex = prevIndex;
-        scrollToMatch(currentIndex);
-        updateUI();
+        postMessage({
+            type: 'virtualTagPrev'
+        });
     }
 
     function setupNavButtons() {
@@ -993,12 +976,20 @@ hljs.registerLanguage('vhdl', vhdl);
                 virtualTagTotalMatches = msg.totalMatches;
                 updateUI();
 
+                isVirtualTagJumping = true;
                 executeScrollToLine(msg.filePath, msg.line);
                 return;
             }
 
             if (msg.type === 'setPreviewCount') {
                 setPreviewFileCount(msg.count);
+                return;
+            }
+
+            if (msg?.type === 'virtualTagCurrentChanged') {
+                currentIndex = msg.currentIndex;
+                virtualTagTotalMatches = msg.totalMatches;
+                updateUI();
                 return;
             }
         });
