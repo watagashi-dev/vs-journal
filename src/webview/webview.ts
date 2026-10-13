@@ -25,12 +25,7 @@ hljs.registerLanguage('vhdl', vhdl);
         | { type: 'openLocalLink'; path: string }
         | { type: 'jumpToLine'; filePath: string; line: number }
         | { type: 'jumpToFile'; filePath: string }
-        | { type: 'virtualTagScroll'; filePath: string; line: number }
-        | { type: 'virtualTagNext' }
-        | { type: 'virtualTagPrev' }
         | { type: 'closePreview' }
-        | { type: 'virtualTagScrollEnd' }
-        | { type: 'virtualTagCurrentChanged'; currentIndex: number; totalMatches: number; }
         | { type: 'edit' };
 
     function postMessage(msg: VsCodeMessage): void {
@@ -194,7 +189,7 @@ hljs.registerLanguage('vhdl', vhdl);
     // Window
     // =========================================================
 
-    let isVirtualTagJumping = false;
+    let isScrollLocked = false;
     function setupWindowHandlers(): void {
         let virtualTagScrollTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -208,24 +203,11 @@ hljs.registerLanguage('vhdl', vhdl);
 
             virtualTagScrollTimer = setTimeout(() => {
                 virtualTagScrollTimer = undefined;
-
-                if (isVirtualTagJumping) {
-                    isVirtualTagJumping = false;
-                    postMessage({ type: 'virtualTagScrollEnd' });
+                if (isScrollLocked) {
+                    isScrollLocked = false;
                     return;
                 }
-
-                const position = getCurrentSourcePosition();
-
-                if (!position) {
-                    return;
-                }
-
-                postMessage({
-                    type: 'virtualTagScroll',
-                    filePath: position.filePath,
-                    line: position.line
-                });
+                updateCurrentVirtualTagMatch();
             }, 100);
         }, { passive: true });
 
@@ -578,11 +560,32 @@ hljs.registerLanguage('vhdl', vhdl);
     const nextBtn = document.getElementById('vjs-next');
 
     let currentIndex = 0;
+    type VirtualTagMatchPosition = {
+        filePath: string;
+        line: number;
+    };
 
-    const body = document.body;
-    let virtualTagTotalMatches = Number(
-        body.dataset.virtualTagCount ?? 0
-    );
+    const matchesElement = document.getElementById('virtual-tag-matches');
+    const virtualTagMatches: VirtualTagMatchPosition[] = matchesElement?.textContent
+        ? JSON.parse(matchesElement.textContent) as VirtualTagMatchPosition[]
+        : [];
+    let virtualTagTotalMatches = virtualTagMatches.length;
+
+    console.log('virtualTagMatches:', virtualTagMatches);
+
+    function navigateVirtualTagMatch(delta: number): void {
+        const totalMatches = virtualTagMatches.length;
+        if (totalMatches === 0) {
+            return;
+        }
+
+        currentIndex = (currentIndex + delta + totalMatches) % totalMatches;
+
+        const match = virtualTagMatches[currentIndex];
+        updateUI();
+        isScrollLocked = true;
+        executeScrollToLine(match.filePath, match.line);
+    }
 
     function updateUI() {
         if (!nav || !counter) { return; }
@@ -598,97 +601,39 @@ hljs.registerLanguage('vhdl', vhdl);
         counter.textContent = `${currentIndex + 1} / ${m}`;
     }
 
-    let lockedTargetIndex: number | null = null;
-
-    function scrollToMatch(index: number) {
-        const el = highlightElements[index];
-        if (!el) { return; }
-
-        lockedTargetIndex = index;
-
-        const rect = el.getBoundingClientRect();
-        const top = window.scrollY + rect.top - 80;
-
-        window.scrollTo({
-            top,
-            behavior: 'smooth'
-        });
-    }
-
-    function updateCurrentIndexFromScroll() {
-        if (!highlightElements.length) {
+    function updateCurrentVirtualTagMatch(): void {
+        const position = getCurrentSourcePosition();
+        if (!position || virtualTagMatches.length === 0) {
             return;
         }
 
-        if (lockedTargetIndex !== null) {
-            const el = highlightElements[lockedTargetIndex];
-            if (!el) {
-                return;
-            }
-
-            const rect = el.getBoundingClientRect();
-            const visible =
-                rect.top < window.innerHeight &&
-                rect.bottom > 0;
-
-            if (visible) {
-                currentIndex = lockedTargetIndex;
-                lockedTargetIndex = null;
-                updateUI();
-            }
-
-            return;
-        }
-
-        // ===== 通常スクロール時 =====
-
-        const currentEl = highlightElements[currentIndex];
-
-        // 今のがまだ見えてるなら何もしない
-        if (currentEl) {
-            const rect = currentEl.getBoundingClientRect();
-            const visible =
-                rect.top < window.innerHeight &&
-                rect.bottom > 0;
-
-            if (visible) {
-                return;
-            }
-        }
-
-        const center = window.innerHeight / 2;
-
-        let closestIndex = currentIndex;
+        let nearestIndex = -1;
         let minDistance = Infinity;
 
-        highlightElements.forEach((el, index) => {
-            const rect = el.getBoundingClientRect();
-            const elCenter = rect.top + rect.height / 2;
+        virtualTagMatches.forEach((match, index) => {
+            if (match.filePath !== position.filePath) {
+                return;
+            }
 
-            const dist = Math.abs(elCenter - center);
-
-            if (dist < minDistance) {
-                minDistance = dist;
-                closestIndex = index;
+            const distance = Math.abs(match.line - position.line);
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearestIndex = index;
             }
         });
 
-        if (closestIndex !== currentIndex) {
-            currentIndex = closestIndex;
+        if (nearestIndex >= 0 && nearestIndex !== currentIndex) {
+            currentIndex = nearestIndex;
             updateUI();
         }
     }
 
     function moveNext() {
-        postMessage({
-            type: 'virtualTagNext'
-        });
+        navigateVirtualTagMatch(1);
     }
 
     function movePrev() {
-        postMessage({
-            type: 'virtualTagPrev'
-        });
+        navigateVirtualTagMatch(-1);
     }
 
     function setupNavButtons() {
@@ -971,25 +916,8 @@ hljs.registerLanguage('vhdl', vhdl);
                 );
             }
 
-            if (msg?.type === 'scrollToVirtualTagMatch') {
-                currentIndex = msg.currentIndex;
-                virtualTagTotalMatches = msg.totalMatches;
-                updateUI();
-
-                isVirtualTagJumping = true;
-                executeScrollToLine(msg.filePath, msg.line);
-                return;
-            }
-
             if (msg.type === 'setPreviewCount') {
                 setPreviewFileCount(msg.count);
-                return;
-            }
-
-            if (msg?.type === 'virtualTagCurrentChanged') {
-                currentIndex = msg.currentIndex;
-                virtualTagTotalMatches = msg.totalMatches;
-                updateUI();
                 return;
             }
         });

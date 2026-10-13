@@ -219,118 +219,6 @@ async function handleWebviewMessage(
 ) {
     if (!message) { return; }
 
-    if (
-        message.type === 'virtualTagNext' ||
-        message.type === 'virtualTagPrev'
-    ) {
-        const state = getPreviewState(panel);
-        const session = state?.virtualTagSession;
-
-        if (!session) {
-            return;
-        }
-
-        const totalMatches = session.matches.reduce(
-            (total, file) => total + file.matches.length,
-            0
-        );
-
-        if (totalMatches === 0) {
-            return;
-        }
-
-        const direction = message.type === 'virtualTagNext' ? 1 : -1;
-
-        session.currentIndex = (
-            session.currentIndex + direction + totalMatches
-        ) % totalMatches;
-
-        let index = 0;
-
-        for (const file of session.matches) {
-            for (const match of file.matches) {
-                if (index === session.currentIndex) {
-                    session.isScrollLocked = true;
-                    panel.webview.postMessage({
-                        type: 'scrollToVirtualTagMatch',
-                        filePath: file.meta.filePath,
-                        line: match.line,
-                        start: match.start,
-                        end: match.end,
-                        currentIndex: session.currentIndex,
-                        totalMatches
-                    });
-
-                    return;
-                }
-
-                index++;
-            }
-        }
-
-        return;
-    }
-
-    if (message.type === 'virtualTagScroll') {
-        const state = getPreviewState(panel);
-        const session = state?.virtualTagSession;
-
-        if (!session || session.isScrollLocked) {
-            return;
-        }
-
-        let currentIndex = -1;
-        let minDistance = Infinity;
-        let index = 0;
-
-        for (const file of session.matches) {
-            if (file.meta.filePath === message.filePath) {
-                for (const match of file.matches) {
-                    const distance = Math.abs(
-                        match.line - message.line
-                    );
-
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        currentIndex = index;
-                    }
-
-                    index++;
-                }
-            } else {
-                index += file.matches.length;
-            }
-        }
-
-        if (currentIndex >= 0) {
-            session.currentIndex = currentIndex;
-
-            const totalMatches = session.matches.reduce(
-                (total, file) => total + file.matches.length,
-                0
-            );
-
-            panel.webview.postMessage({
-                type: 'virtualTagCurrentChanged',
-                currentIndex: session.currentIndex,
-                totalMatches
-            });
-        }
-
-        return;
-    }
-
-    if (message.type === 'virtualTagScrollEnd') {
-        const state = getPreviewState(panel);
-        const session = state?.virtualTagSession;
-
-        if (session) {
-            session.isScrollLocked = false;
-        }
-
-        return;
-    }
-
     if (message.type === 'openExternal') {
         await vscode.env.openExternal(vscode.Uri.parse(message.url));
         return;
@@ -513,8 +401,6 @@ async function buildHtml(
             keyword: highlight.keyword,
             caseSensitive,
             matches: [],
-            currentIndex: 0,
-            isScrollLocked: false
         };
     }
 
@@ -627,10 +513,14 @@ async function buildHtml(
         isDark,
         vscode.Uri.file(extensionContext.extensionPath)
     );
-    const virtualTagCount = virtualTagSession?.matches.reduce(
-        (total, file) => total + file.matches.length,
-        0
-    ) ?? 0;
+    const virtualTagMatches = virtualTagSession
+        ? virtualTagSession.matches.flatMap((file) =>
+            file.matches.map((match) => ({
+                filePath: file.meta.filePath,
+                line: match.line
+            }))
+        )
+        : [];
 
     const html = template
         .replace(/{{cspSource}}/g, webview.cspSource)
@@ -638,7 +528,8 @@ async function buildHtml(
         .replace(/{{katexCssUri}}/g, katexCssUri.toString())
         .replace(/{{themeUrl}}/g, themeUrl)
         .replace(/{{hintText}}/g, hintText)
-        .replace(/{{virtualTagCount}}/g, String(virtualTagCount))
+        .replace(/{{virtualTagMatches}}/g,
+            JSON.stringify(virtualTagMatches).replace(/</g, '\\u003c'))
         .replace(/{{content}}/g, htmlContent)
         .replace(/{{warning}}/g, warningHtml)
         .replace(/{{highlightRules}}/g, (() => {

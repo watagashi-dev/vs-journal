@@ -32,6 +32,4 @@ export type VirtualTagSession = {
   keyword: string;
   caseSensitive: boolean;
   matches: VirtualTagFile[];
-  currentIndex: number;
-  isScrollLocked: boolean;
 };
