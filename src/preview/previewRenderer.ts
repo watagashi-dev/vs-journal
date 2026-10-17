@@ -283,10 +283,67 @@ export function createMarkdownIt(
 </div>`;
     };
 
+    function highlightHtmlTextNodes(
+        html: string,
+        keyword: string | undefined,
+        caseSensitive: boolean
+    ): string {
+        if (!keyword) {
+            return html;
+        }
+
+        const segments: string[] = [];
+        const tokenPattern =
+            /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>|<\/?[a-zA-Z][^>]*>|<![^>]*>/g;
+
+        let lastIndex = 0;
+        let match: RegExpExecArray | null;
+
+        const appendText = (text: string): void => {
+            if (!text) {
+                return;
+            }
+
+            const textSegments = buildTagSegments(
+                text,
+                keyword,
+                caseSensitive
+            );
+
+            for (const segment of textSegments) {
+                if (!segment.virtualTag) {
+                    segments.push(segment.text);
+                    continue;
+                }
+
+                segments.push(
+                    `<span class="vjs-virtual-tag" data-virtual="true">${md.utils.escapeHtml(segment.text)}</span>`
+                );
+            }
+        };
+
+        while ((match = tokenPattern.exec(html)) !== null) {
+            appendText(html.slice(lastIndex, match.index));
+            segments.push(match[0]);
+            lastIndex = match.index + match[0].length;
+        }
+
+        appendText(html.slice(lastIndex));
+
+        return segments.join('');
+    }
+
     const defaultHtmlBlock = md.renderer.rules.html_block;
     md.renderer.rules.html_block = (tokens, idx, options, env, self) => {
         const token = tokens[idx];
         let html = token.content;
+        if (highlightKeyword) {
+            html = highlightHtmlTextNodes(
+                html,
+                highlightKeyword,
+                caseSensitive
+            );
+        }
         if (token.map && html.trimStart().startsWith('<table')) {
             const start = token.map[0];
             const end = token.map[1];
@@ -402,7 +459,6 @@ export function createMarkdownIt(
             ].sort((a, b) => a.line - b.line);
 
             let matchIndex = 0;
-
             state.tokens.forEach((token, index) => {
                 // Keep virtual tag detection for code blocks.
                 if (token.type === 'fence') {

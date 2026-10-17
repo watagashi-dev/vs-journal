@@ -264,7 +264,6 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         if (!element.node && element.type === 'section') {
             const section = TAG_SECTIONS.find(s => s.key === element.sectionKey)!;
             const nodes = section.getNodes(this);
-
             if (nodes.length === 0 && section.emptyLabel) {
                 const empty = new VSTagItem(
                     null,
@@ -294,9 +293,29 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
             const file = element.file;
             const parentTag = element.parentTag;
 
-            const headings = file.headings.filter(
-                heading => heading.tags.includes(parentTag)
-            );
+            const headings = file.headings.filter((heading) => {
+                if (element.sectionKey === 'user') {
+                    return heading.tags.includes(parentTag);
+                }
+
+                if (element.sectionKey === 'virtual') {
+                    const caseSensitive = vscode.workspace
+                        .getConfiguration('vs-journal')
+                        .get<boolean>('virtualTags.caseSensitive', true);
+
+                    const text = caseSensitive
+                        ? heading.rawText
+                        : heading.rawText.toLowerCase();
+
+                    const tag = caseSensitive
+                        ? parentTag
+                        : parentTag.toLowerCase();
+
+                    return text.includes(tag);
+                }
+
+                return false;
+            });
 
             return Promise.resolve(
                 headings.map(heading => {
@@ -322,7 +341,8 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
                             context: {
                                 kind: 'file'
                             },
-                            scrollLine: heading.line
+                            scrollLine: heading.line,
+                            highlight: element.highlight
                         }]
                     };
                     return item;
@@ -360,10 +380,29 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         );
 
         for (const file of sortedFiles) {
-            const headings = file.headings.filter(
-                heading => heading.tags.includes(node.path)
-            );
+            const headings = file.headings.filter((heading) => {
+                if (element.sectionKey === 'user') {
+                    return heading.tags.includes(node.path);
+                }
 
+                if (element.sectionKey === 'virtual') {
+                    const caseSensitive = vscode.workspace
+                        .getConfiguration('vs-journal')
+                        .get<boolean>('virtualTags.caseSensitive', true);
+
+                    const text = caseSensitive
+                        ? heading.rawText
+                        : heading.rawText.toLowerCase();
+
+                    const tag = caseSensitive
+                        ? node.path
+                        : node.path.toLowerCase();
+
+                    return text.includes(tag);
+                }
+
+                return false;
+            });
             const filePath = getJournalRelativePath(file.filePath);
             // const stateKey = `file:${element.sectionKey}:${node.path}:${filePath}`;
 

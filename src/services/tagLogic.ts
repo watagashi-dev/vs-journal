@@ -179,9 +179,7 @@ export function parseHeading(
     line: string,
     lineNumber: number
 ): HeadingMeta | null {
-
     const trimmed = line.trim();
-
     const match = trimmed.match(/^(#+)\s+(.*)$/);
 
     if (!match) {
@@ -189,42 +187,31 @@ export function parseHeading(
     }
 
     const level = match[1].length;
-
-    // H1 is the file title
-    if (level === 1) {
-        return null;
-    }
-
     const content = match[2];
 
-    // Validate the heading's tag structure
-    if (!isHeadingTagPartValid(trimmed, false)) {
-        return null;
-    }
-
-    const tags = extractTags(trimmed);
-
-    // No tag -> not a heading tag
-    if (tags.length === 0) {
-        return null;
-    }
-
-    const ranges = getTagRanges(content);
-
+    let tags: string[] = [];
     let text = content;
 
-    for (let i = ranges.length - 1; i >= 0; i--) {
-        const range = ranges[i];
+    // Extract heading tags only when the tag structure is valid.
+    if (isHeadingTagPartValid(trimmed, false)) {
+        tags = extractTags(trimmed);
 
-        text =
-            text.slice(0, range.start) +
-            text.slice(range.end);
+        const ranges = getTagRanges(content);
+
+        for (let i = ranges.length - 1; i >= 0; i--) {
+            const range = ranges[i];
+
+            text =
+                text.slice(0, range.start) +
+                text.slice(range.end);
+        }
     }
 
     text = text.trim();
 
     return {
         text,
+        rawText: trimmed,
         level,
         line: lineNumber,
         tags

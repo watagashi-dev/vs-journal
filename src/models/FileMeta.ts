@@ -1,5 +1,6 @@
 export interface HeadingMeta {
   text: string;
+  rawText: string;
   level: number;
   line: number;
   tags: string[];
