@@ -571,8 +571,6 @@ hljs.registerLanguage('vhdl', vhdl);
         : [];
     let virtualTagTotalMatches = virtualTagMatches.length;
 
-    console.log('virtualTagMatches:', virtualTagMatches);
-
     function navigateVirtualTagMatch(delta: number): void {
         const totalMatches = virtualTagMatches.length;
         if (totalMatches === 0) {
