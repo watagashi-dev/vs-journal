@@ -410,7 +410,6 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
                 null,
                 file.title,
                 headings.length > 0
-                    //? this.getCollapsibleState(false, stateKey)
                     ? vscode.TreeItemCollapsibleState.Collapsed
                     : vscode.TreeItemCollapsibleState.None,
                 'file'
@@ -470,10 +469,14 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         const contextValue = node.files.length > 0
             ? `${context}:${sortContext}`
             : context;
+        const collapsibleState = section?.key === 'virtual'
+            ? vscode.TreeItemCollapsibleState.Expanded
+            : this.getCollapsibleState(false, stateKey);
+
         const item = new VSTagItem(
             node,
             label,
-            this.getCollapsibleState(false, stateKey),
+            collapsibleState,
             contextValue
         );
 
