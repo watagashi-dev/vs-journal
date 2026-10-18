@@ -1,7 +1,6 @@
 import {
     FileMeta,
     VirtualTagFile,
-    VirtualTagMatch
 } from '../models/FileMeta';
 import {
     virtualTagSet,
@@ -30,7 +29,7 @@ function addMetaToTagIndex(tag: string, meta: FileMeta): void {
     const key = filePathToKey(meta.filePath);
     fileMap.set(key, {
         meta,
-        matches: []
+        matchedLines: []
     });
 }
 
@@ -39,8 +38,8 @@ export function findVirtualTagMatches(
     content: string,
     meta: FileMeta,
     caseSensitive: boolean
-): VirtualTagMatch[] {
-    const matches: VirtualTagMatch[] = [];
+): number[] {
+    const matches: number[] = [];
 
     const source = caseSensitive
         ? content
@@ -80,13 +79,7 @@ export function findVirtualTagMatches(
             const heading = meta.headings.some(
                 item => item.line === line
             );
-
-            matches.push({
-                line,
-                start: index,
-                end: index + tag.length,
-                isHeading: heading
-            });
+            matches.push(line);
 
             searchStart = index + tag.length;
         }

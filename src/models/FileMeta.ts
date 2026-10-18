@@ -17,16 +17,9 @@ export interface FileMeta {
   size: number;        // File size (bytes)
 }
 
-export interface VirtualTagMatch {
-  line: number;
-  start: number;
-  end: number;
-  isHeading: boolean;
-}
-
 export interface VirtualTagFile {
   meta: FileMeta;
-  matches: VirtualTagMatch[];
+  matchedLines: number[];
 }
 
 export type VirtualTagSession = {

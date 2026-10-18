@@ -454,9 +454,12 @@ export function createMarkdownIt(
         'vjs-tag-mark',
         (state) => {
             // Sort virtual tag matches by source line.
+            const sortedMatches = virtualTagFile?.matchedLines ?? [];
+            /*
             const sortedMatches = [
-                ...(virtualTagFile?.matches ?? [])
-            ].sort((a, b) => a.line - b.line);
+                ...(virtualTagFile?.matchedline ?? [])
+            ].sort((a, b) => a - b);
+            */
 
             let matchIndex = 0;
             state.tokens.forEach((token, index) => {
@@ -492,7 +495,7 @@ export function createMarkdownIt(
 
                     while (
                         matchIndex < sortedMatches.length &&
-                        sortedMatches[matchIndex].line < startLine
+                        sortedMatches[matchIndex] < startLine
                     ) {
                         matchIndex++;
                     }
@@ -501,10 +504,10 @@ export function createMarkdownIt(
 
                     while (
                         currentMatchIndex < sortedMatches.length &&
-                        sortedMatches[currentMatchIndex].line < endLine
+                        sortedMatches[currentMatchIndex] < endLine
                     ) {
                         tokenLineMatches.add(
-                            sortedMatches[currentMatchIndex].line
+                            sortedMatches[currentMatchIndex]
                         );
                         currentMatchIndex++;
                     }

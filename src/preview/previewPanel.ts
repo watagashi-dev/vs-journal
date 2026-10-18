@@ -440,7 +440,7 @@ async function buildHtml(
 
             virtualTagFile = cached ?? {
                 meta: fileMeta,
-                matches: findVirtualTagMatches(
+                matchedLines: findVirtualTagMatches(
                     highlight.keyword,
                     text,
                     fileMeta,
@@ -515,9 +515,9 @@ async function buildHtml(
     );
     const virtualTagMatches = virtualTagSession
         ? virtualTagSession.matches.flatMap((file) =>
-            file.matches.map((match) => ({
+            file.matchedLines.map((match) => ({
                 filePath: file.meta.filePath,
-                line: match.line
+                line: match
             }))
         )
         : [];
