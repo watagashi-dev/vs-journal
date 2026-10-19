@@ -1,6 +1,17 @@
 # Change Log
 
-## [0.7.0] - 2026-09-
+## [0.7.1] - 2026-10-
+
+### Changed
+- Refactored virtual tag rendering and expanded highlighting support to text within tables and image alt text.
+- Improved virtual tag navigation and synchronization between jump targets and the current position.
+- Added support for displaying headings containing virtual tags in the tag tree.
+- Changed heading tag items to be expanded by default.
+
+### Fixed
+- Fixed an issue that prevented virtual tags from being deleted.
+
+## [0.7.0] - 2026-09-28
 
 ### Changed
 
