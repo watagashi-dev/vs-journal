@@ -285,13 +285,19 @@ suite('Tag Logic Tests', () => {
 
 suite('parseHeading Tests', () => {
 
-    test('H1 should be ignored', () => {
+    test('H1 should not be ignored', () => {
         const result = parseHeading(
             '# VS Journal 0.6.1',
             0
         );
 
-        assert.strictEqual(result, null);
+        assert.deepStrictEqual(result, {
+            rawText: '# VS Journal 0.6.1',
+            text: 'VS Journal 0.6.1',
+            level: 1,
+            line: 0,
+            tags: []
+        });
     });
 
     test('heading without tag should be ignored', () => {
@@ -300,7 +306,13 @@ suite('parseHeading Tests', () => {
             1
         );
 
-        assert.strictEqual(result, null);
+        assert.deepStrictEqual(result, {
+            text: '見出し1',
+            rawText: '## 見出し1',
+            level: 2,
+            line: 1,
+            tags: []
+        });
     });
 
     test('H2 with tag should be parsed', () => {
@@ -311,6 +323,7 @@ suite('parseHeading Tests', () => {
 
         assert.deepStrictEqual(result, {
             text: '見出し2',
+            rawText: '## 見出し2 #別タグ',
             level: 2,
             line: 2,
             tags: ['別タグ']
@@ -325,6 +338,7 @@ suite('parseHeading Tests', () => {
 
         assert.deepStrictEqual(result, {
             text: '見出し2-2',
+            rawText: '### 見出し2-2 #別タグ',
             level: 3,
             line: 3,
             tags: ['別タグ']
