@@ -1,6 +1,6 @@
 # Change Log
 
-## [0.7.1] - 2026-10-
+## [0.7.1] - 2026-10-24
 
 ### Changed
 - Refactored virtual tag rendering and expanded highlighting support to text within tables and image alt text.
