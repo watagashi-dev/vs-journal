@@ -515,9 +515,9 @@ async function buildHtml(
     );
     const virtualTagMatches = virtualTagSession
         ? virtualTagSession.matches.flatMap((file) =>
-            file.matchedLines.map((match) => ({
+            file.matchedLines.map((line) => ({
                 filePath: file.meta.filePath,
-                line: match
+                line
             }))
         )
         : [];

@@ -41,10 +41,6 @@ export function findVirtualTagMatches(
 ): number[] {
     const matches: number[] = [];
 
-    const source = caseSensitive
-        ? content
-        : content.toLowerCase();
-
     const target = caseSensitive
         ? tag
         : tag.toLowerCase();
@@ -54,37 +50,26 @@ export function findVirtualTagMatches(
     }
 
     const lines = content.split(/\r?\n/);
-    let contentOffset = 0;
 
     for (let line = 0; line < lines.length; line++) {
         const lineText = lines[line];
 
-        const lineSource = source.slice(
-            contentOffset,
-            contentOffset + lineText.length
-        );
+        const lineSource = caseSensitive
+            ? lineText
+            : lineText.toLowerCase();
 
         let searchStart = 0;
 
         while (true) {
-            const index = lineSource.indexOf(
-                target,
-                searchStart
-            );
+            const index = lineSource.indexOf(target, searchStart);
 
             if (index === -1) {
                 break;
             }
 
-            const heading = meta.headings.some(
-                item => item.line === line
-            );
             matches.push(line);
-
-            searchStart = index + tag.length;
+            searchStart = index + target.length;
         }
-
-        contentOffset += lineText.length + 1;
     }
 
     return matches;
@@ -180,13 +165,11 @@ export interface TagSegment {
     text: string;
     virtualTag: boolean;
 }
-
 export function buildTagSegments(
     content: string,
     keyword: string | undefined,
     caseSensitive: boolean
 ): TagSegment[] {
-
     if (!keyword) {
         return [
             {
@@ -196,56 +179,80 @@ export function buildTagSegments(
         ];
     }
 
-    const source = caseSensitive
-        ? content
-        : content.toLowerCase();
-
     const target = caseSensitive
         ? keyword
         : keyword.toLowerCase();
 
+    if (target.length === 0) {
+        return [
+            {
+                text: content,
+                virtualTag: false
+            }
+        ];
+    }
+
     const segments: TagSegment[] = [];
+    let position = 0;
 
-    let searchStart = 0;
+    while (position < content.length) {
+        const remaining = content.slice(position);
+        const source = caseSensitive
+            ? remaining
+            : remaining.toLowerCase();
 
-    while (true) {
-        const index = source.indexOf(
-            target,
-            searchStart
-        );
+        const index = source.indexOf(target);
 
         if (index === -1) {
             break;
         }
 
-        // ヒット前
-        if (index > searchStart) {
+        // Find the matching position in the original content.
+        let originalIndex = position;
+        let lowerLength = 0;
+
+        while (originalIndex < content.length && lowerLength < index) {
+            const char = content[originalIndex];
+            const lowerChar = caseSensitive
+                ? char
+                : char.toLowerCase();
+
+            lowerLength += lowerChar.length;
+            originalIndex += char.length;
+        }
+
+        if (originalIndex > position) {
             segments.push({
-                text: content.slice(
-                    searchStart,
-                    index
-                ),
+                text: content.slice(position, originalIndex),
                 virtualTag: false
             });
         }
 
-        // ヒット部分
+        // Find the end of the match in the original content.
+        let originalEnd = originalIndex;
+        let matchedLength = 0;
+
+        while (originalEnd < content.length && matchedLength < target.length) {
+            const char = content[originalEnd];
+            const lowerChar = caseSensitive
+                ? char
+                : char.toLowerCase();
+
+            matchedLength += lowerChar.length;
+            originalEnd += char.length;
+        }
+
         segments.push({
-            text: content.slice(
-                index,
-                index + keyword.length
-            ),
+            text: content.slice(originalIndex, originalEnd),
             virtualTag: true
         });
 
-        searchStart =
-            index + keyword.length;
+        position = originalEnd;
     }
 
-    // 残り
-    if (searchStart < content.length) {
+    if (position < content.length) {
         segments.push({
-            text: content.slice(searchStart),
+            text: content.slice(position),
             virtualTag: false
         });
     }
