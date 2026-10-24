@@ -146,9 +146,48 @@ hljs.registerLanguage('vhdl', vhdl);
         }
     }
 
+    let mouseDownPosition: { x: number; y: number } | undefined;
+    let suppressNextClick = false;
+
     function setupClickHandler(): void {
-        document.body.addEventListener('click', handleClick);
+        document.body.addEventListener('mousedown', (e: MouseEvent) => {
+            mouseDownPosition = {
+                x: e.clientX,
+                y: e.clientY
+            };
+            suppressNextClick = false;
+        });
+
+        document.body.addEventListener('mouseup', (e: MouseEvent) => {
+            if (!mouseDownPosition) {
+                return;
+            }
+
+            const dx = e.clientX - mouseDownPosition.x;
+            const dy = e.clientY - mouseDownPosition.y;
+            const threshold = 5;
+
+            suppressNextClick =
+                Math.sqrt(dx * dx + dy * dy) >= threshold;
+
+            mouseDownPosition = undefined;
+        });
+
+        document.body.addEventListener('click', (e: MouseEvent) => {
+            if (suppressNextClick) {
+                suppressNextClick = false;
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+
+            handleClick(e);
+        });
     }
+
+    //    function setupClickHandler(): void {
+    //        document.body.addEventListener('click', handleClick);
+    //    }
 
     // =========================================================
     // Keyboard
