@@ -18,7 +18,7 @@ const log: LanguageFn = (hljs) => {
             },
             {
                 className: 'number',
-                begin: /\b\d+(?:\.\d+)?\b/
+                begin: /\b(?:0x[0-9a-f]+|[0-9a-f]{2}|\d+(?:\.\d+)?)\b/i
             },
             {
                 className: 'keyword',
@@ -26,8 +26,13 @@ const log: LanguageFn = (hljs) => {
             },
             {
                 className: 'string',
-                begin: /"(?:\\.|[^"\\])*"/,
-                end: /"/
+                begin: /"/,
+                end: /"/,
+                contains: [
+                    {
+                        begin: /\\./
+                    }
+                ]
             }
         ]
     };

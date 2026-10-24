@@ -17,10 +17,16 @@ const syslog: LanguageFn = () => {
                 begin: /(?<=^<\d{1,3}>)\d+(?=\s)/
             },
 
-            // RFC 5424 timestamp
+            // Date
+            {
+                className: 'number',
+                begin: /\b\d{4}-\d{2}-\d{2}(?=T|\s)/
+            },
+
+            // Time with optional fractional seconds and timezone
             {
                 className: 'string',
-                begin: /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})/
+                begin: /(?<=T|\s)\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?\b/
             },
 
             // RFC 3164 timestamp
@@ -32,13 +38,13 @@ const syslog: LanguageFn = () => {
             // RFC 5424 hostname
             {
                 className: 'title',
-                begin: /(?<=\s)(?:[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?)(?=\s+\S+\s+(?:\S+|-)\s+(?:\S+|-)\s+)/
+                begin: /(?<=^<\d{1,3}>\d{1,2}\s+\S+\s+)[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?(?=\s+\S+\s+(?:\S+|-)\s+(?:\S+|-)\s+)/
             },
 
             // RFC 5424 APP-NAME
             {
                 className: 'keyword',
-                begin: /(?<=\s)[A-Za-z0-9._/-]+(?=\s+(?:\d+|-)\s+(?:[A-Za-z0-9._-]+|-)\s+)/
+                begin: /(?<=^<\d{1,3}>\d{1,2}\s+\S+\s+)[A-Za-z0-9._/-]+(?=\s+(?:\d+|-)\s+(?:[A-Za-z0-9._-]+|-)\s+)/
             },
 
             // RFC 5424 PROCID
@@ -50,7 +56,7 @@ const syslog: LanguageFn = () => {
             // RFC 5424 MSGID
             {
                 className: 'symbol',
-                begin: /(?<=\s)[A-Za-z0-9._-]+(?=\s+(?:\[|-))/
+                begin: /(?<=^<\d{1,3}>\d{1,2}\s+\S+\s+\S+\s+(?:\S+|-)\s+(?:\S+|-)\s+)[A-Za-z0-9._-]+(?=\s+(?:\[|-))/
             },
 
             // RFC 5424 NILVALUE
@@ -97,6 +103,11 @@ const syslog: LanguageFn = () => {
                 className: 'title',
                 begin: /\b[A-Za-z0-9._/-]+(?=\[\d+\]:)/
             },
+            // RFC 3164 tag without PID
+            {
+                className: 'title',
+                begin: /\b[A-Za-z0-9._/-]+(?=:)/
+            },
 
             // RFC 3164 PID
             {
@@ -122,10 +133,10 @@ const syslog: LanguageFn = () => {
                 begin: /\b(?:[0-9A-Fa-f]{1,4}:){2,7}[0-9A-Fa-f]{1,4}\b/
             },
 
-            // Common syslog severity words in MESSAGE
+            // Common syslog severity words
             {
                 className: 'keyword',
-                begin: /\b(?:emerg|alert|crit|err|error|warning|warn|notice|info|debug)\b/i
+                match: /\b(?:EMERG|ALERT|CRIT|ERROR|ERR|WARNING|WARN|NOTICE|INFO|DEBUG|TRACE|FATAL)\b/i
             },
 
             // Quoted strings in MESSAGE
@@ -139,6 +150,12 @@ const syslog: LanguageFn = () => {
                         begin: /\\["\\]/
                     }
                 ]
+            },
+
+            // Numbers in MESSAGE
+            {
+                className: 'number',
+                begin: /\b(?:0x[0-9A-Fa-f]+|[0-9A-Fa-f]{2})\b/
             },
 
             // Numbers in MESSAGE
