@@ -184,6 +184,11 @@ function registerTagMarkPlugin(
                     }
 
                     if (child.type === 'text') {
+                        // Preserve text tokens inside links without virtual tag splitting.
+                        if (linkDepth > 0) {
+                            newChildren.push(child);
+                            continue;
+                        }
                         const content = child.content;
 
                         const currentLineIndex = logicalLines.findIndex(
