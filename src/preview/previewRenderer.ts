@@ -23,74 +23,272 @@ export type InlineVirtualHit = {
     keyword?: string;
 };
 
-export function createMarkdownIt(
-    webview: vscode.Webview,
-    baseUri: vscode.Uri | undefined,
-    options?: {
+function registerTagMarkPlugin(
+    md: MarkdownIt,
+    options: {
         caseSensitive: boolean;
         highlightKeyword: string | undefined;
         virtualTagFile?: VirtualTagFile;
+    } | undefined,
+    helpers: {
+        buildLogicalLines: (
+            children: any[]
+        ) => { start: number; end: number }[];
+        markVirtualTagHit: (
+            token: any,
+            value: string | string[],
+            highlightKeyword: string | undefined,
+            caseSensitive: boolean
+        ) => void;
+        appendVirtualText: (
+            content: string,
+            hasCandidate: boolean,
+            target: any[],
+            currentState: any
+        ) => void;
+        appendUserTagSegments: (
+            content: string,
+            ranges: ReturnType<typeof getTagRanges>,
+            isHeading: boolean,
+            hasSoftbreak: boolean,
+            target: any[],
+            currentState: any,
+            hasVirtualTagCandidate: boolean
+        ) => void;
     }
-) {
-    const highlightKeyword =
-        options?.highlightKeyword;
+): void {
+    const highlightKeyword = options?.highlightKeyword;
+    const caseSensitive = options?.caseSensitive ?? false;
+    const virtualTagFile = options?.virtualTagFile;
 
-    const caseSensitive =
-        options?.caseSensitive ?? false;
+    md.core.ruler.after(
+        'inline',
+        'vjs-tag-mark',
+        (state) => {
+            // Sort virtual tag matches by source line.
+            const sortedMatches = virtualTagFile?.matchedLines ?? [];
 
-    const virtualTagFile =
-        options?.virtualTagFile;
+            let matchIndex = 0;
 
-    const md = new MarkdownIt({
-        html: true,
-        linkify: true,
-        typographer: true
-    }).use(taskLists, {
-        enabled: false,
-        label: false,
-        labelAfter: false
-    }).use(texmath, {
-        engine: katex,
-        delimiters: 'dollars',
-    });
+            state.tokens.forEach((token, index) => {
+                // Keep virtual tag detection for code blocks.
+                if (token.type === 'fence') {
+                    const rawLang = token.info?.trim().split(/\s+/g)[0] ?? '';
 
-    const defaultRender = md.renderer.renderToken.bind(md.renderer);
+                    token.meta = {
+                        ...(token.meta || {}),
+                        hit: {
+                            virtual: rawLang
+                                ? matchesPreviewVirtualTag(
+                                    [rawLang],
+                                    highlightKeyword,
+                                    caseSensitive
+                                )
+                                : false
+                        }
+                    };
 
-    function applyLineAttrs(token: any) {
-        const map = token.map;
-        if (!map) { return; }
+                    return;
+                }
 
-        const start = map[0];
-        const end = map[1];
+                if (token.type !== 'inline' || !token.children) {
+                    return;
+                }
 
-        token.attrSet("data-start-line", String(start));
+                // Find virtual tag matches within this inline token's source lines.
+                const tokenLineMatches = new Set<number>();
 
-        if (typeof end === "number") {
-            token.attrSet("data-end-line", String(end));
+                if (token.map) {
+                    const startLine = token.map[0];
+                    const endLine = token.map[1];
+
+                    while (
+                        matchIndex < sortedMatches.length &&
+                        sortedMatches[matchIndex] < startLine
+                    ) {
+                        matchIndex++;
+                    }
+
+                    let currentMatchIndex = matchIndex;
+
+                    while (
+                        currentMatchIndex < sortedMatches.length &&
+                        sortedMatches[currentMatchIndex] < endLine
+                    ) {
+                        tokenLineMatches.add(
+                            sortedMatches[currentMatchIndex]
+                        );
+                        currentMatchIndex++;
+                    }
+                }
+
+                const hasSoftbreak = token.children.some(
+                    child => child.type === 'softbreak'
+                );
+
+                const context = getTagNodeContext(state.tokens, index);
+                const canProcessUserTag = context.isTagScope;
+                const isHeading = context.isHeading;
+                const logicalLines = helpers.buildLogicalLines(token.children);
+
+                const newChildren: any[] = [];
+                let linkDepth = 0;
+
+                const headingStructureValid =
+                    !isHeading ||
+                    hasValidHeadingTagStructure(token.children);
+
+                for (
+                    let childIndex = 0;
+                    childIndex < token.children.length;
+                    childIndex++
+                ) {
+                    const child = token.children[childIndex];
+
+                    // Preserve link structure without virtual hit metadata.
+                    // Detect virtual tag matches in link URLs.
+                    if (child.type === 'link_open') {
+                        const href = child.attrGet('href') ?? '';
+
+                        helpers.markVirtualTagHit(
+                            child,
+                            href,
+                            highlightKeyword,
+                            caseSensitive
+                        );
+
+                        linkDepth++;
+                    }
+
+                    if (child.type === 'link_close') {
+                        linkDepth = Math.max(0, linkDepth - 1);
+                        newChildren.push(child);
+                        continue;
+                    }
+
+                    // Preserve image tokens without virtual hit metadata.
+                    // Detect virtual tag matches in image alt text and title.
+                    if (child.type === 'image') {
+                        const alt = child.content ?? '';
+                        const title = child.attrGet('title') ?? '';
+
+                        helpers.markVirtualTagHit(
+                            child,
+                            [alt, title],
+                            highlightKeyword,
+                            caseSensitive
+                        );
+
+                        newChildren.push(child);
+                        continue;
+                    }
+
+                    if (child.type === 'text') {
+                        const content = child.content;
+
+                        const currentLineIndex = logicalLines.findIndex(
+                            logicalLine =>
+                                childIndex >= logicalLine.start &&
+                                childIndex < logicalLine.end
+                        );
+
+                        const currentLine =
+                            currentLineIndex >= 0
+                                ? logicalLines[currentLineIndex]
+                                : undefined;
+
+                        const line = token.map && currentLineIndex >= 0
+                            ? token.map[0] + currentLineIndex
+                            : undefined;
+
+                        const hasVirtualTagCandidate =
+                            !!virtualTagFile &&
+                            (
+                                !token.map ||
+                                (
+                                    line !== undefined &&
+                                    tokenLineMatches.has(line)
+                                )
+                            );
+
+                        const isValidStructure = currentLine
+                            ? isValidTagLineStructure(
+                                token.children,
+                                currentLine.start,
+                                currentLine.end
+                            )
+                            : false;
+
+                        const canCreateUserTag =
+                            canProcessUserTag &&
+                            (
+                                isHeading
+                                    ? headingStructureValid
+                                    : isValidStructure
+                            );
+
+                        const canProcessTag =
+                            canCreateUserTag &&
+                            (
+                                isTagLineValid(content, false) ||
+                                (
+                                    isHeading &&
+                                    isParsedHeadingTagPartValid(content)
+                                )
+                            );
+
+                        if (canProcessTag) {
+                            const ranges = getTagRanges(content);
+
+                            if (ranges.length > 0) {
+                                helpers.appendUserTagSegments(
+                                    content,
+                                    ranges,
+                                    isHeading,
+                                    hasSoftbreak,
+                                    newChildren,
+                                    state,
+                                    hasVirtualTagCandidate
+                                );
+
+                                continue;
+                            }
+                        }
+
+                        helpers.appendVirtualText(
+                            content,
+                            hasVirtualTagCandidate,
+                            newChildren,
+                            state
+                        );
+
+                        continue;
+                    }
+
+                    newChildren.push(child);
+                }
+
+                token.children = newChildren;
+            });
         }
-    }
+    );
+}
 
-    md.renderer.renderToken = (
-        tokens: any[],
-        idx: number,
-        options: any,
-        env?: Record<string, any>
-    ): string => {
-        const token = tokens[idx];
 
-        if (token.type === "table_open" || token.type === "thead_open" || token.type === "tbody_open") {
-            return defaultRender(tokens, idx, options);
-        }
-
-        if (token.map && token.nesting === 1) {
-            applyLineAttrs(token);
-        }
-
-        return defaultRender(tokens, idx, options);
-    };
-
+function registerImageRenderer(
+    md: MarkdownIt,
+    webview: vscode.Webview,
+    baseUri: vscode.Uri | undefined
+): void {
     const defaultImageRule = md.renderer.rules.image;
-    md.renderer.rules.image = (tokens, idx, options, env, self) => {
+
+    md.renderer.rules.image = (
+        tokens,
+        idx,
+        options,
+        env,
+        self
+    ) => {
         const token = tokens[idx];
         const src = token.attrGet("src");
         const hit = token.meta?.hit;
@@ -170,40 +368,34 @@ export function createMarkdownIt(
             ? defaultImageRule(tokens, idx, options, env, self)
             : self.renderToken(tokens, idx, options);
     };
+}
 
-    md.renderer.rules.table_open = (tokens, idx, options, env, self) => {
-        const token = tokens[idx];
-
-        // Existing processing (adding line numbers, etc.)
-        applyLineAttrs(token);
-
-        // Treat Markdown tables as border less
-        const existingClass = tokens[idx].attrGet('class');
-        if (existingClass) {
-            tokens[idx].attrSet('class', existingClass + ' vjs-md-table');
-        } else {
-            tokens[idx].attrSet('class', 'vjs-md-table');
-        }
-
-        return self.renderToken(tokens, idx, options);
-    };
-
-    md.renderer.rules.thead_open = (tokens, idx, options, env, self) => {
-        applyLineAttrs(tokens[idx]);
-        return self.renderToken(tokens, idx, options);
-    };
-
-    md.renderer.rules.tbody_open = (tokens, idx, options, env, self) => {
-        applyLineAttrs(tokens[idx]);
-        return self.renderToken(tokens, idx, options);
-    };
-
+function registerFenceRenderer(
+    md: MarkdownIt
+): void {
     const defaultFence = md.renderer.rules.fence;
-    md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+
+    md.renderer.rules.fence = (
+        tokens,
+        idx,
+        options,
+        env,
+        self
+    ) => {
         const token = tokens[idx];
+
         if (token.map) {
-            applyLineAttrs(token);
+            const map = token.map;
+            const start = map[0];
+            const end = map[1];
+
+            token.attrSet("data-start-line", String(start));
+
+            if (typeof end === "number") {
+                token.attrSet("data-end-line", String(end));
+            }
         }
+
         const rawLang = token.info?.trim().split(/\s+/g)[0] ?? "";
         if (rawLang.toLowerCase() === "math") {
             const startLine = token.attrGet("data-start-line");
@@ -220,11 +412,13 @@ export function createMarkdownIt(
         let displayLang = '';
         let hasNoTab = false;
         let hasWrap = false;
+
         if (token.info) {
             const rawLang = token.info.trim();
             const langTokens = rawLang
                 .split(/[\s_-]+/)
                 .filter(Boolean);
+
             const KNOWN_FLAGS = new Set([
                 'diff',
                 'wrap',
@@ -244,15 +438,18 @@ export function createMarkdownIt(
             const lang =
                 langTokens.find(t => !KNOWN_FLAGS.has(t.toLowerCase()))
                 ?? '';
+
             displayLang = lang;
             token.attrSet('data-language', rawLang);
 
             if (flags.has('diff')) {
                 token.attrSet('data-diff', 'true');
             }
+
             if (hasWrap) {
                 token.attrSet('data-wrap', 'true');
             }
+
             if (flags.has('linenumber')) {
                 token.attrSet('data-linenumber', 'true');
             }
@@ -270,6 +467,7 @@ export function createMarkdownIt(
 
         const isVirtual =
             token.meta?.hit?.virtual === true;
+
         return `
 <div class="vjs-code-block">
     ${!hasNoTab && displayLang
@@ -282,7 +480,13 @@ export function createMarkdownIt(
     ${html}
 </div>`;
     };
+}
 
+function registerHtmlBlockRenderer(
+    md: MarkdownIt,
+    highlightKeyword: string | undefined,
+    caseSensitive: boolean
+): void {
     function highlightHtmlTextNodes(
         html: string,
         keyword: string | undefined,
@@ -334,9 +538,17 @@ export function createMarkdownIt(
     }
 
     const defaultHtmlBlock = md.renderer.rules.html_block;
-    md.renderer.rules.html_block = (tokens, idx, options, env, self) => {
+
+    md.renderer.rules.html_block = (
+        tokens,
+        idx,
+        options,
+        env,
+        self
+    ) => {
         const token = tokens[idx];
         let html = token.content;
+
         if (highlightKeyword) {
             html = highlightHtmlTextNodes(
                 html,
@@ -344,11 +556,13 @@ export function createMarkdownIt(
                 caseSensitive
             );
         }
+
         if (token.map && html.trimStart().startsWith('<table')) {
             const start = token.map[0];
             const end = token.map[1];
 
             let attr = `data-start-line="${start}"`;
+
             if (typeof end === "number") {
                 attr += ` data-end-line="${end}"`;
             }
@@ -357,14 +571,28 @@ export function createMarkdownIt(
 
             return html;
         }
-        return defaultHtmlBlock ? defaultHtmlBlock(tokens, idx, options, env, self) : html;
+
+        return defaultHtmlBlock
+            ? defaultHtmlBlock(tokens, idx, options, env, self)
+            : html;
     };
+}
 
-    const defaultLinkOpen = md.renderer.rules.link_open || ((tokens, idx, options, env, self) => {
-        return self.renderToken(tokens, idx, options);
-    });
+function registerLinkOpenRenderer(
+    md: MarkdownIt
+): void {
+    const defaultLinkOpen = md.renderer.rules.link_open
+        || ((tokens, idx, options, env, self) => {
+            return self.renderToken(tokens, idx, options);
+        });
 
-    md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
+    md.renderer.rules.link_open = (
+        tokens,
+        idx,
+        options,
+        env,
+        self
+    ) => {
         const token = tokens[idx];
 
         if (token.attrs) {
@@ -372,14 +600,17 @@ export function createMarkdownIt(
 
             if (hrefIndex >= 0) {
                 let href = token.attrs[hrefIndex][1];
+
                 try {
                     href = decodeURIComponent(href);
                 }
                 catch {
                     // Keep original URL
                 }
+
                 // LOCAL / UNC / relative は VS Journal管理
                 const isUNC = href.startsWith('\\') && !href.startsWith('\\\\');
+
                 if (isUNC) {
                     href = '\\' + href;
                 }
@@ -391,6 +622,7 @@ export function createMarkdownIt(
         }
 
         const hit = token.meta?.hit;
+
         if (hit?.virtual) {
             token.attrJoin("class", "vjs-virtual-link-hit");
             token.attrSet("data-virtual", "true");
@@ -398,7 +630,64 @@ export function createMarkdownIt(
 
         return defaultLinkOpen(tokens, idx, options, env, self);
     };
+}
 
+function registerTableRenderers(
+    md: MarkdownIt,
+    applyLineAttrs: (token: any) => void
+): void {
+    md.renderer.rules.table_open = (
+        tokens,
+        idx,
+        options,
+        env,
+        self
+    ) => {
+        const token = tokens[idx];
+
+        // Existing processing (adding line numbers, etc.)
+        applyLineAttrs(token);
+
+        // Treat Markdown tables as border less
+        const existingClass = tokens[idx].attrGet('class');
+
+        if (existingClass) {
+            tokens[idx].attrSet('class', existingClass + ' vjs-md-table');
+        } else {
+            tokens[idx].attrSet('class', 'vjs-md-table');
+        }
+
+        return self.renderToken(tokens, idx, options);
+    };
+
+    md.renderer.rules.thead_open = (
+        tokens,
+        idx,
+        options,
+        env,
+        self
+    ) => {
+        applyLineAttrs(tokens[idx]);
+        return self.renderToken(tokens, idx, options);
+    };
+
+    md.renderer.rules.tbody_open = (
+        tokens,
+        idx,
+        options,
+        env,
+        self
+    ) => {
+        applyLineAttrs(tokens[idx]);
+        return self.renderToken(tokens, idx, options);
+    };
+}
+
+function registerTagRenderers(
+    md: MarkdownIt,
+    highlightKeyword: string | undefined,
+    caseSensitive: boolean
+): void {
     md.renderer.rules.vjs_tag = (
         tokens,
         idx
@@ -448,316 +737,226 @@ export function createMarkdownIt(
 
         return `<span class="vjs-virtual-tag" data-virtual="true">${md.utils.escapeHtml(token.content)}</span>`;
     };
+}
 
-    md.core.ruler.after(
-        'inline',
-        'vjs-tag-mark',
-        (state) => {
-            // Sort virtual tag matches by source line.
-            const sortedMatches = virtualTagFile?.matchedLines ?? [];
-            /*
-            const sortedMatches = [
-                ...(virtualTagFile?.matchedline ?? [])
-            ].sort((a, b) => a - b);
-            */
+export function createMarkdownIt(
+    webview: vscode.Webview,
+    baseUri: vscode.Uri | undefined,
+    options?: {
+        caseSensitive: boolean;
+        highlightKeyword: string | undefined;
+        virtualTagFile?: VirtualTagFile;
+    }
+) {
+    const highlightKeyword =
+        options?.highlightKeyword;
 
-            let matchIndex = 0;
-            state.tokens.forEach((token, index) => {
-                // Keep virtual tag detection for code blocks.
-                if (token.type === 'fence') {
-                    const rawLang = token.info?.trim().split(/\s+/g)[0] ?? '';
-                    token.meta = {
-                        ...(token.meta || {}),
-                        hit: {
-                            virtual: rawLang
-                                ? matchesPreviewVirtualTag(
-                                    [rawLang],
-                                    options?.highlightKeyword,
-                                    options?.caseSensitive ?? false
-                                )
-                                : false
-                        }
-                    };
+    const caseSensitive =
+        options?.caseSensitive ?? false;
 
-                    return;
-                }
+    const virtualTagFile =
+        options?.virtualTagFile;
 
-                if (token.type !== 'inline' || !token.children) {
-                    return;
-                }
+    const md = new MarkdownIt({
+        html: true,
+        linkify: true,
+        typographer: true
+    }).use(taskLists, {
+        enabled: false,
+        label: false,
+        labelAfter: false
+    }).use(texmath, {
+        engine: katex,
+        delimiters: 'dollars',
+    });
 
-                // Find virtual tag matches within this inline token's source lines.
-                const tokenLineMatches = new Set<number>();
+    const defaultRender = md.renderer.renderToken.bind(md.renderer);
 
-                if (token.map) {
-                    const startLine = token.map[0];
-                    const endLine = token.map[1];
+    function applyLineAttrs(token: any) {
+        const map = token.map;
+        if (!map) { return; }
 
-                    while (
-                        matchIndex < sortedMatches.length &&
-                        sortedMatches[matchIndex] < startLine
-                    ) {
-                        matchIndex++;
-                    }
+        const start = map[0];
+        const end = map[1];
 
-                    let currentMatchIndex = matchIndex;
+        token.attrSet("data-start-line", String(start));
 
-                    while (
-                        currentMatchIndex < sortedMatches.length &&
-                        sortedMatches[currentMatchIndex] < endLine
-                    ) {
-                        tokenLineMatches.add(
-                            sortedMatches[currentMatchIndex]
-                        );
-                        currentMatchIndex++;
-                    }
-                }
+        if (typeof end === "number") {
+            token.attrSet("data-end-line", String(end));
+        }
+    }
 
-                const hasSoftbreak = token.children.some(
-                    child => child.type === 'softbreak'
-                );
-                const context = getTagNodeContext(state.tokens, index);
-                const canProcessUserTag = context.isTagScope;
-                const isHeading = context.isHeading;
+    function appendVirtualText(
+        content: string,
+        hasCandidate: boolean,
+        target: any[],
+        currentState: any
+    ): void {
+        const segments = hasCandidate
+            ? buildTagSegments(
+                content,
+                highlightKeyword,
+                caseSensitive
+            )
+            : [{ text: content, virtualTag: false }];
 
-                // Split inline tokens into logical lines.
-                const logicalLines: {
-                    start: number;
-                    end: number;
-                }[] = [];
+        for (const segment of segments) {
+            if (!segment.text) {
+                continue;
+            }
 
-                let lineStart = 0;
+            const textToken = new currentState.Token(
+                segment.virtualTag ? 'vjs_virtual_tag' : 'text',
+                '',
+                0
+            );
 
-                for (let i = 0; i < token.children.length; i++) {
-                    if (token.children[i].type === 'softbreak') {
-                        logicalLines.push({
-                            start: lineStart,
-                            end: i
-                        });
+            textToken.content = segment.text;
+            target.push(textToken);
+        }
+    }
 
-                        lineStart = i + 1;
-                    }
-                }
+    function buildLogicalLines(children: any[]): {
+        start: number;
+        end: number;
+    }[] {
+        const logicalLines: {
+            start: number;
+            end: number;
+        }[] = [];
 
+        let lineStart = 0;
+
+        for (let i = 0; i < children.length; i++) {
+            if (children[i].type === 'softbreak') {
                 logicalLines.push({
                     start: lineStart,
-                    end: token.children.length
+                    end: i
                 });
 
-                const appendVirtualText = (
-                    content: string,
-                    hasCandidate: boolean,
-                    target: any[],
-                    currentState: any
-                ) => {
-                    const segments = hasCandidate
-                        ? buildTagSegments(
-                            content,
-                            highlightKeyword,
-                            caseSensitive
-                        )
-                        : [{ text: content, virtualTag: false }];
-
-                    for (const segment of segments) {
-                        if (!segment.text) {
-                            continue;
-                        }
-
-                        const textToken = new currentState.Token(
-                            segment.virtualTag ? 'vjs_virtual_tag' : 'text',
-                            '',
-                            0
-                        );
-
-                        textToken.content = segment.text;
-                        target.push(textToken);
-                    }
-                };
-
-                const newChildren: any[] = [];
-                let linkDepth = 0;
-
-                const headingStructureValid =
-                    !isHeading ||
-                    hasValidHeadingTagStructure(token.children);
-
-                for (
-                    let childIndex = 0;
-                    childIndex < token.children.length;
-                    childIndex++
-                ) {
-                    const child = token.children[childIndex];
-
-                    // Preserve link structure without virtual hit metadata.
-                    // Detect virtual tag matches in link URLs.
-                    if (child.type === 'link_open') {
-                        const href = child.attrGet('href') ?? '';
-
-                        child.meta = {
-                            ...(child.meta || {}),
-                            hit: {
-                                ...(child.meta?.hit || {}),
-                                virtual: matchesPreviewVirtualTag(
-                                    href,
-                                    highlightKeyword,
-                                    caseSensitive
-                                )
-                            }
-                        };
-
-                        linkDepth++;
-                    }
-
-                    if (child.type === 'link_close') {
-                        linkDepth = Math.max(0, linkDepth - 1);
-                        newChildren.push(child);
-                        continue;
-                    }
-
-                    // Preserve image tokens without virtual hit metadata.
-                    // Detect virtual tag matches in image alt text and title.
-                    if (child.type === 'image') {
-                        const alt = child.content ?? '';
-                        const title = child.attrGet('title') ?? '';
-
-                        const isVirtualHit = matchesPreviewVirtualTag(
-                            [alt, title],
-                            highlightKeyword,
-                            caseSensitive
-                        );
-
-                        child.meta = {
-                            ...(child.meta || {}),
-                            hit: {
-                                ...(child.meta?.hit || {}),
-                                virtual: isVirtualHit
-                            }
-                        };
-
-                        newChildren.push(child);
-                        continue;
-                    }
-
-                    if (child.type === 'text') {
-                        const content = child.content;
-
-                        const currentLineIndex = logicalLines.findIndex(
-                            logicalLine =>
-                                childIndex >= logicalLine.start &&
-                                childIndex < logicalLine.end
-                        );
-
-                        const currentLine =
-                            currentLineIndex >= 0
-                                ? logicalLines[currentLineIndex]
-                                : undefined;
-
-                        const line = token.map && currentLineIndex >= 0
-                            ? token.map[0] + currentLineIndex
-                            : undefined;
-
-                        const hasVirtualTagCandidate =
-                            !!virtualTagFile &&
-                            (
-                                !token.map ||
-                                (
-                                    line !== undefined &&
-                                    tokenLineMatches.has(line)
-                                )
-                            );
-
-                        const isValidStructure = currentLine
-                            ? isValidTagLineStructure(
-                                token.children,
-                                currentLine.start,
-                                currentLine.end
-                            )
-                            : false;
-
-                        const canCreateUserTag =
-                            canProcessUserTag &&
-                            (
-                                isHeading
-                                    ? headingStructureValid
-                                    : isValidStructure
-                            );
-
-                        const canProcessTag =
-                            canCreateUserTag &&
-                            (
-                                isTagLineValid(content, false) ||
-                                (
-                                    isHeading &&
-                                    isParsedHeadingTagPartValid(content)
-                                )
-                            );
-
-                        if (canProcessTag) {
-                            const ranges = getTagRanges(content);
-
-                            if (ranges.length > 0) {
-                                let lastIndex = 0;
-
-                                for (const range of ranges) {
-                                    if (range.start > lastIndex) {
-                                        appendVirtualText(
-                                            content.slice(lastIndex, range.start),
-                                            hasVirtualTagCandidate,
-                                            newChildren,
-                                            state
-                                        );
-                                    }
-
-                                    const tagText = content.slice(
-                                        range.start,
-                                        range.end
-                                    );
-
-                                    const tagToken = new state.Token(
-                                        'vjs_tag',
-                                        '',
-                                        0
-                                    );
-                                    tagToken.content = tagText;
-                                    tagToken.meta = {
-                                        userTag: true,
-                                        heading: isHeading,
-                                        hasSoftbreak: hasSoftbreak ?? false
-                                    };
-
-                                    newChildren.push(tagToken);
-                                    lastIndex = range.end;
-                                }
-
-                                if (lastIndex < content.length) {
-                                    appendVirtualText(
-                                        content.slice(lastIndex),
-                                        hasVirtualTagCandidate,
-                                        newChildren,
-                                        state
-                                    );
-                                }
-
-                                continue;
-                            }
-                        }
-
-                        appendVirtualText(
-                            content,
-                            hasVirtualTagCandidate,
-                            newChildren,
-                            state
-                        );
-                        continue;
-                    }
-
-                    newChildren.push(child);
-                }
-
-                token.children = newChildren;
-            });
+                lineStart = i + 1;
+            }
         }
+
+        logicalLines.push({
+            start: lineStart,
+            end: children.length
+        });
+
+        return logicalLines;
+    }
+
+    function markVirtualTagHit(
+        token: any,
+        value: string | string[],
+        highlightKeyword: string | undefined,
+        caseSensitive: boolean
+    ): void {
+        token.meta = {
+            ...(token.meta || {}),
+            hit: {
+                ...(token.meta?.hit || {}),
+                virtual: matchesPreviewVirtualTag(
+                    value,
+                    highlightKeyword,
+                    caseSensitive
+                )
+            }
+        };
+    }
+
+    function appendUserTagSegments(
+        content: string,
+        ranges: { start: number; end: number }[],
+        isHeading: boolean,
+        hasSoftbreak: boolean | undefined,
+        target: any[],
+        currentState: any,
+        hasVirtualTagCandidate: boolean
+    ): void {
+        let lastIndex = 0;
+
+        for (const range of ranges) {
+            if (range.start > lastIndex) {
+                appendVirtualText(
+                    content.slice(lastIndex, range.start),
+                    hasVirtualTagCandidate,
+                    target,
+                    currentState
+                );
+            }
+
+            const tagText = content.slice(range.start, range.end);
+
+            const tagToken = new currentState.Token(
+                'vjs_tag',
+                '',
+                0
+            );
+            tagToken.content = tagText;
+            tagToken.meta = {
+                userTag: true,
+                heading: isHeading,
+                hasSoftbreak: hasSoftbreak ?? false
+            };
+
+            target.push(tagToken);
+            lastIndex = range.end;
+        }
+
+        if (lastIndex < content.length) {
+            appendVirtualText(
+                content.slice(lastIndex),
+                hasVirtualTagCandidate,
+                target,
+                currentState
+            );
+        }
+    }
+
+    md.renderer.renderToken = (
+        tokens: any[],
+        idx: number,
+        options: any,
+        env?: Record<string, any>
+    ): string => {
+        const token = tokens[idx];
+
+        if (token.type === "table_open" || token.type === "thead_open" || token.type === "tbody_open") {
+            return defaultRender(tokens, idx, options);
+        }
+
+        if (token.map && token.nesting === 1) {
+            applyLineAttrs(token);
+        }
+
+        return defaultRender(tokens, idx, options);
+    };
+
+    registerImageRenderer(md, webview, baseUri);
+    registerTableRenderers(md, applyLineAttrs);
+    registerFenceRenderer(md);
+
+    registerHtmlBlockRenderer(
+        md,
+        highlightKeyword,
+        caseSensitive
     );
+
+    registerLinkOpenRenderer(md);
+
+    registerTagRenderers(
+        md,
+        highlightKeyword,
+        caseSensitive
+    );
+
+    registerTagMarkPlugin(md, options, {
+        buildLogicalLines,
+        markVirtualTagHit,
+        appendVirtualText,
+        appendUserTagSegments
+    });
 
     return md;
 }
