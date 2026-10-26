@@ -300,8 +300,8 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
 
                 if (element.sectionKey === 'virtual') {
                     const caseSensitive = vscode.workspace
-                        .getConfiguration('vs-journal')
-                        .get<boolean>('virtualTags.caseSensitive', true);
+                        .getConfiguration('vsJournal')
+                        .get<boolean>('virtualTags.caseSensitive', false);
 
                     const text = caseSensitive
                         ? heading.rawText
@@ -387,8 +387,8 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
 
                 if (element.sectionKey === 'virtual') {
                     const caseSensitive = vscode.workspace
-                        .getConfiguration('vs-journal')
-                        .get<boolean>('virtualTags.caseSensitive', true);
+                        .getConfiguration('vsJournal')
+                        .get<boolean>('virtualTags.caseSensitive', false);
 
                     const text = caseSensitive
                         ? heading.rawText
