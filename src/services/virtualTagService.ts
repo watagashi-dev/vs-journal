@@ -8,17 +8,11 @@ import {
 } from '../state';
 import { filePathToKey } from '../extension';
 
-function matchVirtualTag(
+function addMetaToTagIndex(
     tag: string,
-    content: string,
-    caseSensitive: boolean
-): boolean {
-    const c = caseSensitive ? content : content.toLowerCase();
-    const t = caseSensitive ? tag : tag.toLowerCase();
-    return c.includes(t);
-}
-
-function addMetaToTagIndex(tag: string, meta: FileMeta): void {
+    meta: FileMeta,
+    matchedLines: number[]
+): void {
     let fileMap = virtualTagIndexMap.get(tag);
 
     if (!fileMap) {
@@ -29,14 +23,13 @@ function addMetaToTagIndex(tag: string, meta: FileMeta): void {
     const key = filePathToKey(meta.filePath);
     fileMap.set(key, {
         meta,
-        matchedLines: []
+        matchedLines
     });
 }
 
 export function findVirtualTagMatches(
     tag: string,
     content: string,
-    meta: FileMeta,
     caseSensitive: boolean
 ): number[] {
     const matches: number[] = [];
@@ -52,16 +45,14 @@ export function findVirtualTagMatches(
     const lines = content.split(/\r?\n/);
 
     for (let line = 0; line < lines.length; line++) {
-        const lineText = lines[line];
-
-        const lineSource = caseSensitive
-            ? lineText
-            : lineText.toLowerCase();
+        const lineText = caseSensitive
+            ? lines[line]
+            : lines[line].toLowerCase();
 
         let searchStart = 0;
 
         while (true) {
-            const index = lineSource.indexOf(target, searchStart);
+            const index = lineText.indexOf(target, searchStart);
 
             if (index === -1) {
                 break;
@@ -73,6 +64,18 @@ export function findVirtualTagMatches(
     }
 
     return matches;
+}
+
+function matchVirtualTag(
+    tag: string,
+    content: string,
+    caseSensitive: boolean
+): boolean {
+    return findVirtualTagMatches(
+        tag,
+        content,
+        caseSensitive
+    ).length > 0;
 }
 
 /**
@@ -88,14 +91,23 @@ export function indexVirtualTags(
     }
 
     for (const tag of virtualTagSet) {
-        if (!matchVirtualTag(tag, content, caseSensitive)) {
+        const matchedLines = findVirtualTagMatches(
+            tag,
+            content,
+            caseSensitive
+        );
+
+        if (matchedLines.length === 0) {
             continue;
         }
 
-        addMetaToTagIndex(tag, meta);
+        addMetaToTagIndex(
+            tag,
+            meta,
+            matchedLines
+        );
     }
 }
-
 
 /**
  * Clear virtual tag state (for testing).

@@ -8,21 +8,16 @@ import {
     VirtualTagSession
 } from '../models/FileMeta';
 import { createMarkdownIt, getHljsThemeUrl } from './previewRenderer';
-import { getCursorLine, getLastActiveFilePath } from '../state';
-import { findVirtualTagMatches } from '../services/virtualTagService';
+import {
+    getCursorLine,
+    getLastActiveFilePath,
+    virtualTagIndexMap
+} from '../state';
+import { filePathToKey } from '../extension';
 
 let currentPanel: vscode.WebviewPanel | undefined;
 let currentDocument: vscode.TextDocument | undefined;
 let extensionContext: vscode.ExtensionContext;
-let virtualTagFileCache:
-    {
-        tag: string;
-        filePath: string;
-        mtime: number;
-        size: number;
-        value: VirtualTagFile;
-    }
-    | undefined;
 
 export type PreviewContext = {
     kind: 'file' | 'tag';
@@ -429,34 +424,17 @@ async function buildHtml(
 
         let virtualTagFile: VirtualTagFile | undefined;
         if (highlight?.keyword) {
-            const cached =
-                virtualTagFileCache &&
-                    virtualTagFileCache.tag === highlight.keyword &&
-                    virtualTagFileCache.filePath === fileMeta.filePath &&
-                    virtualTagFileCache.mtime === fileMeta.mtime &&
-                    virtualTagFileCache.size === fileMeta.size
-                    ? virtualTagFileCache.value
-                    : undefined;
+            const fileKey = filePathToKey(fileMeta.filePath);
 
-            virtualTagFile = cached ?? {
+            const indexedFile = virtualTagIndexMap
+                .get(highlight.keyword)
+                ?.get(fileKey);
+
+            virtualTagFile = indexedFile ?? {
                 meta: fileMeta,
-                matchedLines: findVirtualTagMatches(
-                    highlight.keyword,
-                    text,
-                    fileMeta,
-                    caseSensitive
-                )
+                matchedLines: []
             };
 
-            if (!cached) {
-                virtualTagFileCache = {
-                    tag: highlight.keyword,
-                    filePath: fileMeta.filePath,
-                    mtime: fileMeta.mtime,
-                    size: fileMeta.size,
-                    value: virtualTagFile
-                };
-            }
             virtualTagSession?.matches.push(virtualTagFile);
         }
 
