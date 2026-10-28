@@ -40,10 +40,43 @@ import { StateService } from './services/StateService';
 import { SortKey, SortOrder } from './services/fileSort';
 
 let tagProvider: TagTreeProvider;
+const tagDiagnosticsChannel = vscode.window.createOutputChannel(
+    'VS Journal Diagnostics'
+);
 
 // State management
 const fileMetaMap = new Map<string, FileMeta>();
 const sessionTagUsage = new Map<string, number>();
+
+function formatTagDiagnosticNodes(
+    nodes: TagHierarchyNode[],
+    targetTag: string
+): string[] {
+    const result: string[] = [];
+
+    const visit = (node: TagHierarchyNode) => {
+        if (
+            node.path === targetTag ||
+            node.path.startsWith(`${targetTag}/`)
+        ) {
+            result.push(
+                `NODE path=${JSON.stringify(node.path)} ` +
+                `files=${node.files.length} ` +
+                `fileNames=${JSON.stringify(node.files.map(file => file.fileName))}`
+            );
+        }
+
+        for (const child of node.children.values()) {
+            visit(child);
+        }
+    };
+
+    for (const node of nodes) {
+        visit(node);
+    }
+
+    return result;
+}
 
 export type FolderStructure =
     | 'flat'
@@ -886,6 +919,107 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // --- Command Registration ---
     context.subscriptions.push(
+
+        tagDiagnosticsChannel,
+        vscode.commands.registerCommand(
+            'vsJournal.dumpTagDiagnostics',
+            () => {
+                const targetTags = [
+                    '日常業務',
+                    '日常業務/2025年'
+                ];
+
+                const lines: string[] = [];
+                const write = (line: string) => {
+                    lines.push(line);
+                };
+
+                const isTestFile = (fileName: string) =>
+                    /^202[56]-\d+\.md$/i.test(fileName);
+
+                const fileMetaEntries = [...fileMetaMap.entries()]
+                    .filter(([, meta]) => isTestFile(meta.fileName))
+                    .sort(([, a], [, b]) =>
+                        a.fileName.localeCompare(b.fileName)
+                    );
+
+                write('=== VS Journal Tag Diagnostics ===');
+                write(`Time: ${new Date().toISOString()}`);
+                write(`Journal directory: ${getJournalDir()}`);
+                write(`fileMetaMap size: ${fileMetaMap.size}`);
+                write(`userTagIndexMap size: ${userTagIndexMap.size}`);
+                write('');
+
+                // Dump test file metadata.
+                write('=== File metadata ===');
+
+                for (const [key, meta] of fileMetaEntries) {
+                    write(
+                        `${meta.fileName} | key=${key} | ` +
+                        `path=${meta.filePath} | ` +
+                        `tags=${JSON.stringify(meta.tags)}`
+                    );
+                }
+
+                write('');
+                write('=== User tag index ===');
+
+                for (const tag of targetTags) {
+                    const indexedFiles = userTagIndexMap.get(tag) ?? [];
+
+                    write(
+                        `TAG ${JSON.stringify(tag)}: ` +
+                        `count=${indexedFiles.length}`
+                    );
+
+                    for (const meta of indexedFiles) {
+                        if (isTestFile(meta.fileName)) {
+                            write(`  ${meta.fileName} | ${meta.filePath}`);
+                        }
+                    }
+                }
+
+                write('');
+                write('=== Fresh TagHierarchyBuilder result ===');
+
+                const builder = new TagHierarchyBuilder();
+                const freshResult = builder.build(
+                    new Map<string, FileMeta[]>(),
+                    userTagIndexMap,
+                    new Map<string, FileMeta[]>()
+                );
+
+                for (const tag of targetTags) {
+                    write(`TARGET ${JSON.stringify(tag)}`);
+
+                    for (const line of formatTagDiagnosticNodes(
+                        freshResult.user,
+                        tag
+                    )) {
+                        write(`  ${line}`);
+                    }
+                }
+
+                write('');
+                write('=== TagTreeProvider stored nodes ===');
+
+                for (const tag of targetTags) {
+                    write(`TARGET ${JSON.stringify(tag)}`);
+
+                    for (const line of formatTagDiagnosticNodes(
+                        tagProvider.getUserNodes(),
+                        tag
+                    )) {
+                        write(`  ${line}`);
+                    }
+                }
+
+                tagDiagnosticsChannel.clear();
+                tagDiagnosticsChannel.appendLine(lines.join('\n'));
+                tagDiagnosticsChannel.show(true);
+            }
+        ),
+
         vscode.commands.registerCommand('vs-journal.newEntry', async () => {
             let doc: vscode.TextDocument;
             let position: vscode.Position;
