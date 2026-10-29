@@ -1,14 +1,78 @@
 import * as assert from 'assert';
 import {
     indexVirtualTags,
-    buildTagSegments
+    buildTagSegments,
+    TagSegment
 } from '../services/virtualTagService';
 import { FileMeta } from '../models/FileMeta';
-
 import {
     virtualTagSet,
     virtualTagIndexMap,
 } from '../state';
+
+/**
+ * Experimental RegExp-based implementation for comparison.
+ */
+function buildTagSegmentsWithRegExp(
+    content: string,
+    keyword: string | undefined,
+    caseSensitive: boolean
+): TagSegment[] {
+    if (!keyword) {
+        return [
+            {
+                text: content,
+                virtualTag: false
+            }
+        ];
+    }
+
+    const escapedKeyword = keyword.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        '\\$&'
+    );
+
+    const flags = caseSensitive ? 'g' : 'gi';
+    const regex = new RegExp(escapedKeyword, flags);
+
+    const segments: TagSegment[] = [];
+    let position = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = regex.exec(content)) !== null) {
+        if (match.index > position) {
+            segments.push({
+                text: content.slice(position, match.index),
+                virtualTag: false
+            });
+        }
+
+        segments.push({
+            text: match[0],
+            virtualTag: true
+        });
+
+        position = match.index + match[0].length;
+    }
+
+    if (position < content.length) {
+        segments.push({
+            text: content.slice(position),
+            virtualTag: false
+        });
+    }
+
+    if (segments.length === 0) {
+        return [
+            {
+                text: content,
+                virtualTag: false
+            }
+        ];
+    }
+
+    return segments;
+}
 
 function createMeta(filePath: string): FileMeta {
     return {
@@ -375,4 +439,142 @@ test('buildTagSegments multi match', () => {
             virtualTag: true
         }
     ]);
+});
+
+// =========================
+// Experimental RegExp comparison tests
+// =========================
+
+test('RegExp comparison: basic matching', () => {
+    const content = '#virtualTag test virtual';
+    const keyword = 'virtual';
+
+    const current = buildTagSegments(
+        content,
+        keyword,
+        true
+    );
+
+    const experimental = buildTagSegmentsWithRegExp(
+        content,
+        keyword,
+        true
+    );
+
+    assert.deepStrictEqual(experimental, current);
+});
+
+test('RegExp comparison: case insensitive', () => {
+    const content = '#VirtualTag #VIRTUAL #virtual';
+    const keyword = 'virtual';
+
+    const current = buildTagSegments(
+        content,
+        keyword,
+        false
+    );
+
+    const experimental = buildTagSegmentsWithRegExp(
+        content,
+        keyword,
+        false
+    );
+
+    assert.deepStrictEqual(experimental, current);
+});
+
+test('RegExp comparison: Japanese', () => {
+    const content = '#仮想タグテスト 仮想タグ';
+    const keyword = '仮想タグ';
+
+    const current = buildTagSegments(
+        content,
+        keyword,
+        true
+    );
+
+    const experimental = buildTagSegmentsWithRegExp(
+        content,
+        keyword,
+        true
+    );
+
+    assert.deepStrictEqual(experimental, current);
+});
+
+test('RegExp comparison: special characters', () => {
+    const content = 'test.* test+ test.*';
+    const keyword = '.*';
+
+    const current = buildTagSegments(
+        content,
+        keyword,
+        true
+    );
+
+    const experimental = buildTagSegmentsWithRegExp(
+        content,
+        keyword,
+        true
+    );
+
+    assert.deepStrictEqual(experimental, current);
+});
+
+test('RegExp comparison: multiple matches', () => {
+    const content = 'abcabcabc';
+    const keyword = 'abc';
+
+    const current = buildTagSegments(
+        content,
+        keyword,
+        true
+    );
+
+    const experimental = buildTagSegmentsWithRegExp(
+        content,
+        keyword,
+        true
+    );
+
+    assert.deepStrictEqual(experimental, current);
+});
+
+test('RegExp comparison: Unicode lowercase length change', () => {
+    const content = 'İvirtual';
+    const keyword = 'virtual';
+
+    const current = buildTagSegments(
+        content,
+        keyword,
+        false
+    );
+
+    const experimental = buildTagSegmentsWithRegExp(
+        content,
+        keyword,
+        false
+    );
+
+    assert.deepStrictEqual(experimental, current);
+});
+
+test('RegExp comparison: Unicode case folding difference', () => {
+    const content = 'İ';
+    const keyword = 'i';
+
+    const current = buildTagSegments(
+        content,
+        keyword,
+        false
+    );
+
+    const experimental = buildTagSegmentsWithRegExp(
+        content,
+        keyword,
+        false
+    );
+
+    console.log('Current:', current);
+    console.log('RegExp:', experimental);
 });
