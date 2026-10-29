@@ -27,9 +27,9 @@ function addMetaToTagIndex(
     });
 }
 
-export function findVirtualTagMatches(
+function findVirtualTagMatchesInLines(
     tag: string,
-    content: string,
+    lines: string[],
     caseSensitive: boolean
 ): number[] {
     const matches: number[] = [];
@@ -41,8 +41,6 @@ export function findVirtualTagMatches(
     if (target.length === 0) {
         return matches;
     }
-
-    const lines = content.split(/\r?\n/);
 
     for (let line = 0; line < lines.length; line++) {
         const lineText = caseSensitive
@@ -66,16 +64,24 @@ export function findVirtualTagMatches(
     return matches;
 }
 
-function matchVirtualTag(
+function containsVirtualTag(
     tag: string,
     content: string,
     caseSensitive: boolean
 ): boolean {
-    return findVirtualTagMatches(
-        tag,
-        content,
-        caseSensitive
-    ).length > 0;
+    if (tag.length === 0) {
+        return false;
+    }
+
+    const target = caseSensitive
+        ? tag
+        : tag.toLowerCase();
+
+    const source = caseSensitive
+        ? content
+        : content.toLowerCase();
+
+    return source.includes(target);
 }
 
 /**
@@ -90,10 +96,12 @@ export function indexVirtualTags(
         return;
     }
 
+    const lines = content.split(/\r?\n/);
+
     for (const tag of virtualTagSet) {
-        const matchedLines = findVirtualTagMatches(
+        const matchedLines = findVirtualTagMatchesInLines(
             tag,
-            content,
+            lines,
             caseSensitive
         );
 
@@ -154,18 +162,20 @@ export function matchesPreviewVirtualTag(
     keyword: string | undefined,
     caseSensitive: boolean
 ): boolean {
-
     if (!keyword) {
         return false;
     }
 
-    const contents =
-        Array.isArray(content)
-            ? content
-            : [content];
+    if (typeof content === 'string') {
+        return containsVirtualTag(
+            keyword,
+            content,
+            caseSensitive
+        );
+    }
 
-    return contents.some(c =>
-        matchVirtualTag(
+    return content.some(c =>
+        containsVirtualTag(
             keyword,
             c,
             caseSensitive
