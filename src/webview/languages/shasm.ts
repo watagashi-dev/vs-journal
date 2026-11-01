@@ -1,4 +1,4 @@
-import type { LanguageFn } from 'highlight.js/lib/core';
+import type { LanguageFn } from 'highlight.js';
 
 const shasm: LanguageFn = () => {
     return {
@@ -55,6 +55,25 @@ const shasm: LanguageFn = () => {
             {
                 className: 'type',
                 begin: /\b(?:r(?:[0-9]|1[0-5])|r15|sr|gbr|vbr|mach|macl|pr|pc|fpul|fpscr|fr(?:[0-9]|1[0-5])|xf(?:[0-9]|1[0-5])|dr(?:[0-9]|1[0-5])|xd(?:[0-9]|1[0-5]))\b/
+            },
+
+            // Branch targets
+            {
+                className: 'title',
+                begin: /\b(?:bra|bsr|bt|bf|bt\/s|bf\/s)\s+([A-Za-z_.$][\w.$]*)\b/i,
+                returnBegin: true,
+                end: /$/,
+                contains: [
+                    {
+                        className: 'keyword',
+                        begin: /\b(?:bra|bsr|bt|bf|bt\/s|bf\/s)\b/i
+                    },
+                    {
+                        className: 'title',
+                        begin: /[A-Za-z_.$][\w.$]*\b/,
+                        relevance: 0
+                    }
+                ]
             },
 
             // SuperH instructions

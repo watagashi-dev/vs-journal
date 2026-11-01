@@ -1,4 +1,4 @@
-import type { LanguageFn } from 'highlight.js/lib/core';
+import type { LanguageFn } from 'highlight.js';
 
 const verilog: LanguageFn = () => {
     return {

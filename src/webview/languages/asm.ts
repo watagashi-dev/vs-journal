@@ -1,4 +1,4 @@
-import type { LanguageFn } from 'highlight.js/lib/core';
+import type { LanguageFn } from 'highlight.js';
 
 const asm: LanguageFn = () => {
     return {
@@ -88,6 +88,24 @@ const asm: LanguageFn = () => {
             {
                 className: 'variable',
                 begin: /\b(?:r(?:[0-9]|1[0-5])|e(?:ax|bx|cx|dx|si|di|bp|sp)|[re]ip|[re]flags|[abcd][lh]|xmm\d+|ymm\d+|zmm\d+|cr\d+|dr\d+|st(?:\d+)?|sp|fp|lr|pc)\b/
+            },
+
+            // Branch targets
+            {
+                begin: /\b(?:b|bal|bcc|bcs|beq|bge|bgt|bhis|bhi|ble|blo|bls|blt|bmi|bne|bpl|bra|br|bsr|bt|bts|bvc|bvs|call|jmp|jsr)\s+/i,
+                end: /$/,
+                returnBegin: true,
+                contains: [
+                    {
+                        className: 'keyword',
+                        begin: /\b(?:b|bal|bcc|bcs|beq|bge|bgt|bhis|bhi|ble|blo|bls|blt|bmi|bne|bpl|bra|br|bsr|bt|bts|bvc|bvs|call|jmp|jsr)\b/i
+                    },
+                    {
+                        className: 'title',
+                        begin: /[A-Za-z_.$?@][\w.$?@]*/,
+                        relevance: 0
+                    }
+                ]
             },
 
             // Instructions
