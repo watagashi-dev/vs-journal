@@ -31,6 +31,10 @@
   "contributes": {
     "commands": [
       {
+        "command": "vsJournal.dumpTagDiagnostics",
+        "title": "VS Journal: Dump Tag Diagnostics"
+      },
+      {
         "command": "vs-journal.newEntry",
         "title": "%command.newEntry%",
         "icon": "$(new-file)"
