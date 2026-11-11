@@ -49,22 +49,15 @@ const fileMetaMap = new Map<string, FileMeta>();
 const sessionTagUsage = new Map<string, number>();
 
 function formatTagDiagnosticNodes(
-    nodes: TagHierarchyNode[],
-    targetTag: string
-): string[] {
-    const result: string[] = [];
+    nodes: TagHierarchyNode[]
+): Map<string, Set<string>> {
+    const result = new Map<string, Set<string>>();
 
     const visit = (node: TagHierarchyNode) => {
-        if (
-            node.path === targetTag ||
-            node.path.startsWith(`${targetTag}/`)
-        ) {
-            result.push(
-                `NODE path=${JSON.stringify(node.path)} ` +
-                `files=${node.files.length} ` +
-                `fileNames=${JSON.stringify(node.files.map(file => file.fileName))}`
-            );
-        }
+        result.set(
+            node.path,
+            new Set(node.files.map(file => file.filePath))
+        );
 
         for (const child of node.children.values()) {
             visit(child);
@@ -919,68 +912,131 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // --- Command Registration ---
     context.subscriptions.push(
-
         tagDiagnosticsChannel,
         vscode.commands.registerCommand(
             'vsJournal.dumpTagDiagnostics',
             () => {
-                const targetTags = [
-                    '日常業務',
-                    '日常業務/2025年'
-                ];
-
                 const lines: string[] = [];
                 const write = (line: string) => {
                     lines.push(line);
                 };
 
-                const isTestFile = (fileName: string) =>
-                    /^202[56]-\d+\.md$/i.test(fileName);
+                const journalDir = getJournalDir();
+
+                const getRelativePath = (filePath: string) => {
+                    return path.relative(journalDir, filePath);
+                };
+
+                const getExpectedTags = (meta: FileMeta) => {
+                    return new Set([
+                        ...meta.tags,
+                        ...meta.headings.flatMap(heading => heading.tags)
+                    ]);
+                };
 
                 const fileMetaEntries = [...fileMetaMap.entries()]
-                    .filter(([, meta]) => isTestFile(meta.fileName))
                     .sort(([, a], [, b]) =>
                         a.fileName.localeCompare(b.fileName)
                     );
 
-                write('=== VS Journal Tag Diagnostics ===');
+                write('=== VS Journal Diagnostics ===');
                 write(`Time: ${new Date().toISOString()}`);
-                write(`Journal directory: ${getJournalDir()}`);
+                write(`Journal directory: ${journalDir}`);
                 write(`fileMetaMap size: ${fileMetaMap.size}`);
                 write(`userTagIndexMap size: ${userTagIndexMap.size}`);
                 write('');
 
-                // Dump test file metadata.
+                // Dump file metadata.
                 write('=== File metadata ===');
 
                 for (const [key, meta] of fileMetaEntries) {
                     write(
-                        `${meta.fileName} | key=${key} | ` +
-                        `path=${meta.filePath} | ` +
-                        `tags=${JSON.stringify(meta.tags)}`
+                        `${meta.fileName} | ` +
+                        `key=${key} | ` +
+                        `path=${getRelativePath(meta.filePath)} | ` +
+                        `tags=${JSON.stringify([...getExpectedTags(meta)])}`
                     );
                 }
 
+                // Dump user tag index and check consistency.
                 write('');
                 write('=== User tag index ===');
 
-                for (const tag of targetTags) {
-                    const indexedFiles = userTagIndexMap.get(tag) ?? [];
+                let duplicateCount = 0;
+                let missingFileMetaCount = 0;
+                let missingIndexCount = 0;
 
+                const indexedTagsByFile = new Map<string, Set<string>>();
+
+                for (const [tag, indexedFiles] of userTagIndexMap) {
                     write(
                         `TAG ${JSON.stringify(tag)}: ` +
                         `count=${indexedFiles.length}`
                     );
 
+                    const seenFiles = new Set<string>();
+
                     for (const meta of indexedFiles) {
-                        if (isTestFile(meta.fileName)) {
-                            write(`  ${meta.fileName} | ${meta.filePath}`);
+                        const fileKey = filePathToKey(meta.filePath);
+
+                        if (seenFiles.has(fileKey)) {
+                            duplicateCount++;
+                            write(
+                                `  DUPLICATE: ${getRelativePath(meta.filePath)}`
+                            );
+                        }
+
+                        seenFiles.add(fileKey);
+
+                        if (!fileMetaMap.has(fileKey)) {
+                            missingFileMetaCount++;
+                            write(
+                                `  MISSING FileMeta: ${getRelativePath(meta.filePath)}`
+                            );
+                        }
+
+                        const tags = indexedTagsByFile.get(fileKey) ?? new Set<string>();
+                        tags.add(tag);
+                        indexedTagsByFile.set(fileKey, tags);
+
+                        write(`  ${getRelativePath(meta.filePath)}`);
+                    }
+                }
+
+                for (const [, meta] of fileMetaEntries) {
+                    const fileKey = filePathToKey(meta.filePath);
+                    const expectedTags = getExpectedTags(meta);
+                    const indexedTags = indexedTagsByFile.get(fileKey) ?? new Set<string>();
+
+                    for (const tag of expectedTags) {
+                        if (!indexedTags.has(tag)) {
+                            missingIndexCount++;
+                            write(
+                                `MISSING INDEX: ${getRelativePath(meta.filePath)} | ` +
+                                `${JSON.stringify(tag)}`
+                            );
+                        }
+                    }
+
+                    for (const tag of indexedTags) {
+                        if (!expectedTags.has(tag)) {
+                            write(
+                                `UNEXPECTED INDEX: ${getRelativePath(meta.filePath)} | ` +
+                                `${JSON.stringify(tag)}`
+                            );
                         }
                     }
                 }
 
                 write('');
-                write('=== Fresh TagHierarchyBuilder result ===');
+                write('=== Consistency summary ===');
+                write(`Duplicate entries: ${duplicateCount}`);
+                write(`Missing FileMeta: ${missingFileMetaCount}`);
+                write(`Missing index entries: ${missingIndexCount}`);
+
+                // Build a fresh tree from the current index.
+                write('');
+                write('=== TagHierarchyBuilder comparison ===');
 
                 const builder = new TagHierarchyBuilder();
                 const freshResult = builder.build(
@@ -989,37 +1045,62 @@ export async function activate(context: vscode.ExtensionContext) {
                     new Map<string, FileMeta[]>()
                 );
 
-                for (const tag of targetTags) {
-                    write(`TARGET ${JSON.stringify(tag)}`);
+                const freshNodes = formatTagDiagnosticNodes(freshResult.user);
+                const providerNodes = formatTagDiagnosticNodes(
+                    tagProvider.getUserNodes()
+                );
 
-                    for (const line of formatTagDiagnosticNodes(
-                        freshResult.user,
-                        tag
-                    )) {
-                        write(`  ${line}`);
+                const allTagPaths = new Set([
+                    ...freshNodes.keys(),
+                    ...providerNodes.keys()
+                ]);
+
+                let treeDifferenceCount = 0;
+
+                for (const tagPath of [...allTagPaths].sort()) {
+                    const freshFiles = freshNodes.get(tagPath) ?? new Set<string>();
+                    const providerFiles = providerNodes.get(tagPath) ?? new Set<string>();
+
+                    const missingInProvider = [...freshFiles].filter(
+                        filePath => !providerFiles.has(filePath)
+                    );
+
+                    const extraInProvider = [...providerFiles].filter(
+                        filePath => !freshFiles.has(filePath)
+                    );
+
+                    if (
+                        missingInProvider.length === 0 &&
+                        extraInProvider.length === 0
+                    ) {
+                        continue;
+                    }
+
+                    treeDifferenceCount++;
+
+                    write(`TAG ${JSON.stringify(tagPath)}`);
+
+                    for (const filePath of missingInProvider) {
+                        write(
+                            `  MISSING IN PROVIDER: ${getRelativePath(filePath)}`
+                        );
+                    }
+
+                    for (const filePath of extraInProvider) {
+                        write(
+                            `  EXTRA IN PROVIDER: ${getRelativePath(filePath)}`
+                        );
                     }
                 }
 
                 write('');
-                write('=== TagTreeProvider stored nodes ===');
-
-                for (const tag of targetTags) {
-                    write(`TARGET ${JSON.stringify(tag)}`);
-
-                    for (const line of formatTagDiagnosticNodes(
-                        tagProvider.getUserNodes(),
-                        tag
-                    )) {
-                        write(`  ${line}`);
-                    }
-                }
+                write(`Tree differences: ${treeDifferenceCount}`);
 
                 tagDiagnosticsChannel.clear();
                 tagDiagnosticsChannel.appendLine(lines.join('\n'));
                 tagDiagnosticsChannel.show(true);
             }
         ),
-
         vscode.commands.registerCommand('vs-journal.newEntry', async () => {
             let doc: vscode.TextDocument;
             let position: vscode.Position;
