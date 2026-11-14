@@ -1,6 +1,5 @@
 import hljs from 'highlight.js';
-import log from './languages/log';
-import syslog from './languages/syslog';
+import { log, syslog } from './languages/log';
 import asm from './languages/asm';
 import shasm from './languages/shasm';
 import verilog from './languages/verilog';
