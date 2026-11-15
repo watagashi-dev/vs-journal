@@ -501,7 +501,8 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
                 context: {
                     kind: 'tag',
                     tagType: section?.key ?? 'user',
-                    tagName: node.name
+                    tagName: node.name,
+                    displayName: label
                 },
                 highlight: item.highlight
             }]

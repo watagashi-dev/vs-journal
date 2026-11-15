@@ -23,6 +23,7 @@ export type PreviewContext = {
     kind: 'file' | 'tag';
     tagType?: 'system' | 'user' | 'virtual';
     tagName?: string;
+    displayName?: string;
 };
 
 type PreviewBuildResult = {
@@ -551,6 +552,24 @@ export async function updatePreviewPanel(
         });
 
         panel.webview.html = result.html;
+
+        // Update preview tab title.
+        if (state?.context?.kind === 'tag') {
+            const context = state.context;
+            const tagName = context.displayName
+                ?? context.tagName
+                ?? 'VS Journal Preview';
+
+            panel.title = context.tagType === 'user'
+                ? `${tagName} (${filesToPreview.length})`
+                : tagName;
+        }
+        else {
+            const firstFile = filesToPreview[0];
+            panel.title = firstFile?.title
+                || firstFile?.fileName
+                || 'VS Journal Preview';
+        }
 
         if (state) {
             setPreviewState(panel, {
