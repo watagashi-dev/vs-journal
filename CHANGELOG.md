@@ -1,5 +1,22 @@
 # Change Log
 
+## [0.7.2] - 2026-11-15
+
+### Added
+- Added a diagnostic command to inspect tag metadata, index consistency, and tag tree differences.
+
+### Changed
+- Improved virtual tag indexing by storing matched line numbers for each file.
+- Updated preview rendering to use the virtual tag index for highlighting.
+- Refactored Markdown preview tag processing into smaller components.
+- Improved virtual tag highlighting in links, images, code blocks, and HTML content.
+- Improved syntax highlighting for assembly branch targets.
+- Enhanced Log and Syslog syntax highlighting and consolidated their language definitions.
+
+### Fixed
+- Fixed virtual tag highlighting to respect case sensitivity consistently.
+- Fixed preview click handling to prevent accidental navigation when selecting text by dragging.
+
 ## [0.7.1] - 2026-10-24
 
 ### Changed
