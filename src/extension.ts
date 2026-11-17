@@ -231,7 +231,7 @@ $img.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png);
 
 function getImageMac(): Buffer | null {
     try {
-        // pngpaste が前提（ほぼ入ってる or brewで入る）
+        // pngpaste is required (usually already installed or available via Homebrew)
         const buffer = execFileSync('pngpaste', ['-'], {
             encoding: 'buffer'
         });
@@ -243,7 +243,7 @@ function getImageMac(): Buffer | null {
 }
 
 function getImageLinux(): Buffer | null {
-    // 優先: Wayland
+    // Try Wayland first
     try {
         const buffer = execFileSync('wl-paste', ['--type', 'image/png'], {
             encoding: 'buffer'

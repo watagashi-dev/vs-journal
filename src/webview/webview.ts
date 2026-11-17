@@ -193,7 +193,7 @@ hljs.registerLanguage('vhdl', vhdl);
     // =========================================================
     function setupKeyHandler(): void {
         window.addEventListener('keydown', (e) => {
-            // Ctrl + ↑ / ↓ → 仮想タグジャンプ
+            // Ctrl + Up / Down: jump between virtual tags
             if (e.ctrlKey && e.key === 'ArrowDown') {
                 e.preventDefault();
                 moveNext();
@@ -259,7 +259,7 @@ hljs.registerLanguage('vhdl', vhdl);
     }
 
     // =========================================================
-    // Highlight.js（型問題回避込み）
+    // Highlight.js (including type workaround)
     // =========================================================
     function decorateCodeBlocks(): void {
         document
@@ -921,7 +921,7 @@ hljs.registerLanguage('vhdl', vhdl);
 
     let highlightElements: HTMLElement[] = [];
 
-    // theme変更対応（旧コードで消えがちな部分）
+    // Handle theme changes (this was often lost in the old code)
     function setupMessageHandler(): void {
         window.addEventListener('message', (event) => {
             const msg = event.data;

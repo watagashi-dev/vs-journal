@@ -55,7 +55,7 @@ suite('fileSort tests', () => {
 
         const result = sortFiles(files);
 
-        // localeCompareの結果に合わせる
+        // Match the localeCompare ordering
         assert.deepStrictEqual(
             result.map(f => f.title),
             ['_a', '-a', 'a']

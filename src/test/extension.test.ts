@@ -22,14 +22,14 @@ suite('VS Journal Logic Tests', () => {
 		const workspaceRoot = '/workspace/root';
 		const rel = 'journal';
 
-		// workspace.getWorkspaceRoot を一時的に置き換え
+		// Temporarily replace workspace.getWorkspaceRoot
 		const originalGetWorkspaceRoot = workspaceUtils.getWorkspaceRoot;
 		(workspaceUtils as any).getWorkspaceRoot = () => workspaceRoot;
 
 		const result = getAbsoluteJournalDir(rel);
 		assert.strictEqual(result, path.join(workspaceRoot, rel));
 
-		// 復元
+		// Restore the original function
 		(workspaceUtils as any).getWorkspaceRoot = originalGetWorkspaceRoot;
 	});
 

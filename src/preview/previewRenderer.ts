@@ -535,7 +535,7 @@ function registerImageRenderer(
                 : "";
         }
 
-        // External URL はそのまま
+        // Leave external URLs unchanged
         if (!src.startsWith("http://") && !src.startsWith("https://")) {
             if (baseUri) {
                 try {
@@ -829,14 +829,14 @@ function registerLinkOpenRenderer(
                     // Keep original URL
                 }
 
-                // LOCAL / UNC / relative は VS Journal管理
+                // LOCAL, UNC, and relative paths are managed by VS Journal
                 const isUNC = href.startsWith('\\') && !href.startsWith('\\\\');
 
                 if (isUNC) {
                     href = '\\' + href;
                 }
 
-                // data-hrefのみ保持
+                // Keep only data-href
                 token.attrs.splice(hrefIndex, 1);
                 token.attrPush(["data-href", href]);
             }
