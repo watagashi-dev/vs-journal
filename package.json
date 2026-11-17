@@ -40,6 +40,11 @@
         "icon": "$(new-file)"
       },
       {
+        "command": "vs-journal.newEntryFromUserTag",
+        "title": "%command.newEntryFromUserTag%",
+        "icon": "$(new-file)"
+      },
+      {
         "command": "vs-journal.previewEntry",
         "title": "%command.previewEntry%",
         "icon": "$(preview)"
@@ -284,9 +289,18 @@
         {
           "command": "vs-journal.addVirtualTag",
           "when": "view.VSJournal.TagTree.visible"
+        },
+        {
+          "command": "vs-journal.newEntryFromUserTag",
+          "when": "false"
         }
       ],
       "view/item/context": [
+        {
+          "command": "vs-journal.newEntryFromUserTag",
+          "when": "view == VSJournal.TagTree && viewItem =~ /^tag:user(:|$)/",
+          "group": "0_create"
+        },
         {
           "command": "vsJournal.sortByTitle",
           "when": "view == VSJournal.TagTree && viewItem =~ /^tag(:system|:user|:virtual):sort:[^:]+:(asc|desc)$/",

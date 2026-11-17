@@ -48,6 +48,48 @@ const tagDiagnosticsChannel = vscode.window.createOutputChannel(
 const fileMetaMap = new Map<string, FileMeta>();
 const sessionTagUsage = new Map<string, number>();
 
+async function createNewEntry(tagPath?: string): Promise<void> {
+    let doc: vscode.TextDocument;
+    let position: vscode.Position;
+
+    const now = new Date();
+    const config = getConfig();
+    const fullPath = generateFullPath(now, config);
+
+    fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+
+    if (!fs.existsSync(fullPath)) {
+        const journalConfig = vscode.workspace.getConfiguration('vsJournal');
+        const enableDateTime = journalConfig.get<boolean>('enableDateTime') ?? true;
+
+        let content = '# \n';
+
+        if (enableDateTime) {
+            content += `\n_${formatDateString(now)}_ _${formatTimeString(now)}_\n\n`;
+        }
+
+        if (tagPath) {
+            content += `#${tagPath}\n`;
+        }
+
+        fs.writeFileSync(fullPath, content);
+
+        doc = await vscode.workspace.openTextDocument(fullPath);
+        position = new vscode.Position(0, 2);
+    }
+    else {
+        doc = await vscode.workspace.openTextDocument(fullPath);
+
+        const lastLine = doc.lineCount - 1;
+        const char = doc.lineAt(lastLine).text.length;
+
+        position = new vscode.Position(lastLine, char);
+    }
+
+    const editor = await vscode.window.showTextDocument(doc);
+    editor.selection = new vscode.Selection(position, position);
+}
+
 function formatTagDiagnosticNodes(
     nodes: TagHierarchyNode[]
 ): Map<string, Set<string>> {
@@ -1102,37 +1144,61 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         ),
         vscode.commands.registerCommand('vs-journal.newEntry', async () => {
-            let doc: vscode.TextDocument;
-            let position: vscode.Position;
-            const config = getConfig();
-
-            const fullPath = generateFullPath(new Date(), config);
-
-            fs.mkdirSync(path.dirname(fullPath), { recursive: true });
-
-            if (!fs.existsSync(fullPath)) {
-                const config = vscode.workspace.getConfiguration('vsJournal');
-                const enableDateTime = config.get<boolean>('enableDateTime') ?? true;
-
-                let content = '# \n';
-                if (enableDateTime) {
-                    const now = new Date();
-                    content += `\n_${formatDateString(now)}_ _${formatTimeString(now)}_\n\n`;
-                }
-                fs.writeFileSync(fullPath, content);
-                doc = await vscode.workspace.openTextDocument(fullPath);
-                position = new vscode.Position(0, 2);
-            }
-            else {
-                doc = await vscode.workspace.openTextDocument(fullPath);
-                const lastLine = doc.lineCount - 1;
-                const char = doc.lineAt(lastLine).text.length;
-                position = new vscode.Position(lastLine, char);
-            }
-
-            const editor = await vscode.window.showTextDocument(doc);
-            editor.selection = new vscode.Selection(position, position);
+            await createNewEntry();
         }),
+        /*
+                vscode.commands.registerCommand('vs-journal.newEntry', async () => {
+                    let doc: vscode.TextDocument;
+                    let position: vscode.Position;
+                    const config = getConfig();
+        
+                    const fullPath = generateFullPath(new Date(), config);
+        
+                    fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+        
+                    if (!fs.existsSync(fullPath)) {
+                        const config = vscode.workspace.getConfiguration('vsJournal');
+                        const enableDateTime = config.get<boolean>('enableDateTime') ?? true;
+        
+                        let content = '# \n';
+                        if (enableDateTime) {
+                            const now = new Date();
+                            content += `\n_${formatDateString(now)}_ _${formatTimeString(now)}_\n\n`;
+                        }
+                        fs.writeFileSync(fullPath, content);
+                        doc = await vscode.workspace.openTextDocument(fullPath);
+                        position = new vscode.Position(0, 2);
+                    }
+                    else {
+                        doc = await vscode.workspace.openTextDocument(fullPath);
+                        const lastLine = doc.lineCount - 1;
+                        const char = doc.lineAt(lastLine).text.length;
+                        position = new vscode.Position(lastLine, char);
+                    }
+        
+                    const editor = await vscode.window.showTextDocument(doc);
+                    editor.selection = new vscode.Selection(position, position);
+                }),
+        */
+        vscode.commands.registerCommand(
+            'vs-journal.newEntryFromUserTag',
+            async (item: {
+                type?: string;
+                sectionKey?: string;
+                node?: TagHierarchyNode | null;
+            }) => {
+                if (
+                    !item ||
+                    item.type !== 'tag' ||
+                    item.sectionKey !== 'user' ||
+                    !item.node
+                ) {
+                    return;
+                }
+
+                await createNewEntry(item.node.path);
+            }
+        ),
 
         vscode.commands.registerCommand('vs-journal.previewEntry', async (arg?: unknown) => {
             let filePath: string | undefined;

@@ -40,6 +40,7 @@
   "command.insertFile": "VSJ: ファイルへのリンクを挿入",
   "command.insertFolder": "VSJ: フォルダーへのリンクを挿入",
   "command.paste": "VSJ: 画像を貼り付け",
+  "command.newEntryFromUserTag": "タグから新規作成",
   "command.SortByTitle": "タイトルで並べ替え",
   "command.SortByCreatedDate": "作成日で並べ替え",
   "command.SortByModifiedDate": "更新日で並べ替え",
