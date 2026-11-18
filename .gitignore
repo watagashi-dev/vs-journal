@@ -12,6 +12,4 @@ node_modules/
 Thumbs.db
 .eslintcache
 
-AGENTS.md
-
 benchmarks/datasets/
