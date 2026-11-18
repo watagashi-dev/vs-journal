@@ -308,8 +308,15 @@ async function handleWebviewMessage(
         const uri = vscode.Uri.file(message.filePath);
         const doc = await vscode.workspace.openTextDocument(uri);
 
-        const safeLine = Math.min(message.line ?? 0, doc.lineCount - 1);
-        const pos = new vscode.Position(safeLine, 0);
+        const safeLine = Math.max(
+            0,
+            Math.min(message.line ?? 0, doc.lineCount - 1)
+        );
+        const safeCharacter = Math.max(
+            0,
+            Math.min(message.character ?? 0, doc.lineAt(safeLine).text.length)
+        );
+        const pos = new vscode.Position(safeLine, safeCharacter);
 
         await vscode.window.showTextDocument(doc, {
             selection: new vscode.Selection(pos, pos)
@@ -416,12 +423,14 @@ async function buildHtml(
         }
         index++;
 
-        htmlContent += `<div class="file-block" data-file="${fileMeta.filePath}">\n`;
-
         const fileText = await vscode.workspace.fs.readFile(
             vscode.Uri.file(fileMeta.filePath)
         );
         const text = Buffer.from(fileText).toString('utf8');
+        const sourceLineLengths = JSON.stringify(
+            text.split(/\r?\n/).map(line => line.length)
+        );
+        htmlContent += `<div class="file-block" data-file="${fileMeta.filePath}" data-source-line-lengths='${sourceLineLengths}'>\n`;
 
         let virtualTagFile: VirtualTagFile | undefined;
         if (highlight?.keyword) {

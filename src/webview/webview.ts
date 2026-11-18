@@ -22,7 +22,7 @@ hljs.registerLanguage('vhdl', vhdl);
     type VsCodeMessage =
         | { type: 'openExternal'; url: string }
         | { type: 'openLocalLink'; path: string }
-        | { type: 'jumpToLine'; filePath: string; line: number }
+        | { type: 'jumpToLine'; filePath: string; line: number; character?: number }
         | { type: 'jumpToFile'; filePath: string }
         | { type: 'closePreview' }
         | { type: 'edit' };
@@ -89,6 +89,108 @@ hljs.registerLanguage('vhdl', vhdl);
     // =========================================================
     // Click
     // =========================================================
+    function getCodeClickPosition(
+        target: HTMLElement,
+        clientX: number,
+        clientY: number,
+        sourceStartLine: number
+    ): { line: number; character: number } | undefined {
+        const lineElement = target.closest<HTMLElement>('.vjs-line');
+        const lineContent = lineElement?.querySelector<HTMLElement>('.vjs-line-content');
+        const code = lineElement?.parentElement;
+        if (!lineElement || !lineContent || code?.tagName !== 'CODE') {
+            return undefined;
+        }
+
+        const lines = Array.from(code.querySelectorAll<HTMLElement>(':scope > .vjs-line'));
+        const displayedLine = lines.indexOf(lineElement);
+        if (displayedLine < 0) {
+            return undefined;
+        }
+
+        let character = 0;
+        const doc = document as Document & {
+            caretPositionFromPoint?: (x: number, y: number) => {
+                offsetNode: Node;
+                offset: number;
+            } | null;
+            caretRangeFromPoint?: (x: number, y: number) => Range | null;
+        };
+        const caret = doc.caretPositionFromPoint?.(clientX, clientY);
+        const range = caret
+            ? document.createRange()
+            : doc.caretRangeFromPoint?.(clientX, clientY);
+
+        if (caret && lineContent.contains(caret.offsetNode)) {
+            range!.setStart(lineContent, 0);
+            range!.setEnd(caret.offsetNode, caret.offset);
+            character = range.toString().length;
+        } else if (range?.startContainer && lineContent.contains(range.startContainer)) {
+            const endRange = document.createRange();
+            endRange.setStart(lineContent, 0);
+            endRange.setEnd(range.startContainer, range.startOffset);
+            character = endRange.toString().length;
+        }
+
+        return {
+            line: sourceStartLine + displayedLine + 1,
+            character
+        };
+    }
+
+    function getApproximateTextCharacter(
+        block: HTMLElement,
+        clientX: number,
+        clientY: number
+    ): number | undefined {
+        const doc = document as Document & {
+            caretPositionFromPoint?: (x: number, y: number) => {
+                offsetNode: Node;
+                offset: number;
+            } | null;
+            caretRangeFromPoint?: (x: number, y: number) => Range | null;
+        };
+        const caret = doc.caretPositionFromPoint?.(clientX, clientY);
+        const caretRange = caret
+            ? undefined
+            : doc.caretRangeFromPoint?.(clientX, clientY);
+        const node = caret?.offsetNode ?? caretRange?.startContainer;
+        const offset = caret?.offset ?? caretRange?.startOffset;
+        if (!node || offset === undefined || !block.contains(node)) {
+            return undefined;
+        }
+
+        const range = document.createRange();
+        range.setStart(block, 0);
+        range.setEnd(node, offset);
+        const renderedOffset = range.toString().length;
+        const renderedLength = (block.textContent ?? '').length;
+        if (renderedLength === 0) {
+            return 0;
+        }
+
+        const sourceLine = Number(block.getAttribute('data-start-line'));
+        const fileBlock = block.closest<HTMLElement>('.file-block');
+        const lineLengthsText = fileBlock?.getAttribute('data-source-line-lengths');
+        if (!Number.isInteger(sourceLine) || !lineLengthsText) {
+            return renderedOffset;
+        }
+
+        try {
+            const lineLengths = JSON.parse(lineLengthsText) as number[];
+            const sourceLength = lineLengths[sourceLine];
+            if (!Number.isFinite(sourceLength)) {
+                return renderedOffset;
+            }
+
+            return Math.round(
+                renderedOffset / renderedLength * sourceLength
+            );
+        } catch {
+            return renderedOffset;
+        }
+    }
+
     function handleClick(e: MouseEvent): void {
         const target = e.target as HTMLElement | null;
         if (!target) { return; }
@@ -126,10 +228,20 @@ hljs.registerLanguage('vhdl', vhdl);
             const end = Number(blockEl.getAttribute('data-end-line') ?? start);
 
             if (filePath && Number.isFinite(start)) {
+                const codePosition = getCodeClickPosition(
+                    target,
+                    e.clientX,
+                    e.clientY,
+                    start
+                );
+                const character = codePosition?.character ??
+                    getApproximateTextCharacter(blockEl, e.clientX, e.clientY) ??
+                    0;
                 postMessage({
                     type: 'jumpToLine',
                     filePath,
-                    line: start
+                    line: codePosition?.line ?? start,
+                    character
                     // NOTE: range-based system (end currently unused for click)
                 });
             }
