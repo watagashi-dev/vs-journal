@@ -71,12 +71,17 @@
     のライフサイクルを扱う際は、解放漏れや多重登録に注意する。
 -   依存パッケージを追加する場合は、標準機能や既存依存で実現できないかを先に確認し、追加理由を説明する。
 
-【要追記】フォーマッター、Lint、TypeScript
-の厳格設定、命名規則など、`package.json`・設定ファイルで確定できる規約があれば追記してください。
+TypeScript と静的チェックの現行設定:
+
+-   `tsconfig.json` と `tsconfig.webview.json` の両方で `strict: true`。
+-   拡張側の `tsconfig.json` は `noImplicitAny: false` で、`src/webview` を除外する。WebView は `tsconfig.webview.json` で個別に型チェックする。
+-   ESLint は `npm run lint` (`eslint src`) で実行する。設定ファイルには命名規則、`curly`、`eqeqeq`、`no-throw-literal`、`semi` の警告ルールがある。
+-   【要調査】ESLint 設定ファイルとして `eslint.config.js` と `eslint.config.mjs` が存在する。どちらを正式な設定として維持するか確認する。
+-   フォーマッターの設定および実行スクリプトは確認できていない。既存の書式を維持する。
 
 ## 4. データとファイルの取り扱い
 
--   既定のジャーナル保存先は `$HOME/vsJournal`。
+-   既定のジャーナル保存先は `os.homedir()/vsJournal` (`src/extension.ts`)。
 -   設定 `vsJournal.journalDir` で保存先を指定する。
 -   ファイル名形式や保存フォルダー構成は設定に依存する。
 -   フォルダーモードには flat / year / year-month / year-month-day
@@ -93,7 +98,13 @@
 -   キャッシュを使う場合は、更新・削除・リネーム時の無効化条件を確認する。
 -   ファイルシステムの状態と UI の状態がずれないようにする。
 
-【要追記】ファイルの読み書き、削除、ゴミ箱フォールバック、ファイル名生成、フォルダー生成の実装箇所と、データ保護上の確定仕様を記載してください。
+### ファイル操作の実装
+
+-   保存先、ファイル名・フォルダー構成の生成、新規エントリー作成は `src/extension.ts` (`getJournalDir`、`generateFolderPath`、`generateFullPath`、`createNewEntry`) にある。既定保存先は `os.homedir()/vsJournal`。相対保存先はワークスペースルートを基準に解決する。
+-   新規エントリーの親フォルダーは再帰作成する。生成先が既に存在する場合は上書きせず、既存ファイルを開く。ファイル名形式とフォルダー構成の設定は新規作成時に使われる。
+-   Markdown のメタデータ読み込みとファイル削除は `src/services/fileMetaService.ts` にある。削除は最初に VS Code のゴミ箱利用を試し、失敗時は確認後に完全削除する。
+-   保存先・ファイル名・フォルダー構成の設定を変えても、既存ファイルを移動・改名する処理は確認できていない。
+-   ファイルの作成・読み書きには `src/extension.ts` 内の Node.js `fs` と `src/preview/previewPanel.ts` 内の `vscode.workspace.fs` が併存する。変更時は既存処理の API と上書き挙動を個別に確認する。
 
 ## 5. タグとツリーの設計上の注意
 
@@ -118,16 +129,14 @@ VS Journal には、少なくとも次のタグ種別がある。
     は区別する。見出しタグの表示位置や見出しラベルにタグ文字列を混入させない既存方針を維持する。
 -   仮想タグの条件変更・削除・再読み込み時に、古い結果が残らないことを確認する。
 
-既知の実装要素・名前（変更前に必ず現行コードを確認すること）:
+現行コードで確認した実装要素・名前（変更時は責務と利用箇所を再確認すること）:
 
 -   `FileMeta`、`HeadingMeta`
 -   `systemTagIndexMap`、`userTagIndexMap`、`virtualTagIndexMap`、`virtualTagSet`
 -   `filePathToKey`
 -   `vsJournal.systemTags.visibility`
 -   `vsJournal.virtualTags.caseSensitive`
--   `vs-journal.addVirtualTag`、`vs-journal.deleteVirtualTag`
-
-これらは過去の実装情報に基づく参考名です。現行ブランチで名称・責務が変わっている可能性があります。
+-   `vs-journal.addVirtualTag`、`vsJournal.deleteVirtualTag`
 
 ## 6. Markdown プレビューと WebView
 
@@ -143,8 +152,14 @@ VS Journal には、少なくとも次のタグ種別がある。
     に渡すデータは必要最小限にする。大きなインデックスや内部状態を理由なく丸ごと渡さない。
 -   HTML を生成・挿入する処理では、エスケープや信頼境界を確認する。
 
-【要追記】プレビュー生成・WebView
-通信・CSS・スクリプトの主要ファイル名、メッセージ型の定義場所、セキュリティ方針を追記してください。
+### 主な実装ファイルと境界
+
+-   プレビュー生成・Extension Host 側の WebView 管理とメッセージ受信: `src/preview/previewPanel.ts`。
+-   Markdown-it の設定、レンダラー、ソース行属性の付与: `src/preview/previewRenderer.ts`。
+-   WebView のクリック・キー操作・受信メッセージ: `src/webview/webview.ts`。スタイルは `src/webview/webview.css`、HTML と CSP は `src/webview/template.html`。
+-   WebView から Extension Host へ送るメッセージ型は `webview.ts` 内の `VsCodeMessage`。受信側は `previewPanel.ts` の `handleWebviewMessage` で `message.type` を判定する。両側で共有する型定義はないため、メッセージ変更時は両方を確認する。
+-   Extension Host から WebView へのメッセージは `themeChanged`、`scrollToLine`、`setPreviewCount` など。型は共通化されていない。
+-   CSP は `default-src 'none'` を基本とし、スクリプト・フォント・スタイルは WebView リソースに制限する。画像は WebView リソース、HTTPS、data URL を許可する。スタイルには `'unsafe-inline'` が許可されている。HTML を組み立てるときはテンプレートの CSP と各データのエスケープを維持する。
 
 ## 7. 状態管理・キャッシュ
 
@@ -158,8 +173,12 @@ VS Journal には、少なくとも次のタグ種別がある。
 -   キャッシュは正しさを損なわない範囲で使う。キャッシュの有無で結果が変わる実装にしない。
 -   更新イベントの順序や非同期処理の競合に注意する。
 
-【要追記】StateService
-の現行責務、永続化キー、状態移行方針、キャッシュ一覧と無効化条件を記載してください。
+### 永続化と一時状態
+
+-   `src/services/StateService.ts` は `context.globalState` を使い、`tagUsage` (`Record<string, number>`)、`expandedItems` (`string[]`)、`sortStates` (`Record<string, SortState>`) を保存する。`stateVersion` は現在 `0`。
+-   初期化時に保存済み `stateVersion` と現行バージョンが異なる場合、上記の保存状態を空にして現行バージョンを書き込む。保存バージョンが未設定の場合の既定値も `0` のため、初回はバージョン不一致によるリセットを行わない。
+-   永続化しないソート状態は `StateService` の `sessionSortStates` に保持する。ファイルメタデータ、タグ索引、カーソル行、仮想タグの集合・索引などは `src/extension.ts` と `src/state.ts` のメモリ上の状態。
+-   各キャッシュの更新・削除・リネーム・設定変更に対する無効化条件を網羅した一覧は未確認。キャッシュに関わる変更では、イベント購読と各更新経路を追って確認する。
 
 ## 8. ローカライズ・設定・コマンド
 
@@ -172,7 +191,12 @@ VS Journal には、少なくとも次のタグ種別がある。
 -   設定の既定値を変更する場合は、既存ユーザーと新規ユーザーの挙動の違いを説明する。
 -   ローカライズ対象の追加・変更では、必要な翻訳ファイルが揃っていることを確認する。
 
-【要追記】対応言語、翻訳ファイルの一覧、ローカライズ確認方法、設定追加時のチェック項目を追記してください。
+### 翻訳ファイルと設定追加
+
+-   `package.nls.json` はマニフェスト文言の既定言語 (英語)、`package.nls.ja.json` は日本語訳。実行時文言の日本語訳は `l10n/bundle.l10n.ja.json` にある。リポジトリ内で確認できる翻訳言語は日本語。
+-   新しい UI 文言は既存方式に合わせる。`package.json` の `%key%` は `package.nls.json` と `package.nls.ja.json`、実行時の `vscode.l10n.t` は `l10n/bundle.l10n.ja.json` の対応を確認する。
+-   設定追加・変更時は `package.json` の `contributes.configuration.properties` と、実装側の設定読み込み・変更イベント処理を確認する。設定が利用者向け文言を持つ場合は NLS 翻訳も確認し、既定値・列挙値・制約が実装と一致することを確認する。
+-   【要調査】ローカライズの専用チェックコマンドや確認手順は未確認。必要に応じて VS Code 上で対象言語の表示を確認する。
 
 ## 9. テスト・ビルド・確認
 
@@ -188,17 +212,15 @@ VS Journal には、少なくとも次のタグ種別がある。
 -   `git status --short`
 -   差分に意図しないファイル変更が含まれていないこと
 
-【要追記】以下はリポジトリの実際の `package.json` や CI
-設定を確認して記入してください。
+リポジトリで定義されているコマンド:
 
--   依存関係のインストールコマンド: `～`
--   開発ビルド／コンパイルコマンド: `～`
--   型チェックコマンド: `～`
--   Lint コマンド: `～`
--   単体テストコマンド: `～`
--   VS Code Extension Host テストコマンド: `～`
--   パッケージ作成コマンド: `～`
--   CI で実行されるチェック: `～`
+-   依存関係のインストール: `npm ci`
+-   開発ビルド: `npm run build` (clean、拡張ビルド、WebView ビルド)。個別には `npm run build:extension`、`npm run build:webview`。
+-   型チェック: `npx tsc --noEmit -p tsconfig.json` (拡張側)、`npx tsc --noEmit -p tsconfig.webview.json` (WebView)。
+-   Lint: `npm run lint`。
+-   テスト: `npm test`。`pretest` により `npm run compile-tests` と `npm run lint` が先に実行される。テストは `@vscode/test-cli` を使う VS Code Extension Host テスト。
+-   パッケージ作成: `npx @vscode/vsce package`。`package.json` に専用 npm script はない。
+-   CI: `.github/workflows/publish.yml` の手動起動ワークフローのみ確認できる。Node.js 22 で `npm ci`、`xvfb-run -a npm test`、`npm run build` を実行し、OIDC で Visual Studio Marketplace に公開する。通常の push / pull request 用 workflow は確認できていない。
 
 ### 手動テストの観点
 
@@ -229,8 +251,11 @@ VS Journal には、少なくとも次のタグ種別がある。
 -   README
     は、利用者向け説明に実質的な変更がある場合に更新する。内部実装だけの変更で機械的に更新しない。
 
-【要追記】ブランチ運用、コミットメッセージの形式、バージョン更新手順、CHANGELOG
-の書式、公開手順を追記してください。
+### 確認できた公開手順
+
+-   公開 workflow は `.github/workflows/publish.yml`。GitHub Actions の手動起動でテスト・ビルド後、`npx @vscode/vsce publish --oidc` を実行する。
+-   公開するバージョンは `package.json` の `version` に定義される。バージョンをいつ・どのように更新するかは workflow からは分からない。
+-   ブランチ運用、コミットメッセージ形式、バージョン更新ルール、CHANGELOG の書式・更新方針は未確認。公開前にメンテナーの運用を確認する。
 
 ## 11. エージェントの報告形式
 
@@ -256,27 +281,22 @@ VS Journal には、少なくとも次のタグ種別がある。
 -   [ ] 既存の仕様・テスト・設定を確認した
 -   [ ] 変更範囲と影響範囲を説明した
 
-## 13. メンテナが追記・確定する項目
+## 13. 現行のディレクトリ構成とデータフロー
 
-このファイルをリポジトリに追加した後、次の項目を実際のソース・設定・運用に合わせて埋めてください。
+-   `src/extension.ts`: Extension Host の起動、コマンド、ジャーナル走査、ファイルメタデータとタグ索引の更新。
+-   `src/sidebar/TagTreeProvider.ts`: タグ索引を VS Code の TreeView に表示。
+-   `src/services/`: ファイルメタデータ、タグ解析・仮想タグ、状態、階層構築、ソートなどの処理。
+-   `src/preview/`: Markdown プレビューの生成、レンダラー、Preview WebView の管理。
+-   `src/webview/`: WebView の TypeScript、CSS、HTML、言語別コードハイライト定義、KaTeX リソース。
+-   `src/test/`: 自動テスト。
+-   起動時などの全件更新では、`extension.ts` が保存先以下を再帰走査して `.md` ファイルを読み、`createFileMeta` でメタデータとタグを抽出する。システムタグと仮想タグの索引を構築し、`TagTreeProvider` を更新する。プレビューでは `previewPanel.ts` が対象ファイルを読み、`previewRenderer.ts` が Markdown-it で HTML 化し、WebView に表示する。
 
-1.  **実行コマンド**: install / compile / lint / test / package
-    の正確なコマンド。
-2.  **ディレクトリ構成**: Extension
-    Host、TreeView、WebView、サービス、パーサー、テストの配置。
-3.  **主要なデータフロー**: Markdown
-    読み込みからメタデータ、タグインデックス、ツリー表示、プレビューまで。
-4.  **永続化仕様**: `globalState` のキーと形式、互換性・移行方針。
-5.  **キャッシュ仕様**: キャッシュの所有者、キー、更新・削除時の無効化。
-6.  **WebView の境界**: Extension Host
-    とのメッセージ定義、渡してよいデータ、セキュリティ要件。
-7.  **テスト環境**: 自動テストと手動テストの具体的な実行方法。
-8.  **リリース運用**: バージョン、CHANGELOG、CI、Marketplace
-    公開の手順。
-9.  **対応環境**: 対応 OS、VS Code
-    の最小バージョン、必要な外部コマンド等。
-10. **設計上の非目標**:
-    今後も実装しない機能や、意図的に制限している仕様。
+## 14. 要追記・要調査
+
+-   【要調査】キャッシュ一覧と、ファイル更新・削除・リネーム・設定変更時の無効化条件を実行経路ごとに整理する。
+-   【要調査】対応 OS と、画像クリップボード処理などが必要とする OS 別の外部コマンドを確認する。
+-   【要調査】README / README.ja.md の保存先表記 `$HOME/VSJournal` と実装の `os.homedir()/vsJournal` の違いが意図的か確認し、説明を統一する。
+-   【要追記】ブランチ運用、コミットメッセージ形式、バージョン更新、CHANGELOG のルールをメンテナーに確認する。
 
 ------------------------------------------------------------------------
 
