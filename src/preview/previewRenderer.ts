@@ -983,7 +983,7 @@ export function createMarkdownIt(
         linkify: true,
         typographer: true
     }).use(taskLists, {
-        enabled: false,
+        enabled: true,
         label: false,
         labelAfter: false
     }).use(texmath, {

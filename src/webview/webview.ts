@@ -25,6 +25,7 @@ hljs.registerLanguage('makefile', makefile);
         | { type: 'openExternal'; url: string }
         | { type: 'openLocalLink'; path: string }
         | { type: 'jumpToLine'; filePath: string; line: number; character?: number }
+        | { type: 'setTaskListItem'; filePath: string; line: number; checked: boolean }
         | { type: 'jumpToFile'; filePath: string }
         | { type: 'closePreview' }
         | { type: 'edit' };
@@ -196,6 +197,26 @@ hljs.registerLanguage('makefile', makefile);
     function handleClick(e: MouseEvent): void {
         const target = e.target as HTMLElement | null;
         if (!target) { return; }
+
+        const checkbox = target.closest<HTMLInputElement>(
+            'input.task-list-item-checkbox[type="checkbox"]'
+        );
+        if (checkbox) {
+            const listItem = checkbox.closest<HTMLElement>('[data-start-line]');
+            const file = checkbox.closest<HTMLElement>('[data-file]');
+            const filePath = file?.getAttribute('data-file');
+            const line = Number(listItem?.getAttribute('data-start-line'));
+            if (filePath && Number.isInteger(line) && line >= 0) {
+                postMessage({
+                    type: 'setTaskListItem',
+                    filePath,
+                    line,
+                    checked: checkbox.checked
+                });
+            }
+            e.stopPropagation();
+            return;
+        }
 
         const link = target.closest('a');
         if (link) {

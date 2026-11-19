@@ -324,6 +324,39 @@ async function handleWebviewMessage(
         return;
     }
 
+    if (
+        message.type === 'setTaskListItem' &&
+        typeof message.filePath === 'string' &&
+        Number.isInteger(message.line) &&
+        typeof message.checked === 'boolean'
+    ) {
+        const uri = vscode.Uri.file(message.filePath);
+        const doc = await vscode.workspace.openTextDocument(uri);
+        if (message.line < 0 || message.line >= doc.lineCount) {
+            return;
+        }
+
+        const lineText = doc.lineAt(message.line).text;
+        const marker = /^(\s*(?:[-*+]|\d+[.)])\s+\[)[ xX](\])/;
+        const match = marker.exec(lineText);
+        if (!match) {
+            return;
+        }
+
+        const markerOffset = match[1].length;
+        const edit = new vscode.WorkspaceEdit();
+        edit.replace(
+            uri,
+            new vscode.Range(
+                new vscode.Position(message.line, markerOffset),
+                new vscode.Position(message.line, markerOffset + 1)
+            ),
+            message.checked ? 'x' : ' '
+        );
+        await vscode.workspace.applyEdit(edit);
+        return;
+    }
+
     if (message.type === 'jumpToFile' && message.filePath) {
         const uri = vscode.Uri.file(message.filePath);
         const doc = await vscode.workspace.openTextDocument(uri);
