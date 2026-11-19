@@ -4,6 +4,7 @@ import asm from './languages/asm';
 import shasm from './languages/shasm';
 import verilog from './languages/verilog';
 import vhdl from './languages/vhdl';
+import makefile from './languages/makefile';
 
 declare function acquireVsCodeApi(): any;
 hljs.registerLanguage('log', log);
@@ -12,6 +13,7 @@ hljs.registerLanguage('asm', asm);
 hljs.registerLanguage('shasm', shasm);
 hljs.registerLanguage('verilog', verilog);
 hljs.registerLanguage('vhdl', vhdl);
+hljs.registerLanguage('makefile', makefile);
 
 (function () {
     // =========================================================
