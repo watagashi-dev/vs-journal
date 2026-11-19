@@ -124,9 +124,9 @@ hljs.registerLanguage('makefile', makefile);
             ? document.createRange()
             : doc.caretRangeFromPoint?.(clientX, clientY);
 
-        if (caret && lineContent.contains(caret.offsetNode)) {
-            range!.setStart(lineContent, 0);
-            range!.setEnd(caret.offsetNode, caret.offset);
+        if (caret && range && lineContent.contains(caret.offsetNode)) {
+            range.setStart(lineContent, 0);
+            range.setEnd(caret.offsetNode, caret.offset);
             character = range.toString().length;
         } else if (range?.startContainer && lineContent.contains(range.startContainer)) {
             const endRange = document.createRange();
@@ -242,7 +242,7 @@ hljs.registerLanguage('makefile', makefile);
             return;
         }
 
-        const blockEl = target.closest('[data-start-line]');
+        const blockEl = target.closest<HTMLElement>('[data-start-line]');
         if (blockEl) {
             const file = blockEl.closest('[data-file]');
             const filePath = file?.getAttribute('data-file');
