@@ -561,12 +561,16 @@ function getAllMarkdownFiles(dir: string): string[] {
             return getAllMarkdownFiles(fullPath);
         }
 
-        if (entry.isFile() && entry.name.toLowerCase().endsWith('.md')) {
+        if (entry.isFile() && isMarkdownFilePath(entry.name)) {
             return [fullPath];
         }
 
         return [];
     });
+}
+
+export function isMarkdownFilePath(filePath: string): boolean {
+    return path.extname(filePath).toLowerCase() === '.md';
 }
 
 async function refreshAllData() {
@@ -867,7 +871,7 @@ export async function activate(context: vscode.ExtensionContext) {
         fileWatcher = vscode.workspace.createFileSystemWatcher(pattern);
 
         const onCreate = fileWatcher.onDidCreate(uri => {
-            if (!uri.fsPath.endsWith('.md')) {
+            if (!isMarkdownFilePath(uri.fsPath)) {
                 return;
             }
             updateSingleFile(uri.fsPath);
@@ -875,7 +879,7 @@ export async function activate(context: vscode.ExtensionContext) {
         });
 
         const onChange = fileWatcher.onDidChange(uri => {
-            if (!uri.fsPath.endsWith('.md')) {
+            if (!isMarkdownFilePath(uri.fsPath)) {
                 return;
             }
             const doc = vscode.workspace.textDocuments.find(d => d.uri.fsPath === uri.fsPath);

@@ -7,7 +7,8 @@ import {
 	VSJournalConfig,
 	generateFolderPath, generateFullPath,
 	getAbsoluteJournalDir,
-	isJournalFile
+	isJournalFile,
+	isMarkdownFilePath
 } from '../extension';
 
 
@@ -53,6 +54,18 @@ suite('VS Journal Logic Tests', () => {
 			isJournalFile(document, '/workspace/root/journal'),
 			false
 		);
+	});
+
+	test('isMarkdownFilePath accepts .md extensions regardless of case', () => {
+		assert.strictEqual(isMarkdownFilePath('/journal/note.md'), true);
+		assert.strictEqual(isMarkdownFilePath('/journal/note.MD'), true);
+		assert.strictEqual(isMarkdownFilePath('/journal/note.Md'), true);
+		assert.strictEqual(isMarkdownFilePath('/journal/note.mD'), true);
+	});
+
+	test('isMarkdownFilePath rejects other extensions', () => {
+		assert.strictEqual(isMarkdownFilePath('/journal/note.markdown'), false);
+		assert.strictEqual(isMarkdownFilePath('/journal/note.md.txt'), false);
 	});
 
 });

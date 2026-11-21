@@ -17,7 +17,7 @@
 
 `activate` は `StateService` を初期化し、TreeViewやコマンド、イベントハンドラーを登録します。その後 `performScan` から `refreshAllData` を実行し、走査結果でツリーを構築して保存済みの展開・ソート状態を整理し、ファイル監視を設定します。
 
-`getAllMarkdownFiles` は保存先を再帰走査し、拡張子が大文字小文字を問わず `.md` で終わるファイルを列挙します。`refreshAllData` はファイル内容・統計情報を読み、`createFileMeta` を通じて `fileMetaMap` とユーザータグ索引を構築します。続いてシステムタグを再構築し、`rebuildVirtualTagIndex` で登録中の仮想タグを照合します。最後に `rebuildTree` が `TagHierarchyBuilder` と `TagTreeProvider.refresh` を呼びます。
+`getAllMarkdownFiles` は保存先を再帰走査し、`isMarkdownFilePath` で拡張子が大文字小文字を問わず `.md` のファイルを列挙します。`refreshAllData` はファイル内容・統計情報を読み、`createFileMeta` を通じて `fileMetaMap` とユーザータグ索引を構築します。続いてシステムタグを再構築し、`rebuildVirtualTagIndex` で登録中の仮想タグを照合します。最後に `rebuildTree` が `TagHierarchyBuilder` と `TagTreeProvider.refresh` を呼びます。
 
 ## ファイル変更時の更新経路
 
@@ -27,7 +27,7 @@
 - ジャーナル保存先設定の変更: 仮想タグ状態とタグ使用履歴をクリアし、保存状態の一部を消去して再走査・監視再設定を行い、現在のプレビューを閉じます。索引や仮想タグ集合の詳細は [data-model.md](data-model.md) を参照してください。
 - テキスト文書の保存: ジャーナルファイルなら単一ファイルを更新してツリーを再構築します。プレビュー状態があれば、保存対象のメタデータを置き換えてプレビューも更新します。
 
-ファイル監視の作成・変更イベントは `uri.fsPath.endsWith('.md')` で判定されます。一方、初回走査は `.toLowerCase().endsWith('.md')` を使います。この大小文字の違いは現在の実装上の差です。
+ファイル監視の作成・変更イベントと初回走査は、共通の `isMarkdownFilePath` を使って拡張子を判定します。そのため `.md`、`.MD` など、大文字小文字が異なる拡張子も同じように処理されます。
 
 ## 保存先とパスキー
 
