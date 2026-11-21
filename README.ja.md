@@ -437,7 +437,7 @@ Cmd+Option+P (Mac)
 
 | 設定 | 説明 | デフォルト |
 |------|------|----------|
-| vsJournal.journalDir | 保存フォルダ | $HOME/VSJournal |
+| vsJournal.journalDir | 保存フォルダ | $HOME/vsJournal |
 | vsJournal.autoSave | 自動保存(ms) | 800 |
 | vsJournal.enableDateTime | 日時自動挿入 | true |
 | vsJournal.confirmDeleteFile | ファイル削除確認 | true |
@@ -466,7 +466,7 @@ Cmd+Option+P (Mac)
     "Today": true,
     "Yesterday": true,
     "Last Week": true
-  }
+  },
   "vsJournal.fileNameStyle": "datetime-minute",
   "vsJournal.folderStructure": "yyyy-mm-dd",
   "vsJournal.paste.saveLocation": "structured",

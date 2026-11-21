@@ -483,13 +483,13 @@ Cmd+Option+P (macOS)
 
 | Setting | Description | Default |
 | :--- | :--- | :--- |
-| vsJournal.journalDir | Storage folder | $HOME/VSJournal |
+| vsJournal.journalDir | Storage folder | $HOME/vsJournal |
 | vsJournal.autoSave | Auto-save delay (ms) | 800 |
 | vsJournal.enableDateTime | Insert date/time on new file | true |
 | vsJournal.confirmDeleteFile | Confirm before deleting file | true |
 | vsJournal.confirmDeleteVirtualTag | Confirm before deleting virtual tag | true |
 | vsJournal.virtualTags.caseSensitive | Case-sensitive virtual tags | false |
-+| vsJournal.systemTags.visibility | Control system tag visibility | { "Today": true, "Yesterday": true, "Last Week": true } |
+| vsJournal.systemTags.visibility | Control system tag visibility | { "Today": true, "Yesterday": true, "Last Week": true } |
 | vsJournal.fileNameStyle | File naming format for new entries | datetime-minute |
 | vsJournal.folderStructure | Folder structure for new entries | flat |
 | vsJournal.paste.saveLocation | Location for pasted images | structured |
