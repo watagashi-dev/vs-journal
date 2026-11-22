@@ -276,6 +276,28 @@ foobar`;
         assert.strictEqual(files.size, 1);
     });
 
+    test('case insensitive indexing keeps one line entry per occurrence', () => {
+        virtualTagSet.add('foo');
+
+        const meta = createMeta('a.md');
+        indexVirtualTags(meta, 'FOO foo\nbar FOO\nnone', false);
+
+        const files = virtualTagIndexMap.get('foo')!;
+        const file = Array.from(files.values())[0];
+        assert.deepStrictEqual(file.matchedLines, [0, 0, 1]);
+    });
+
+    test('case insensitive indexing preserves Unicode lowercase matching', () => {
+        virtualTagSet.add('İ');
+
+        const meta = createMeta('a.md');
+        indexVirtualTags(meta, 'i\u0307', false);
+
+        const files = virtualTagIndexMap.get('İ')!;
+        const file = Array.from(files.values())[0];
+        assert.deepStrictEqual(file.matchedLines, [0]);
+    });
+
     test('case insensitive no match when different string', () => {
         virtualTagSet.add('foo');
 

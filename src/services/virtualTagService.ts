@@ -28,24 +28,17 @@ function addMetaToTagIndex(
 }
 
 function findVirtualTagMatchesInLines(
-    tag: string,
-    lines: string[],
-    caseSensitive: boolean
+    target: string,
+    lines: string[]
 ): number[] {
     const matches: number[] = [];
-
-    const target = caseSensitive
-        ? tag
-        : tag.toLowerCase();
 
     if (target.length === 0) {
         return matches;
     }
 
     for (let line = 0; line < lines.length; line++) {
-        const lineText = caseSensitive
-            ? lines[line]
-            : lines[line].toLowerCase();
+        const lineText = lines[line];
 
         let searchStart = 0;
 
@@ -97,12 +90,17 @@ export function indexVirtualTags(
     }
 
     const lines = content.split(/\r?\n/);
+    const searchLines = caseSensitive
+        ? lines
+        : lines.map(line => line.toLowerCase());
 
     for (const tag of virtualTagSet) {
+        const target = caseSensitive
+            ? tag
+            : tag.toLowerCase();
         const matchedLines = findVirtualTagMatchesInLines(
-            tag,
-            lines,
-            caseSensitive
+            target,
+            searchLines
         );
 
         if (matchedLines.length === 0) {

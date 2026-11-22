@@ -647,11 +647,23 @@ function removeUserTagsFromMeta(oldMeta: FileMeta | undefined) {
     }
 }
 
-function addUserTagsFromMeta(meta: FileMeta) {
+export function addUserTagsToIndex(
+    index: Map<string, FileMeta[]>,
+    meta: FileMeta
+) {
     for (const tag of getUserTagsFromMeta(meta)) {
-        const arr = userTagIndexMap.get(tag) ?? [];
-        userTagIndexMap.set(tag, [...arr, meta]);
+        const files = index.get(tag);
+
+        if (files) {
+            files.push(meta);
+        } else {
+            index.set(tag, [meta]);
+        }
     }
+}
+
+function addUserTagsFromMeta(meta: FileMeta) {
+    addUserTagsToIndex(userTagIndexMap, meta);
 }
 
 function updateSingleFile(filePath: string) {

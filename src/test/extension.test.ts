@@ -5,6 +5,7 @@ import * as workspaceUtils from '../utils/workspace';
 import { FileMeta } from '../models/FileMeta';
 import {
 	VSJournalConfig,
+	addUserTagsToIndex,
 	generateFolderPath, generateFullPath,
 	getAbsoluteJournalDir,
 	getUserTagsFromMeta,
@@ -92,6 +93,42 @@ suite('VS Journal Logic Tests', () => {
 		assert.deepStrictEqual(
 			getUserTagsFromMeta(meta),
 			new Set(['shared', 'file-only', 'heading-only'])
+		);
+	});
+
+	test('addUserTagsToIndex appends files and indexes duplicate tags once', () => {
+		const firstMeta: FileMeta = {
+			filePath: '/journal/first.md',
+			fileName: 'first.md',
+			title: 'First',
+			tags: ['shared'],
+			headings: [
+				{
+					text: 'Heading',
+					rawText: '## Heading #shared',
+					level: 2,
+					line: 0,
+					tags: ['shared']
+				}
+			],
+			ctime: 0,
+			mtime: 0,
+			size: 0
+		};
+		const secondMeta: FileMeta = {
+			...firstMeta,
+			filePath: '/journal/second.md',
+			fileName: 'second.md',
+			title: 'Second'
+		};
+		const index = new Map<string, FileMeta[]>();
+
+		addUserTagsToIndex(index, firstMeta);
+		addUserTagsToIndex(index, secondMeta);
+
+		assert.deepStrictEqual(
+			index.get('shared'),
+			[firstMeta, secondMeta]
 		);
 	});
 
