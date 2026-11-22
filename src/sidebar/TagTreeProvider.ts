@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { TagHierarchyNode } from '../services/TagHierarchyBuilder';
 import { getJournalDir, getJournalRelativePath } from '../extension';
 import { FileMeta } from '../models/FileMeta';
+import { filterHeadingsForTag } from '../services/headingTagFilter';
 import { PreviewContext } from '../preview/previewPanel';
 import { StateService } from '../services/StateService';
 import { sortFiles } from '../services/fileSort';
@@ -85,6 +86,25 @@ function formatTagLabel(
 
     const count = node.files.length;
     return `${base}(${count})`;
+}
+
+function getHeadingsForTag(
+    file: FileMeta,
+    sectionKey: string | undefined,
+    tag: string
+) {
+    const caseSensitive = sectionKey === 'virtual'
+        ? vscode.workspace
+            .getConfiguration('vsJournal')
+            .get<boolean>('virtualTags.caseSensitive', false)
+        : false;
+
+    return filterHeadingsForTag(
+        file.headings,
+        sectionKey,
+        tag,
+        caseSensitive
+    );
 }
 
 class VSTagItem extends vscode.TreeItem {
@@ -292,30 +312,11 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         if (element.type === 'file' && element.file && element.parentTag) {
             const file = element.file;
             const parentTag = element.parentTag;
-
-            const headings = file.headings.filter((heading) => {
-                if (element.sectionKey === 'user') {
-                    return heading.tags.includes(parentTag);
-                }
-
-                if (element.sectionKey === 'virtual') {
-                    const caseSensitive = vscode.workspace
-                        .getConfiguration('vsJournal')
-                        .get<boolean>('virtualTags.caseSensitive', false);
-
-                    const text = caseSensitive
-                        ? heading.rawText
-                        : heading.rawText.toLowerCase();
-
-                    const tag = caseSensitive
-                        ? parentTag
-                        : parentTag.toLowerCase();
-
-                    return text.includes(tag);
-                }
-
-                return false;
-            });
+            const headings = getHeadingsForTag(
+                file,
+                element.sectionKey,
+                parentTag
+            );
 
             return Promise.resolve(
                 headings.map(heading => {
@@ -380,29 +381,11 @@ export class TagTreeProvider implements vscode.TreeDataProvider<VSTagItem> {
         );
 
         for (const file of sortedFiles) {
-            const headings = file.headings.filter((heading) => {
-                if (element.sectionKey === 'user') {
-                    return heading.tags.includes(node.path);
-                }
-
-                if (element.sectionKey === 'virtual') {
-                    const caseSensitive = vscode.workspace
-                        .getConfiguration('vsJournal')
-                        .get<boolean>('virtualTags.caseSensitive', false);
-
-                    const text = caseSensitive
-                        ? heading.rawText
-                        : heading.rawText.toLowerCase();
-
-                    const tag = caseSensitive
-                        ? node.path
-                        : node.path.toLowerCase();
-
-                    return text.includes(tag);
-                }
-
-                return false;
-            });
+            const headings = getHeadingsForTag(
+                file,
+                element.sectionKey,
+                node.path
+            );
             const filePath = getJournalRelativePath(file.filePath);
             // const stateKey = `file:${element.sectionKey}:${node.path}:${filePath}`;
 

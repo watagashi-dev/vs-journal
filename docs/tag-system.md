@@ -40,4 +40,4 @@ TreeView用には `rebuildTree` が `virtualTagSet` の全タグについて索�
 
 `TagHierarchyBuilder.build` はSystem / User / Virtualの各索引を別々に階層化します。タグ文字列を `/` で分割して親子ノードを作り、ユーザータグと仮想タグのルート・子は名前順に整列します。パス深度が4段を超える場合は4段目以降を1つの末尾セグメントにまとめます。システムタグのルート順は入力順を維持します。
 
-`TagTreeProvider` は各セクション、タグノード、ファイル、見出しをTreeItemにします。ファイル項目の子には該当ファイルの見出しタグが表示されます。User Tagでは見出しの `tags` を照合し、Virtual Tagでは見出しの `rawText` にタグ文字列が含まれるかを設定の大小文字規則で照合します。
+`TagTreeProvider` は各セクション、タグノード、ファイル、見出しをTreeItemにします。ファイル項目の子には該当ファイルの見出しタグが表示されます。見出しの絞り込みは `headingTagFilter.ts` の `filterHeadingsForTag` を、ファイル項目の子見出し表示とタグノード配下のファイルの展開可否判定で共用します。User Tagでは見出しの `tags` を完全一致で照合し、Virtual Tagでは見出しの `rawText` にタグ文字列が含まれるかを設定の大小文字規則で照合します。System Tagでは見出しを表示しません。
