@@ -30,6 +30,8 @@
 
 仮想タグ名は `vs-journal.addVirtualTag` コマンドで入力され、trim後に `virtualTagSet` に追加されます。`virtualTagService.ts` の `indexVirtualTags` はファイル内容の全行に対してタグ文字列を検索し、照合行を `VirtualTagFile.matchedLines` として `virtualTagIndexMap` に格納します。これは Markdownのタグ構文解析とは独立した部分文字列照合です。大小文字の扱いは `vsJournal.virtualTags.caseSensitive` 設定に従います。
 
+大小文字設定の変更時は、`rebuildVirtualTagIndex` を一度呼び出し、登録中の全仮想タグについて索引を再構築します。再構築関数は一度の呼び出しで全タグを処理するため、呼び出し側でタグごとに繰り返す必要はありません。
+
 TreeView用には `rebuildTree` が `virtualTagSet` の全タグについて索引を参照し、照合ファイルが0件でも空のタグ分類を生成対象に含めます。仮想タグの更新・削除・再走査時の索引ライフサイクルは [data-model.md](data-model.md) を参照してください。
 
 プレビューでは `previewPanel.ts` が仮想タグ索引からファイルごとの `VirtualTagFile` を取得し、`VirtualTagSession` を組み立てます。索引にそのファイルの項目がない場合も、空の `matchedLines` を持つ `VirtualTagFile` がその場で作られます。照合行はWebView内のナビゲーション位置データに変換されます。描画中の文字強調は `previewRenderer.ts` のMarkdownトークン処理と `webview.ts` のDOM処理が担います。詳細は [preview.md](preview.md) を参照してください。

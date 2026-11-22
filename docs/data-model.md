@@ -32,7 +32,7 @@
 
 `indexVirtualTags` は各ファイルの内容を行に分け、登録された各仮想タグを行ごとに文字列検索します。一致があったファイルについて `VirtualTagFile` を作り、URI文字列キーで `virtualTagIndexMap` に保存します。`matchedLines` は0始まりの行番号です。同じ行内でキーワードが複数回見つかっても、その行番号は検索ループにより複数回入る場合があります。
 
-`rebuildVirtualTagIndex` は索引マップ全体をクリアしてから、現在の `fileMetaMap` にある全ファイルを読み直して再登録します。単一ファイル更新の `updateSingleFile` は対象ファイルの旧メタデータをユーザー索引から除き、再読込後にメタデータとユーザー索引を追加します。仮想タグ索引は `removeVirtualTagsForFile` でそのファイルの旧項目を取り除き、新しい内容で `indexVirtualTags` を呼びます。
+`rebuildVirtualTagIndex` は索引マップ全体をクリアしてから、現在の `fileMetaMap` にある全ファイルを読み直し、登録済みのすべての仮想タグを一度の呼び出しで再登録します。`vsJournal.virtualTags.caseSensitive` の変更時もこの再構築を一度実行します。仮想タグが0件なら索引を空にして、ファイル内容は読み込みません。単一ファイル更新の `updateSingleFile` は対象ファイルの旧メタデータをユーザー索引から除き、再読込後にメタデータとユーザー索引を追加します。仮想タグ索引は `removeVirtualTagsForFile` でそのファイルの旧項目を取り除き、新しい内容で `indexVirtualTags` を呼びます。
 
 ファイル削除時はExtension Hostのファイル監視イベントから全件再走査されます（処理順は [architecture.md](architecture.md)）。この経路は仮想タグ索引を作り直しますが、`virtualTagSet` は保持します。ジャーナル保存先の設定変更では `resetVirtualTags` が集合と索引の両方を空にします。現在のコードで仮想タグ集合を永続化・起動時復元する処理は確認できません。
 

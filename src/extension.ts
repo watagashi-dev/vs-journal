@@ -1578,14 +1578,10 @@ export async function activate(context: vscode.ExtensionContext) {
                 const config = vscode.workspace.getConfiguration('vsJournal');
                 const caseSensitive = config.get<boolean>('virtualTags.caseSensitive', true);
 
-                virtualTagIndexMap.clear();
-
                 const readFileContent = (filePath: string): string => {
                     return readFileEntry(filePath).content;
                 };
-                for (const tag of virtualTagSet) {
-                    rebuildVirtualTagIndex(fileMetaMap, readFileContent, caseSensitive);
-                }
+                rebuildVirtualTagIndex(fileMetaMap, readFileContent, caseSensitive);
                 rebuildTree();
             }
         }),

@@ -1,6 +1,7 @@
 import * as assert from 'assert';
 import {
     indexVirtualTags,
+    rebuildVirtualTagIndex,
     buildTagSegments,
     TagSegment
 } from '../services/virtualTagService';
@@ -176,6 +177,70 @@ foobar`;
 
         const file = Array.from(files.values())[0];
         assert.strictEqual(file.meta.filePath, 'a.md');
+    });
+
+    test('rebuild indexes every tag while reading each file once', () => {
+        virtualTagSet.add('foo');
+        virtualTagSet.add('bar');
+
+        const metaA = createMeta('a.md');
+        const metaB = createMeta('b.md');
+        const fileMetaMap = new Map([
+            ['a', metaA],
+            ['b', metaB]
+        ]);
+        const contents = new Map([
+            ['a.md', 'foo here\nbar too'],
+            ['b.md', 'foo only']
+        ]);
+        const readFileCalls: string[] = [];
+
+        virtualTagIndexMap.set('stale', new Map());
+        rebuildVirtualTagIndex(
+            fileMetaMap,
+            filePath => {
+                readFileCalls.push(filePath);
+                return contents.get(filePath)!;
+            },
+            true
+        );
+
+        assert.deepStrictEqual(readFileCalls, ['a.md', 'b.md']);
+        assert.strictEqual(virtualTagIndexMap.has('stale'), false);
+
+        const fooFiles = virtualTagIndexMap.get('foo')!;
+        const barFiles = virtualTagIndexMap.get('bar')!;
+        assert.deepStrictEqual(
+            Array.from(fooFiles.values()).map(file => file.meta.filePath),
+            ['a.md', 'b.md']
+        );
+        assert.deepStrictEqual(
+            Array.from(barFiles.values()).map(file => file.meta.filePath),
+            ['a.md']
+        );
+        assert.deepStrictEqual(
+            Array.from(barFiles.values())[0].matchedLines,
+            [1]
+        );
+    });
+
+    test('rebuild clears index and skips file reads when there are no tags', () => {
+        const meta = createMeta('a.md');
+        const fileMetaMap = new Map([['a', meta]]);
+        let readFileCount = 0;
+
+        virtualTagIndexMap.set('stale', new Map());
+        rebuildVirtualTagIndex(
+            fileMetaMap,
+            () => {
+                readFileCount++;
+                return 'content';
+            },
+            true
+        );
+
+        assert.strictEqual(readFileCount, 0);
+        assert.strictEqual(virtualTagIndexMap.size, 0);
     });
 
     test('japanese match (case sensitive)', () => {
