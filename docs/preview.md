@@ -7,8 +7,8 @@ PreviewはExtension Host側のパネル管理・Markdownレンダリングと、
 1. `extension.ts` のプレビューコマンドが対象の `FileMeta[]`、`PreviewContext`、必要なら強調条件を `setPreviewState` に渡します。
 2. `previewPanel.ts` の `updatePreviewPanel` / `buildHtml` がファイル内容を `vscode.workspace.fs.readFile` で読み込み、各ファイル用のコンテナを作ってMarkdownレンダラーへ渡します。
 3. `previewRenderer.ts` の `createMarkdownIt` は markdown-itを構成し、タスクリストとKaTeX数式プラグインを使用します。トークンにソース行属性を付与し、タグ・リンク・画像・HTML・コードフェンスなどのレンダリング規則を登録します。
-4. `buildHtml` は `src/webview/template.html` のプレースホルダーに、本文、CSS・スクリプトURI、テーマ、強調ルール、仮想タグナビゲーション用データなどを埋め、`panel.webview.html` に設定します。
-5. `webview.ts` はDOM準備後に構文ハイライトや行単位の装飾を行い、クリック・キー・スクロールを扱います。
+4. `buildHtml` は `src/webview/template.html` のプレースホルダーに、本文、CSS・スクリプトURI、テーマ、強調ルール、仮想タグナビゲーション用データ、表示回IDなどを埋め、`panel.webview.html` に設定します。
+5. `webview.ts` はDOM準備後に構文ハイライトや行単位の装飾を行い、クリック・キー・スクロールを扱います。初期化完了後、HTMLに埋め込まれた表示回IDを付けてHostへ準備完了を通知します。
 
 Previewパネルのファイル一覧・コンテキスト・強調条件・`VirtualTagSession` は `previewStateMap` にパネル単位で保持されます。パネル破棄時に状態が削除されます。拡張側のプレビュー状態更新やファイル保存後の更新は `extension.ts` と `previewPanel.ts` を参照してください。
 
@@ -31,9 +31,12 @@ WebViewからExtension Hostへの送信型 `VsCodeMessage` は `webview.ts` 内�
 | WebView → Host | `jumpToFile` | ファイルを開いて表示 |
 | WebView → Host | `edit` | 現在の文書をエディターで表示 |
 | WebView → Host | `closePreview` | 現在のPreviewパネルを閉じる |
+| WebView → Host | `webviewReady` | 表示回IDが現在のHTMLと一致する場合、プレビュー件数と保留中スクロールを送る |
 | Host → WebView | `themeChanged` | highlight.jsテーマのリンクを更新 |
-| Host → WebView | `scrollToLine` | 対象ファイル・行へスクロール。DOM準備前なら保留 |
-| Host → WebView | `setPreviewCount` | WebView内のプレビュー件数状態を更新 |
+| Host → WebView | `scrollToLine` | WebView準備完了後に対象ファイル・行へスクロール |
+| Host → WebView | `setPreviewCount` | WebView準備完了後にプレビュー件数状態を更新 |
+
+各HTML更新には単調増加する表示回IDが付きます。HostはWebViewの準備完了通知を待ってからスクロール命令を送り、IDが古い通知は無視します。準備前に複数のスクロール要求が発生した場合は、最後の対象だけを保持します。これにより、初回表示などでWebViewのメッセージハンドラー登録前に命令が届いて失われることを防ぎます。
 
 WebView側には `scrollToTop` を処理する分岐もありますが、現在のソースでHostから送信する箇所は確認できませんでした。
 

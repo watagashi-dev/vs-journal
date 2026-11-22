@@ -613,20 +613,24 @@ async function refreshAllData() {
     rebuildVirtualTagIndex(fileMetaMap, readFileContent, caseSensitive);
 }
 
-function removeUserTagsFromMeta(oldMeta: FileMeta | undefined) {
-    if (!oldMeta) {
-        return;
-    }
+export function getUserTagsFromMeta(meta: FileMeta): Set<string> {
+    const tags = new Set<string>(meta.tags);
 
-    const tags = new Set<string>(oldMeta.tags);
-
-    for (const heading of oldMeta.headings) {
+    for (const heading of meta.headings) {
         for (const tag of heading.tags) {
             tags.add(tag);
         }
     }
 
-    for (const tag of tags) {
+    return tags;
+}
+
+function removeUserTagsFromMeta(oldMeta: FileMeta | undefined) {
+    if (!oldMeta) {
+        return;
+    }
+
+    for (const tag of getUserTagsFromMeta(oldMeta)) {
         const files = userTagIndexMap.get(tag);
 
         if (files) {
@@ -644,15 +648,7 @@ function removeUserTagsFromMeta(oldMeta: FileMeta | undefined) {
 }
 
 function addUserTagsFromMeta(meta: FileMeta) {
-    const tags = new Set<string>(meta.tags);
-
-    for (const heading of meta.headings) {
-        for (const tag of heading.tags) {
-            tags.add(tag);
-        }
-    }
-
-    for (const tag of tags) {
+    for (const tag of getUserTagsFromMeta(meta)) {
         const arr = userTagIndexMap.get(tag) ?? [];
         userTagIndexMap.set(tag, [...arr, meta]);
     }

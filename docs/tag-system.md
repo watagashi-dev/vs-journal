@@ -9,7 +9,7 @@
 - `createFileMeta` はファイルを行単位で読み、`CodeBlockTracker` がフェンスコード内と判断した行をタグ・見出し抽出から除きます。
 - `extractTags` は行の種類を判定し、タグ行または見出し行として妥当な構造に限ってタグ範囲を抽出します。インラインコード部分は `normalizeInlineCode` でマスクされます。
 - `parseHeading` は見出しのレベル、行番号、元文字列、表示用文字列、タグを `HeadingMeta` にします。妥当な見出しタグは表示用テキストから除かれます。
-- `addUserTagsFromMeta` はファイルタグと見出しタグをまとめ、ファイル単位で重複を除いて `userTagIndexMap` に追加します。
+- `getUserTagsFromMeta` はファイルタグと見出しタグをまとめ、ファイル単位で重複を除いた集合を返します。`addUserTagsFromMeta` はその集合を `userTagIndexMap` に追加し、`removeUserTagsFromMeta` は同じ集合を使って索引からファイルを取り除きます。
 
 タグのトークン規則、行構造の詳細は `tagLogic.ts` と `src/test/tagLogic.test.ts` を参照してください。この文書では利用者向けの規則一覧をREADMEから重複転記しません。
 

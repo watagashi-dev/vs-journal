@@ -7,6 +7,7 @@ import {
 	VSJournalConfig,
 	generateFolderPath, generateFullPath,
 	getAbsoluteJournalDir,
+	getUserTagsFromMeta,
 	isJournalFile,
 	isMarkdownFilePath
 } from '../extension';
@@ -66,6 +67,32 @@ suite('VS Journal Logic Tests', () => {
 	test('isMarkdownFilePath rejects other extensions', () => {
 		assert.strictEqual(isMarkdownFilePath('/journal/note.markdown'), false);
 		assert.strictEqual(isMarkdownFilePath('/journal/note.md.txt'), false);
+	});
+
+	test('getUserTagsFromMeta merges file and heading tags without duplicates', () => {
+		const meta: FileMeta = {
+			filePath: '/journal/note.md',
+			fileName: 'note.md',
+			title: 'Note',
+			tags: ['shared', 'file-only'],
+			headings: [
+				{
+					text: 'Heading',
+					rawText: 'Heading #shared #heading-only',
+					level: 1,
+					line: 0,
+					tags: ['shared', 'heading-only']
+				}
+			],
+			ctime: 0,
+			mtime: 0,
+			size: 0
+		};
+
+		assert.deepStrictEqual(
+			getUserTagsFromMeta(meta),
+			new Set(['shared', 'file-only', 'heading-only'])
+		);
 	});
 
 });

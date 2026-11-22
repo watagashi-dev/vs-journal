@@ -31,6 +31,17 @@ type PreviewBuildResult = {
     virtualTagSession?: VirtualTagSession;
 };
 
+type ScrollTarget = {
+    filePath: string;
+    line: number;
+};
+
+type PreviewSyncState = {
+    renderId: number;
+    ready: boolean;
+    pendingScroll?: ScrollTarget;
+};
+
 // =========================================
 // Virtual Tag Session (new unified state)
 // =========================================
@@ -53,6 +64,18 @@ const previewStateMap = new Map<
         virtualTagSession?: VirtualTagSession;
     }
 >();
+const previewSyncStateMap = new WeakMap<vscode.WebviewPanel, PreviewSyncState>();
+
+function getPreviewSyncState(panel: vscode.WebviewPanel): PreviewSyncState {
+    let state = previewSyncStateMap.get(panel);
+
+    if (!state) {
+        state = { renderId: 0, ready: false };
+        previewSyncStateMap.set(panel, state);
+    }
+
+    return state;
+}
 
 export function setPreviewState(
     panel: vscode.WebviewPanel,
@@ -131,7 +154,26 @@ function getLocalResourceRoots(): vscode.Uri[] {
     return roots;
 }
 
+function flushPendingScroll(panel: vscode.WebviewPanel) {
+    const syncState = getPreviewSyncState(panel);
+    const target = syncState.pendingScroll;
+
+    if (!syncState.ready || !target) {
+        return;
+    }
+
+    syncState.pendingScroll = undefined;
+    panel.webview.postMessage({
+        type: 'scrollToLine',
+        filePath: target.filePath,
+        line: target.line
+    });
+}
+
 function syncScrollToCursor(panel: vscode.WebviewPanel) {
+    const syncState = getPreviewSyncState(panel);
+    syncState.pendingScroll = undefined;
+
     const state = getPreviewState(panel);
     if (!state) {
         return;
@@ -147,11 +189,8 @@ function syncScrollToCursor(panel: vscode.WebviewPanel) {
         return;
     }
 
-    panel.webview.postMessage({
-        type: 'scrollToLine',
-        filePath,
-        line
-    });
+    syncState.pendingScroll = { filePath, line };
+    flushPendingScroll(panel);
 }
 
 let syncScheduled = false;
@@ -214,6 +253,19 @@ async function handleWebviewMessage(
     message: any
 ) {
     if (!message) { return; }
+
+    if (message.type === 'webviewReady' && Number.isInteger(message.renderId)) {
+        const syncState = getPreviewSyncState(panel);
+        if (message.renderId === syncState.renderId) {
+            syncState.ready = true;
+            panel.webview.postMessage({
+                type: 'setPreviewCount',
+                count: getPreviewState(panel)?.files.length ?? 0
+            });
+            flushPendingScroll(panel);
+        }
+        return;
+    }
 
     if (message.type === 'openExternal') {
         await vscode.env.openExternal(vscode.Uri.parse(message.url));
@@ -408,6 +460,7 @@ function getHintText(count: number): string {
 async function buildHtml(
     panel: vscode.WebviewPanel,
     filesToPreview: FileMeta[],
+    renderId: number,
     options?: {
         limitExceeded?: boolean;
         message?: string;
@@ -544,6 +597,7 @@ async function buildHtml(
         : [];
 
     const html = template
+        .replace(/{{renderId}}/g, String(renderId))
         .replace(/{{cspSource}}/g, webview.cspSource)
         .replace(/{{cssUri}}/g, cssUri.toString())
         .replace(/{{katexCssUri}}/g, katexCssUri.toString())
@@ -584,14 +638,30 @@ export async function updatePreviewPanel(
         message?: string;
     }
 ) {
+    let syncState: PreviewSyncState | undefined;
+    let previousRenderId: number | undefined;
+    let previousReady = false;
+    let renderId: number | undefined;
+
     try {
+        syncState = getPreviewSyncState(panel);
+        previousRenderId = syncState.renderId;
+        previousReady = syncState.ready;
+        renderId = syncState.renderId + 1;
+        syncState.renderId = renderId;
+        syncState.ready = false;
+
         const state = getPreviewState(panel);
 
-        const result = await buildHtml(panel, filesToPreview, {
+        const result = await buildHtml(panel, filesToPreview, renderId, {
             ...options,
             context: state?.context,
             highlight: state?.highlight
         });
+
+        if (syncState.renderId !== renderId) {
+            return;
+        }
 
         panel.webview.html = result.html;
 
@@ -619,11 +689,17 @@ export async function updatePreviewPanel(
                 virtualTagSession: result.virtualTagSession
             });
         }
-        panel.webview.postMessage({
-            type: 'setPreviewCount',
-            count: filesToPreview.length
-        });
     } catch (e) {
+        if (
+            syncState &&
+            renderId !== undefined &&
+            previousRenderId !== undefined &&
+            syncState.renderId === renderId
+        ) {
+            syncState.renderId = previousRenderId;
+            syncState.ready = previousReady;
+            flushPendingScroll(panel);
+        }
         // Preview update skipped
     }
 }

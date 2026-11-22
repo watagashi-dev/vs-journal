@@ -22,6 +22,7 @@ hljs.registerLanguage('makefile', makefile);
     const vscode = acquireVsCodeApi();
 
     type VsCodeMessage =
+        | { type: 'webviewReady'; renderId: number }
         | { type: 'openExternal'; url: string }
         | { type: 'openLocalLink'; path: string }
         | { type: 'jumpToLine'; filePath: string; line: number; character?: number }
@@ -1160,6 +1161,11 @@ hljs.registerLanguage('makefile', makefile);
                     scroll.line
                 );
             }, 100);
+        }
+
+        const renderId = Number(document.body.dataset.renderId);
+        if (Number.isInteger(renderId)) {
+            postMessage({ type: 'webviewReady', renderId });
         }
     }
 
