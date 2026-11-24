@@ -1,5 +1,21 @@
 # Change Log
 
+## [Unreleased] - 2026-11-
+
+### Added
+- Added a command to create a new journal entry with a user tag.
+- Added support for persistent task list checkboxes in the Markdown preview.
+- Added Makefile syntax highlighting, including continued lines.
+
+### Changed
+- Improved virtual tag indexing and synchronized preview highlighting and navigation with indexed matches.
+- Improved cursor positioning when clicking the Markdown preview.
+- Improved preview tab titles to show the selected tag and file name.
+- Recognized Markdown file extensions regardless of letter case.
+
+### Fixed
+- Fixed virtual tag highlighting and heading navigation to respect case sensitivity consistently.
+
 ## [0.7.2] - 2026-11-15
 
 ### Added
