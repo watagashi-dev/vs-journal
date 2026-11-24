@@ -1,7 +1,9 @@
 import * as assert from 'assert';
 import {
+    indexVirtualTag,
     indexVirtualTags,
     rebuildVirtualTagIndex,
+    removeVirtualTag,
     buildTagSegments,
     TagSegment
 } from '../services/virtualTagService';
@@ -149,6 +151,46 @@ foobar`;
 
         assert.strictEqual(fooFiles.size, 1);
         assert.strictEqual(barFiles.size, 1);
+    });
+
+    test('indexing one virtual tag leaves other tag indexes untouched', () => {
+        virtualTagSet.add('foo');
+        virtualTagSet.add('bar');
+        const existingMeta = createMeta('existing.md');
+        const newMeta = createMeta('new.md');
+        const existingIndex = new Map([
+            ['existing-key', {
+                meta: existingMeta,
+                matchedLines: [3]
+            }]
+        ]);
+        virtualTagIndexMap.set('foo', existingIndex);
+
+        indexVirtualTag(newMeta, 'bar here', 'bar', true);
+
+        assert.strictEqual(virtualTagIndexMap.get('foo'), existingIndex);
+        assert.deepStrictEqual(
+            Array.from(virtualTagIndexMap.get('bar')!.values()).map(
+                file => file.meta.filePath
+            ),
+            ['new.md']
+        );
+    });
+
+    test('removing one virtual tag leaves other tag indexes untouched', () => {
+        virtualTagSet.add('foo');
+        virtualTagSet.add('bar');
+        const fooIndex = new Map();
+        const barIndex = new Map();
+        virtualTagIndexMap.set('foo', fooIndex);
+        virtualTagIndexMap.set('bar', barIndex);
+
+        removeVirtualTag('foo');
+
+        assert.strictEqual(virtualTagSet.has('foo'), false);
+        assert.strictEqual(virtualTagIndexMap.has('foo'), false);
+        assert.strictEqual(virtualTagSet.has('bar'), true);
+        assert.strictEqual(virtualTagIndexMap.get('bar'), barIndex);
     });
 
     test('no match (case sensitive)', () => {

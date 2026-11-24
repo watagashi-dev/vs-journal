@@ -5,7 +5,7 @@ import * as os from 'os';
 import * as path from 'path';
 
 import { execFileSync } from 'child_process';
-import { FileMeta, VirtualTagFile } from './models/FileMeta';
+import { FileMeta } from './models/FileMeta';
 import { measure } from './perf';
 import { TagHierarchyBuilder, TagHierarchyNode } from './services/TagHierarchyBuilder';
 import { createFileMeta, deleteNote } from './services/fileMetaService';
@@ -33,6 +33,8 @@ import {
 } from './state';
 import {
     indexVirtualTags,
+    indexVirtualTag,
+    removeVirtualTag,
     removeVirtualTagsForFile,
     rebuildVirtualTagIndex,
 } from './services/virtualTagService';
@@ -1330,21 +1332,23 @@ export async function activate(context: vscode.ExtensionContext) {
                 return;
             }
 
-            await measure("rebuild virtual tag", async () => {
-                // --- Register virtual tag (core) ---
-                virtualTagSet.add(trimmed);
+            if (virtualTagSet.has(trimmed)) {
+                return;
+            }
 
-                // --- Register virtual tag (empty entry allowed for now) ---
-                if (!virtualTagIndexMap.has(trimmed)) {
-                    virtualTagIndexMap.set(
-                        trimmed,
-                        new Map<string, VirtualTagFile>()
-                    );
-                }
+            await measure("index virtual tag", async () => {
+                virtualTagSet.add(trimmed);
                 const readFileContent = (filePath: string): string => {
                     return readFileEntry(filePath).content;
                 };
-                rebuildVirtualTagIndex(fileMetaMap, readFileContent, caseSensitive);
+                for (const meta of fileMetaMap.values()) {
+                    indexVirtualTag(
+                        meta,
+                        readFileContent(meta.filePath),
+                        trimmed,
+                        caseSensitive
+                    );
+                }
             });
 
             // --- Refresh tree ---
@@ -1429,17 +1433,7 @@ export async function activate(context: vscode.ExtensionContext) {
                     }
                 }
 
-                // 1. remove from source
-                virtualTagSet.delete(node.name);
-
-                // 2. rebuild derived structures
-                const readFileContent = (filePath: string): string => {
-                    return readFileEntry(filePath).content;
-                };
-
-                const caseSensitive = config.get<boolean>('virtualTags.caseSensitive', true);
-
-                rebuildVirtualTagIndex(fileMetaMap, readFileContent, caseSensitive);
+                removeVirtualTag(node.name);
 
                 // 3. rebuild UI
                 rebuildTree();

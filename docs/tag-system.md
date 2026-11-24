@@ -28,7 +28,7 @@
 
 ## Virtual Tag
 
-仮想タグ名は `vs-journal.addVirtualTag` コマンドで入力され、trim後に `virtualTagSet` に追加されます。`virtualTagService.ts` の `indexVirtualTags` はファイル内容の全行に対してタグ文字列を検索し、照合行を `VirtualTagFile.matchedLines` として `virtualTagIndexMap` に格納します。これは Markdownのタグ構文解析とは独立した部分文字列照合です。大小文字の扱いは `vsJournal.virtualTags.caseSensitive` 設定に従います。
+仮想タグ名は `vs-journal.addVirtualTag` コマンドで入力され、trim後に `virtualTagSet` に追加されます。`virtualTagService.ts` の `indexVirtualTags` は登録済みの各タグをファイル内容の全行と照合し、一致行を `VirtualTagFile.matchedLines` として `virtualTagIndexMap` に格納します。新規タグの追加では `indexVirtualTag` を使い、全ファイルを新しいタグだけで照合して既存索引を保ちます。削除時はタグ名と該当索引だけを削除します。これは Markdownのタグ構文解析とは独立した部分文字列照合です。大小文字の扱いは `vsJournal.virtualTags.caseSensitive` 設定に従います。
 
 大小文字設定の変更時は、`rebuildVirtualTagIndex` を一度呼び出し、登録中の全仮想タグについて索引を再構築します。再構築関数は一度の呼び出しで全タグを処理するため、呼び出し側でタグごとに繰り返す必要はありません。
 

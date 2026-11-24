@@ -80,39 +80,46 @@ function containsVirtualTag(
 /**
  * Index virtual tags using tag-driven includes matching.
  */
-export function indexVirtualTags(
+export function indexVirtualTag(
     meta: FileMeta,
     content: string,
+    tag: string,
     caseSensitive: boolean
 ): void {
-    if (virtualTagSet.size === 0) {
-        return;
-    }
-
     const lines = content.split(/\r?\n/);
     const searchLines = caseSensitive
         ? lines
         : lines.map(line => line.toLowerCase());
+    const target = caseSensitive
+        ? tag
+        : tag.toLowerCase();
+    const matchedLines = findVirtualTagMatchesInLines(
+        target,
+        searchLines
+    );
 
-    for (const tag of virtualTagSet) {
-        const target = caseSensitive
-            ? tag
-            : tag.toLowerCase();
-        const matchedLines = findVirtualTagMatchesInLines(
-            target,
-            searchLines
-        );
-
-        if (matchedLines.length === 0) {
-            continue;
-        }
-
+    if (matchedLines.length > 0) {
         addMetaToTagIndex(
             tag,
             meta,
             matchedLines
         );
     }
+}
+
+export function indexVirtualTags(
+    meta: FileMeta,
+    content: string,
+    caseSensitive: boolean
+): void {
+    for (const tag of virtualTagSet) {
+        indexVirtualTag(meta, content, tag, caseSensitive);
+    }
+}
+
+export function removeVirtualTag(tag: string): void {
+    virtualTagSet.delete(tag);
+    virtualTagIndexMap.delete(tag);
 }
 
 /**
