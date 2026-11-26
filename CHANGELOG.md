@@ -1,6 +1,6 @@
 # Change Log
 
-## [Unreleased] - 2026-11-
+## [0.7.3] - 2026-11-26
 
 ### Added
 - Added a command to create a new journal entry with a user tag.
